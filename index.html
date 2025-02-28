@@ -2247,6 +2247,8 @@
 			
 			// Save data when a new Marque + Modèle is entered
 			function saveFiche(materiel, marque, modele, pdfFile, row) {
+			console.log("saveFiche() called with:", { materiel, marque, modele, pdfFile, row });
+
 			    if (!db) {
 			        console.error("Database not initialized.");
 			        return;
