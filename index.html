@@ -2210,44 +2210,63 @@
 			};
 			
 			// Save data when a new Marque + Modèle is entered
-			function saveFiche(materiel, marque, modele, pdfFile) {
-			    const transaction = db.transaction(["fiches"], "readwrite");
-			    const store = transaction.objectStore("fiches");
-			
-			    const reader = new FileReader();
-			    reader.readAsDataURL(pdfFile);
-			    reader.onload = function () {
-			        const data = {
-			            materiel: materiel.toUpperCase(),
-			            marque: marque.toUpperCase(),
-			            modele: modele.toUpperCase(),
-			            pdf: reader.result // Store file as Base64
-			        };
-			        store.add(data);
-			        populateDropdowns(); // Update dropdowns dynamically
-			    };
-			}
+			function saveFiche(materiel, marque, modele, pdfFile, row) {
+    if (!db) {
+        console.error("Database not initialized.");
+        return;
+    }
+
+    const transaction = db.transaction(["fiches"], "readwrite");
+    const store = transaction.objectStore("fiches");
+
+    const reader = new FileReader();
+    reader.readAsDataURL(pdfFile);
+    reader.onload = function() {
+        const data = {
+            materiel: materiel.toUpperCase(),
+            marque: marque.toUpperCase(),
+            modele: modele.toUpperCase(),
+            pdf: reader.result // Base64 encoded file
+        };
+
+        const addRequest = store.add(data);
+        addRequest.onsuccess = function() {
+            console.log("Saved successfully:", data); // ✅ No pop-up, only logs
+            populateDropdowns(); // Update dropdowns dynamically
+            row.querySelector(".pdf-preview").href = data.pdf;
+            row.querySelector(".pdf-preview").style.display = "block";
+        };
+
+        addRequest.onerror = function(event) {
+            console.warn("Duplicate Marque + Modèle detected. Skipping save.");
+        };
+    };
+}
+
 			
 			// Check if Marque + Modèle exists and auto-load PDF
 			function checkAndLoadPDF(materiel, marque, modele, row) {
-			    const transaction = db.transaction(["fiches"], "readonly");
-			    const store = transaction.objectStore("fiches");
-			
-			    const index = store.index("marque");
-			    const request = index.openCursor();
-			
-			    request.onsuccess = function (event) {
-			        const cursor = event.target.result;
-			        if (cursor) {
-			            if (cursor.value.marque === marque.toUpperCase() && cursor.value.modele === modele.toUpperCase()) {
-			                console.log("PDF found! Auto-filling...");
-			                row.querySelector(".pdf-preview").href = cursor.value.pdf;
-			                row.querySelector(".pdf-preview").style.display = "block";
-			            }
-			            cursor.continue();
-			        }
-			    };
-			}
+    if (!db) {
+        console.error("Database not initialized.");
+        return;
+    }
+
+    const transaction = db.transaction(["fiches"], "readonly");
+    const store = transaction.objectStore("fiches");
+    const index = store.index("marqueModele");
+
+    const request = index.get([marque.toUpperCase(), modele.toUpperCase()]);
+    request.onsuccess = function() {
+        if (request.result) {
+            console.log("Existing fiche found:", request.result);
+            row.querySelector(".pdf-preview").href = request.result.pdf;
+            row.querySelector(".pdf-preview").style.display = "block";
+        } else {
+            console.log("No matching fiche found.");
+        }
+    };
+}
+
 			
 			// Populate dropdown lists dynamically
 			function populateDropdowns() {
