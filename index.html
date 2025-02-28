@@ -2211,39 +2211,47 @@
 			
 			// Save data when a new Marque + Modèle is entered
 			function saveFiche(materiel, marque, modele, pdfFile, row) {
-    if (!db) {
-        console.error("Database not initialized.");
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.readAsDataURL(pdfFile);
-
-    reader.onload = function() {
-        const data = {
-            materiel: materiel.toUpperCase(),
-            marque: marque.toUpperCase(),
-            modele: modele.toUpperCase(),
-            pdf: reader.result // Base64 encoded file
-        };
-
-        // ✅ START a new transaction AFTER reading file
-        const transaction = db.transaction(["fiches"], "readwrite");
-        const store = transaction.objectStore("fiches");
-
-        const addRequest = store.add(data);
-        addRequest.onsuccess = function() {
-            console.log("Fiche saved:", data);
-            populateDropdowns(); // Update dropdowns dynamically
-            row.querySelector(".pdf-preview").href = data.pdf;
-            row.querySelector(".pdf-preview").style.display = "block";
-        };
-
-        addRequest.onerror = function(event) {
-            console.warn("Duplicate Marque + Modèle detected. Skipping save.");
-        };
-    };
-}
+			    if (!db) {
+			        console.error("Database not initialized.");
+			        return;
+			    }
+			
+			    const reader = new FileReader();
+			    reader.readAsDataURL(pdfFile);
+			
+			    reader.onload = function() {
+			        const data = {
+			            materiel: materiel.toUpperCase(),
+			            marque: marque.toUpperCase(),
+			            modele: modele.toUpperCase(),
+			            pdf: reader.result // Base64 encoded file
+			        };
+			
+			        // ✅ START a new transaction AFTER reading file
+			        const transaction = db.transaction(["fiches"], "readwrite");
+			        const store = transaction.objectStore("fiches");
+			
+			        const addRequest = store.add(data);
+			        addRequest.onsuccess = function() {
+			            console.log("Fiche saved:", data);
+			
+			            // ✅ Ensure "row" is correctly used before accessing it
+			            if (row) {
+			                let previewLink = row.querySelector(".pdf-preview");
+			                if (previewLink) {
+			                    previewLink.href = data.pdf;
+			                    previewLink.style.display = "block";
+			                }
+			            }
+			
+			            populateDropdowns(); // Update dropdowns dynamically
+			        };
+			
+			        addRequest.onerror = function(event) {
+			            console.warn("Duplicate Marque + Modèle detected. Skipping save.");
+			        };
+			    };
+			}
 
 			// Check if Marque + Modèle exists and auto-load PDF
 			function checkAndLoadPDF(materiel, marque, modele, row) {
