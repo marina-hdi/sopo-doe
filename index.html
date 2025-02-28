@@ -3,21 +3,6 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<link rel="manifest" href="/manifest.json">
-		<link rel="icon" href="icones/favicon.ico" type="image/x-icon">
-		<link rel="shortcut icon" href="icones/favicon.ico" type="image/x-icon">
-		<!-- For Android -->
-		<link rel="icon" type="image/png" sizes="192x192" href="icones/icon-192x192.png">
-		<link rel="icon" type="image/png" sizes="512x512" href="icones/icon-512x512.png">
-		<!-- For iPad/iPhone -->
-		<link rel="apple-touch-icon" sizes="180x180" href="icones/apple-touch-icon.png">
-		<!-- Additional Meta for Web App Appearance -->
-		<meta name="apple-mobile-web-app-capable" content="yes">
-		<meta name="apple-mobile-web-app-status-bar-style" content="black">
-		<meta name="apple-mobile-web-app-title" content="SOPODEX - RELEVE CHAUFFERIE">
-		<!-- For Android Chrome (optional but improves appearance) -->
-		<meta name="mobile-web-app-capable" content="yes">
-		<meta name="theme-color" content="#ffffff">
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link
@@ -281,254 +266,422 @@
 					<tbody>
 						<tr class="fiches-techniques-row">
 							<td>ADOUCISSEUR</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-adoucisseur" /> 
+								<datalist id="marque-list-adoucisseur"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-adoucisseur" /> 
+								<datalist id="modele-list-adoucisseur"></datalist>
 							<td>
 								<div class="dropzone" id="adoucisseur-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="adoucisseur-file" />
+								<input type="file" class="file-upload" id="adoucisseur-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>AQUASTAT ECS</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-aquastat" /> 
+								<datalist id="marque-list-aquastat"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-aquastat" /> 
+								<datalist id="modele-list-aquastat"></datalist>
 							<td>
 								<div class="dropzone" id="aquastat-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="aquastat-file" />
+								<input type="file" class="file-upload" id="aquastat-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>BALLON ECS</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-ballon-ecs" /> 
+								<datalist id="marque-list-ballon-ecs"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-ballon-ecs" /> 
+								<datalist id="modele-list-ballon-ecs"></datalist>
 							<td>
 								<div class="dropzone" id="ballon-ecs-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="ballon-ecs-file" />
+								<input type="file" class="file-upload" id="ballon-ecs-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>CHAUDIERE</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-chaudiere" /> 
+								<datalist id="marque-list-chaudiere"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-chaudiere" /> 
+								<datalist id="modele-list-chaudiere"></datalist>
 							<td>
 								<div class="dropzone" id="chaudiere-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="chaudiere-file" />
+								<input type="file" class="file-upload" id="chaudiere-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>DESEMBOUEUR MAGNETIQUE</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-desemboueur" /> 
+								<datalist id="marque-list-desemboueur"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-desemboueur" /> 
+								<datalist id="modele-list-desemboueur"></datalist>
 							<td>
 								<div class="dropzone" id="desemboueur-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="desemboueur-file" />
+								<input type="file" class="file-upload" id="desemboueur-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>ECHANGEUR CPCU</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-echangeur-cpcu" /> 
+								<datalist id="marque-list-echangeur-cpcu"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-echangeur-cpcu" /> 
+								<datalist id="modele-list-echangeur-cpcu"></datalist>
 							<td>
 								<div class="dropzone" id="echangeur-cpcu-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="echangeur-cpcu-file" />
+								<input type="file" class="file-upload" id="echangeur-cpcu-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>ECHANGEUR DE DISCONNEXION</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-echangeur" /> 
+								<datalist id="marque-list-echangeur"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-echangeur" /> 
+								<datalist id="modele-list-echangeur"></datalist>
 							<td>
 								<div class="dropzone" id="echangeur-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="echangeur-file" />
+								<input type="file" class="file-upload" id="echangeur-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>ELECTROVANNE GAZ</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-electrovanne-gaz" /> 
+								<datalist id="marque-list-electrovanne-gaz"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-electrovanne-gaz" /> 
+								<datalist id="modele-list-electrovanne-gaz"></datalist>
 							<td>
 								<div class="dropzone" id="electrovanne-gaz-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="electrovanne-gaz-file" />
+								<input type="file" class="file-upload" id="electrovanne-gaz-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>GROUPE DE MAINTIEN DE PRESSION</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-groupe-maintien" /> 
+								<datalist id="marque-list-groupe-maintien"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-groupe-maintien" /> 
+								<datalist id="modele-list-groupe-maintien"></datalist>
 							<td>
 								<div class="dropzone" id="groupe-maintien-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="groupe-maintien-file" />
+								<input type="file" class="file-upload" id="groupe-maintien-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>POMPE BALLON ECS</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-pompe-ballon" /> 
+								<datalist id="marque-list-pompe-ballon"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-pompe-ballon" /> 
+								<datalist id="modele-list-pompe-ballon"></datalist>
 							<td>
 								<div class="dropzone" id="pompe-ballon-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="pompe-ballon-file" />
+								<input type="file" class="file-upload" id="pompe-ballon-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>POMPE CHARGE CHAUDIERE</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-pompe-charge-chaudiere" /> 
+								<datalist id="marque-list-pompe-charge-chaudiere"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-pompe-charge-chaudiere" /> 
+								<datalist id="modele-list-pompe-charge-chaudiere"></datalist>
 							<td>
 								<div class="dropzone" id="pompe-charge-chaudiere-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="pompe-charge-chaudiere-file" />
+								<input type="file" class="file-upload" id="pompe-charge-chaudiere-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>POMPE CHAUFFAGE</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-pompe-chauffage" /> 
+								<datalist id="marque-list-pompe-chauffage"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-pompe-chauffage" /> 
+								<datalist id="modele-list-pompe-chauffage"></datalist>
 							<td>
 								<div class="dropzone" id="pompe-chauffage-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="pompe-chauffage-file" />
+								<input type="file" class="file-upload" id="pompe-chauffage-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>POMPE DE RELEVAGE</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-pompe-relevage" /> 
+								<datalist id="marque-list-pompe-relevage"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-pompe-relevage" /> 
+								<datalist id="modele-list-pompe-relevage"></datalist>
 							<td>
 								<div class="dropzone" id="pompe-relevage-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="pompe-relevage-file" />
+								<input type="file" class="file-upload" id="pompe-relevage-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>POMPE PRIMAIRE ECS</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-pompe-primaire" /> 
+								<datalist id="marque-list-pompe-primaire"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-pompe-primaire" /> 
+								<datalist id="modele-list-pompe-primaire"></datalist>
 							<td>
 								<div class="dropzone" id="pompe-primaire-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="pompe-primaire-file" />
+								<input type="file" class="file-upload" id="pompe-primaire-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>POMPE RECYCLAGE ECS</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-pompe-recyclage" /> 
+								<datalist id="marque-list-pompe-recyclage"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-pompe-recyclage" /> 
+								<datalist id="modele-list-pompe-recyclage"></datalist>
 							<td>
 								<div class="dropzone" id="pompe-recyclage-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="pompe-recyclage-file" />
+								<input type="file" class="file-upload" id="pompe-recyclage-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>PREPARATEUR ECS</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-preparateur-ecs" /> 
+								<datalist id="marque-list-preparateur-ecs"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-preparateur-ecs" /> 
+								<datalist id="modele-list-preparateur-ecs"></datalist>
 							<td>
 								<div class="dropzone" id="preparateur-ecs-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="preparateur-ecs-file" />
+								<input type="file" class="file-upload" id="preparateur-ecs-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>PRESSOSTAT MANQUE D'EAU</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-pressostat" /> 
+								<datalist id="marque-list-pressostat"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-pressostat" /> 
+								<datalist id="modele-list-pressostat"></datalist>
 							<td>
 								<div class="dropzone" id="pressostat-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="pressostat-file" />
+								<input type="file" class="file-upload" id="pressostat-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>REGULATION ECS</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-regulation-ecs" /> 
+								<datalist id="marque-list-regulation-ecs"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-regulation-ecs" /> 
+								<datalist id="modele-list-regulation-ecs"></datalist>
 							<td>
 								<div class="dropzone" id="regulation-ecs-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="regulation-ecs-file" />
+								<input type="file" class="file-upload" id="regulation-ecs-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>REGULATION VIESSMANN</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-regulation-viessmann" /> 
+								<datalist id="marque-list-regulation-viessmann"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-regulation-viessmann" /> 
+								<datalist id="modele-list-regulation-viessmann"></datalist>
 							<td>
 								<div class="dropzone" id="regulation-viessmann-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="regulation-viessmann-file" />
+								<input type="file" class="file-upload" id="regulation-viessmann-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>SERVOMOTEUR CHAUFFAGE</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-servomoteur-chauffage" /> 
+								<datalist id="marque-list-servomoteur-chauffage"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-servomoteur-chauffage" /> 
+								<datalist id="modele-list-servomoteur-chauffage"></datalist>
 							<td>
 								<div class="dropzone" id="servomoteur-chauffage-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="servomoteur-chauffage-file" />
+								<input type="file" class="file-upload" id="servomoteur-chauffage-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>SERVOMOTEUR ECS</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-servomoteur-ecs" /> 
+								<datalist id="marque-list-servomoteur-ecs"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-servomoteur-ecs" /> 
+								<datalist id="modele-list-servomoteur-ecs"></datalist>
 							<td>
 								<div class="dropzone" id="servomoteur-ecs-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="servomoteur-ecs-file" />
+								<input type="file" class="file-upload" id="servomoteur-ecs-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>SOUPAPE DE SECURITE</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-soupape-securite" /> 
+								<datalist id="marque-list-soupape-securite"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-soupape-securite" /> 
+								<datalist id="modele-list-soupape-securite"></datalist>
 							<td>
 								<div class="dropzone" id="soupape-securite-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="soupape-securite-file" />
+								<input type="file" class="file-upload" id="soupape-securite-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>TRAITEMENT FILMOGENE</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-traitement" /> 
+								<datalist id="marque-list-traitement"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-traitement" /> 
+								<datalist id="modele-list-traitement"></datalist>
 							<td>
 								<div class="dropzone" id="traitement-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="traitement-file" />
+								<input type="file" class="file-upload" id="traitement-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>VANNE DEUX VOIES MOTORISEE</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-vanne-deux" /> 
+								<datalist id="marque-list-vanne-deux"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-vanne-deux" /> 
+								<datalist id="modele-list-vanne-deux"></datalist>
 							<td>
 								<div class="dropzone" id="vanne-deux-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="vanne-deux-file" />
+								<input type="file" class="file-upload" id="vanne-deux-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>VANNE TROIS VOIES CHAUFFAGE</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-vanne-trois-chauffage" /> 
+								<datalist id="marque-list-vanne-trois-chauffage"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-vanne-trois-chauffage" /> 
+								<datalist id="modele-list-vanne-trois-chauffage"></datalist>
 							<td>
 								<div class="dropzone" id="vanne-trois-chauffage-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="vanne-trois-chauffage-file" />
+								<input type="file" class="file-upload" id="vanne-trois-chauffage-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>VANNE TROIS VOIES ECS</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-vanne-trois-ecs" /> 
+								<datalist id="marque-list-vanne-trois-ecs"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-vanne-trois-ecs" /> 
+								<datalist id="modele-list-vanne-trois-ecs"></datalist>
 							<td>
 								<div class="dropzone" id="vanne-trois-ecs-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="vanne-trois-ecs-file" />
+								<input type="file" class="file-upload" id="vanne-trois-ecs-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>VASE D'EXPANSION CHAUFFAGE</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-vase-chauffage" /> 
+								<datalist id="marque-list-vase-chauffage"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-vase-chauffage" /> 
+								<datalist id="modele-list-vase-chauffage"></datalist>
 							<td>
 								<div class="dropzone" id="vase-chauffage-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="vase-chauffage-file" />
+								<input type="file" class="file-upload" id="vase-chauffage-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 						<tr class="fiches-techniques-row">
 							<td>VASE D'EXPANSION SANITAIRE</td>
-							<td><input type="text" /></td>
-							<td><input type="text" /></td>
+							<td>
+								<input type="text" class="marque-input" list="marque-list-vase-sanitaire" /> 
+								<datalist id="marque-list-vase-sanitaire"></datalist>
+							</td>
+							<td>
+								<input type="text" class="modele-input" list="modele-list-vase-sanitaire" /> 
+								<datalist id="modele-list-vase-sanitaire"></datalist>
 							<td>
 								<div class="dropzone" id="vase-sanitaire-dropzone">Cliquez ou déposez</div>
-								<input type="file" id="vase-sanitaire-file" />
+								<input type="file" class="file-upload" id="vase-sanitaire-file" accept="application/pdf" />
+								<a class="pdf-preview" href="#" target="_blank" style="display: none;">Voir PDF</a>
 							</td>
 						</tr>
 					</tbody>
@@ -2030,6 +2183,143 @@
 			        });
 			    }
 			});
+		</script>
+		<script>// Open IndexedDB
+			const dbName = "FichesTechniquesDB";
+			let db;
+			
+			const request = indexedDB.open(dbName, 1);
+			
+			request.onupgradeneeded = function (event) {
+			    db = event.target.result;
+			    if (!db.objectStoreNames.contains("fiches")) {
+			        let store = db.createObjectStore("fiches", { keyPath: "id", autoIncrement: true });
+			        store.createIndex("marque", "marque", { unique: false });
+			        store.createIndex("modele", "modele", { unique: false });
+			        store.createIndex("pdf", "pdf", { unique: false });
+			    }
+			};
+			
+			request.onsuccess = function (event) {
+			    db = event.target.result;
+			    populateDropdowns();
+			};
+			
+			request.onerror = function (event) {
+			    console.error("IndexedDB error:", event.target.error);
+			};
+			
+			// Save data when a new Marque + Modèle is entered
+			function saveFiche(materiel, marque, modele, pdfFile) {
+			    const transaction = db.transaction(["fiches"], "readwrite");
+			    const store = transaction.objectStore("fiches");
+			
+			    const reader = new FileReader();
+			    reader.readAsDataURL(pdfFile);
+			    reader.onload = function () {
+			        const data = {
+			            materiel: materiel.toUpperCase(),
+			            marque: marque.toUpperCase(),
+			            modele: modele.toUpperCase(),
+			            pdf: reader.result // Store file as Base64
+			        };
+			        store.add(data);
+			        populateDropdowns(); // Update dropdowns dynamically
+			    };
+			}
+			
+			// Check if Marque + Modèle exists and auto-load PDF
+			function checkAndLoadPDF(materiel, marque, modele, row) {
+			    const transaction = db.transaction(["fiches"], "readonly");
+			    const store = transaction.objectStore("fiches");
+			
+			    const index = store.index("marque");
+			    const request = index.openCursor();
+			
+			    request.onsuccess = function (event) {
+			        const cursor = event.target.result;
+			        if (cursor) {
+			            if (cursor.value.marque === marque.toUpperCase() && cursor.value.modele === modele.toUpperCase()) {
+			                console.log("PDF found! Auto-filling...");
+			                row.querySelector(".pdf-preview").href = cursor.value.pdf;
+			                row.querySelector(".pdf-preview").style.display = "block";
+			            }
+			            cursor.continue();
+			        }
+			    };
+			}
+			
+			// Populate dropdown lists dynamically
+			function populateDropdowns() {
+			    const transaction = db.transaction(["fiches"], "readonly");
+			    const store = transaction.objectStore("fiches");
+			
+			    const marqueSet = new Set();
+			    const modeleSet = new Set();
+			
+			    store.openCursor().onsuccess = function (event) {
+			        const cursor = event.target.result;
+			        if (cursor) {
+			            marqueSet.add(cursor.value.marque);
+			            modeleSet.add(cursor.value.modele);
+			            cursor.continue();
+			        } else {
+			            document.querySelectorAll(".marque-input").forEach(input => {
+			                const listId = input.getAttribute("list");
+			                const dataList = document.getElementById(listId);
+			                dataList.innerHTML = Array.from(marqueSet)
+			                    .map(marque => `<option value="${marque}">${marque}</option>`)
+			                    .join("");
+			            });
+			
+			            document.querySelectorAll(".modele-input").forEach(input => {
+			                const listId = input.getAttribute("list");
+			                const dataList = document.getElementById(listId);
+			                dataList.innerHTML = Array.from(modeleSet)
+			                    .map(modele => `<option value="${modele}">${modele}</option>`)
+			                    .join("");
+			            });
+			        }
+			    };
+			}
+			
+			// Event Listeners for Dropdown Selection
+			document.querySelectorAll(".marque-input").forEach(input => {
+			    input.addEventListener("change", function () {
+			        const row = this.closest(".fiches-techniques-row");
+			        const materiel = row.cells[0].innerText.trim();
+			        const modele = row.querySelector(".modele-input").value;
+			        checkAndLoadPDF(materiel, this.value, modele, row);
+			    });
+			});
+			
+			document.querySelectorAll(".modele-input").forEach(input => {
+			    input.addEventListener("change", function () {
+			        const row = this.closest(".fiches-techniques-row");
+			        const materiel = row.cells[0].innerText.trim();
+			        const marque = row.querySelector(".marque-input").value;
+			        checkAndLoadPDF(materiel, marque, this.value, row);
+			    });
+			});
+			
+			// Event Listener for File Upload and Save
+			document.querySelectorAll(".file-upload").forEach(input => {
+			    input.addEventListener("change", function (e) {
+			        const row = this.closest(".fiches-techniques-row");
+			        const materiel = row.cells[0].innerText.trim();
+			        const marque = row.querySelector(".marque-input").value;
+			        const modele = row.querySelector(".modele-input").value;
+			        const file = e.target.files[0];
+			
+			        if (marque && modele && file) {
+			            saveFiche(materiel, marque, modele, file);
+			            alert("Fiche saved successfully!");
+			        } else {
+			            alert("Veuillez renseigner la marque et le modèle.");
+			        }
+			    });
+			});
+			
 		</script>
 		<script>
 			document.addEventListener('DOMContentLoaded', function() {
