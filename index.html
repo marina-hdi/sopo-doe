@@ -2255,28 +2255,32 @@
 
 			// Check if Marque + Modèle exists and auto-load PDF
 			function checkAndLoadPDF(materiel, marque, modele, row) {
-    if (!db) {
-        console.error("Database not initialized.");
-        return;
-    }
-
-    const transaction = db.transaction(["fiches"], "readonly");
-    const store = transaction.objectStore("fiches");
-    const index = store.index("marqueModele");
-
-    const request = index.get([marque.toUpperCase(), modele.toUpperCase()]);
-    request.onsuccess = function() {
-        if (request.result) {
-            console.log("Existing fiche found:", request.result);
-            row.querySelector(".pdf-preview").href = request.result.pdf;
-            row.querySelector(".pdf-preview").style.display = "block";
-        } else {
-            console.log("No matching fiche found. Hiding PDF preview.");
-            row.querySelector(".pdf-preview").style.display = "none"; // ✅ Hides link if no PDF
-        }
-    };
-}
+			    if (!db) {
+			        console.error("Database not initialized.");
+			        return;
+			    }
 			
+			    const transaction = db.transaction(["fiches"], "readonly");
+			    const store = transaction.objectStore("fiches");
+			    const index = store.index("marqueModele");
+			
+			    const request = index.get([marque.toUpperCase(), modele.toUpperCase()]);
+			    request.onsuccess = function() {
+			        if (request.result) {
+			            console.log("Existing fiche found:", request.result);
+			
+			            let pdfPreview = row.querySelector(".pdf-preview");
+			            if (pdfPreview) {
+			                pdfPreview.href = request.result.pdf;
+			                pdfPreview.target = "_blank"; // ✅ Ensures it opens properly
+			                pdfPreview.style.display = "block";
+			            }
+			        } else {
+			            console.log("No matching fiche found. Hiding PDF preview.");
+			            row.querySelector(".pdf-preview").style.display = "none"; // ✅ Hide if no file
+			        }
+			    };
+			}
 			// Populate dropdown lists dynamically
 			function populateDropdowns() {
 			    const transaction = db.transaction(["fiches"], "readonly");
