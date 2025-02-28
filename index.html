@@ -2217,6 +2217,13 @@
 			        return;
 			    }
 			
+			    if (!pdfFile) {
+			        console.warn("No file selected!");
+			        return;
+			    }
+			
+			    console.log("Processing file:", pdfFile.name); // ✅ Debugging
+			
 			    const reader = new FileReader();
 			    reader.readAsDataURL(pdfFile);
 			
@@ -2234,42 +2241,44 @@
 			        // ✅ Check if the entry already exists
 			        const checkRequest = index.get([marque.toUpperCase(), modele.toUpperCase()]);
 			        checkRequest.onsuccess = function() {
-			            if (checkRequest.result) {
-			                // ✅ If exists, delete the old entry first
-			                store.delete(checkRequest.result.id);
-			            }
-			
-			            // ✅ Now insert the new entry
-			            const data = {
+			            let data = {
 			                materiel: materiel.toUpperCase(),
 			                marque: marque.toUpperCase(),
 			                modele: modele.toUpperCase(),
 			                pdf: pdfBase64
 			            };
 			
-			            const addRequest = store.add(data);
-			            addRequest.onsuccess = function() {
-			                console.log("Fiche saved:", data);
+			            if (checkRequest.result) {
+			                // ✅ If exists, update instead of deleting
+			                data.id = checkRequest.result.id;
+			                store.put(data);
+			                console.log("Updated existing fiche:", data);
+			            } else {
+			                // ✅ If new, add normally
+			                store.add(data);
+			                console.log("Added new fiche:", data);
+			            }
 			
-			                let previewLink = row.querySelector(".pdf-preview");
-			                if (previewLink) {
-			                    let blob = base64ToBlob(pdfBase64, "application/pdf");
-			                    let blobUrl = URL.createObjectURL(blob);
+			            // ✅ Update UI
+			            let previewLink = row.querySelector(".pdf-preview");
+			            if (previewLink) {
+			                let blob = base64ToBlob(pdfBase64, "application/pdf");
+			                let blobUrl = URL.createObjectURL(blob);
 			
-			                    previewLink.href = blobUrl;
-			                    previewLink.target = "_blank";
-			                    previewLink.style.display = "block";
-			                }
+			                previewLink.href = blobUrl;
+			                previewLink.target = "_blank";
+			                previewLink.style.display = "block";
+			            }
 			
-			                populateDropdowns(); // ✅ Update dropdowns dynamically
-			            };
+			            populateDropdowns();
+			        };
 			
-			            addRequest.onerror = function(event) {
-			                console.warn("Error saving new fiche:", event.target.error);
-			            };
+			        checkRequest.onerror = function(event) {
+			            console.error("Error checking existing fiche:", event.target.error);
 			        };
 			    };
 			}
+
 			// Check if Marque + Modèle exists and auto-load PDF
 			function checkAndLoadPDF(materiel, marque, modele, row) {
 			    if (!db) {
