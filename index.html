@@ -2227,37 +2227,46 @@
 			            return;
 			        }
 			
-			        console.log("PDF Stored as Base64:", pdfBase64.slice(0, 100)); // ✅ Debug first 100 chars
-			
-			        const data = {
-			            materiel: materiel.toUpperCase(),
-			            marque: marque.toUpperCase(),
-			            modele: modele.toUpperCase(),
-			            pdf: pdfBase64
-			        };
-			
 			        const transaction = db.transaction(["fiches"], "readwrite");
 			        const store = transaction.objectStore("fiches");
+			        const index = store.index("marqueModele");
 			
-			        const addRequest = store.add(data);
-			        addRequest.onsuccess = function() {
-			            console.log("Fiche saved:", data);
-			
-			            let previewLink = row.querySelector(".pdf-preview");
-			            if (previewLink) {
-			                let blob = base64ToBlob(pdfBase64, "application/pdf");
-			                let blobUrl = URL.createObjectURL(blob);
-			
-			                previewLink.href = blobUrl;
-			                previewLink.target = "_blank"; // ✅ Ensures correct opening
-			                previewLink.style.display = "block";
+			        // ✅ Check if the entry already exists
+			        const checkRequest = index.get([marque.toUpperCase(), modele.toUpperCase()]);
+			        checkRequest.onsuccess = function() {
+			            if (checkRequest.result) {
+			                // ✅ If exists, delete the old entry first
+			                store.delete(checkRequest.result.id);
 			            }
 			
-			            populateDropdowns(); // ✅ Update dropdowns dynamically
-			        };
+			            // ✅ Now insert the new entry
+			            const data = {
+			                materiel: materiel.toUpperCase(),
+			                marque: marque.toUpperCase(),
+			                modele: modele.toUpperCase(),
+			                pdf: pdfBase64
+			            };
 			
-			        addRequest.onerror = function(event) {
-			            console.warn("Duplicate Marque + Modèle detected. Skipping save.");
+			            const addRequest = store.add(data);
+			            addRequest.onsuccess = function() {
+			                console.log("Fiche saved:", data);
+			
+			                let previewLink = row.querySelector(".pdf-preview");
+			                if (previewLink) {
+			                    let blob = base64ToBlob(pdfBase64, "application/pdf");
+			                    let blobUrl = URL.createObjectURL(blob);
+			
+			                    previewLink.href = blobUrl;
+			                    previewLink.target = "_blank";
+			                    previewLink.style.display = "block";
+			                }
+			
+			                populateDropdowns(); // ✅ Update dropdowns dynamically
+			            };
+			
+			            addRequest.onerror = function(event) {
+			                console.warn("Error saving new fiche:", event.target.error);
+			            };
 			        };
 			    };
 			}
