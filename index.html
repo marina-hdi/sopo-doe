@@ -2216,11 +2216,9 @@
         return;
     }
 
-    const transaction = db.transaction(["fiches"], "readwrite");
-    const store = transaction.objectStore("fiches");
-
     const reader = new FileReader();
     reader.readAsDataURL(pdfFile);
+
     reader.onload = function() {
         const data = {
             materiel: materiel.toUpperCase(),
@@ -2229,9 +2227,13 @@
             pdf: reader.result // Base64 encoded file
         };
 
+        // ✅ START a new transaction AFTER reading file
+        const transaction = db.transaction(["fiches"], "readwrite");
+        const store = transaction.objectStore("fiches");
+
         const addRequest = store.add(data);
         addRequest.onsuccess = function() {
-            console.log("Saved successfully:", data); // ✅ No pop-up, only logs
+            console.log("Fiche saved:", data);
             populateDropdowns(); // Update dropdowns dynamically
             row.querySelector(".pdf-preview").href = data.pdf;
             row.querySelector(".pdf-preview").style.display = "block";
@@ -2243,7 +2245,6 @@
     };
 }
 
-			
 			// Check if Marque + Modèle exists and auto-load PDF
 			function checkAndLoadPDF(materiel, marque, modele, row) {
     if (!db) {
@@ -2262,11 +2263,11 @@
             row.querySelector(".pdf-preview").href = request.result.pdf;
             row.querySelector(".pdf-preview").style.display = "block";
         } else {
-            console.log("No matching fiche found.");
+            console.log("No matching fiche found. Hiding PDF preview.");
+            row.querySelector(".pdf-preview").style.display = "none"; // ✅ Hides link if no PDF
         }
     };
 }
-
 			
 			// Populate dropdown lists dynamically
 			function populateDropdowns() {
