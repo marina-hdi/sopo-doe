@@ -2185,6 +2185,41 @@
 			});
 		</script>
 		<script>
+						
+			// Populate dropdown lists dynamically
+			function populateDropdowns() {
+			    const transaction = db.transaction(["fiches"], "readonly");
+			    const store = transaction.objectStore("fiches");
+			
+			    const marqueSet = new Set();
+			    const modeleSet = new Set();
+			
+			    store.openCursor().onsuccess = function (event) {
+			        const cursor = event.target.result;
+			        if (cursor) {
+			            marqueSet.add(cursor.value.marque);
+			            modeleSet.add(cursor.value.modele);
+			            cursor.continue();
+			        } else {
+			            document.querySelectorAll(".marque-input").forEach(input => {
+			                const listId = input.getAttribute("list");
+			                const dataList = document.getElementById(listId);
+			                dataList.innerHTML = Array.from(marqueSet)
+			                    .map(marque => `<option value="${marque}">${marque}</option>`)
+			                    .join("");
+			            });
+			
+			            document.querySelectorAll(".modele-input").forEach(input => {
+			                const listId = input.getAttribute("list");
+			                const dataList = document.getElementById(listId);
+			                dataList.innerHTML = Array.from(modeleSet)
+			                    .map(modele => `<option value="${modele}">${modele}</option>`)
+			                    .join("");
+			            });
+			        }
+			    };
+			}
+			
 			// Open IndexedDB
 			const dbName = "FichesTechniquesDB";
 			let db;
@@ -2217,12 +2252,10 @@
 			        return;
 			    }
 			
-			    if (!pdfFile) {
-			        console.warn("No file selected!");
+			    if (!row) {
+			        console.error("Row is undefined! Skipping file preview update.");
 			        return;
 			    }
-			
-			    console.log("Processing file:", pdfFile.name); // ✅ Debugging
 			
 			    const reader = new FileReader();
 			    reader.readAsDataURL(pdfFile);
@@ -2238,7 +2271,6 @@
 			        const store = transaction.objectStore("fiches");
 			        const index = store.index("marqueModele");
 			
-			        // ✅ Check if the entry already exists
 			        const checkRequest = index.get([marque.toUpperCase(), modele.toUpperCase()]);
 			        checkRequest.onsuccess = function() {
 			            let data = {
@@ -2249,25 +2281,25 @@
 			            };
 			
 			            if (checkRequest.result) {
-			                // ✅ If exists, update instead of deleting
-			                data.id = checkRequest.result.id;
+			                data.id = checkRequest.result.id; // Preserve existing ID for update
 			                store.put(data);
 			                console.log("Updated existing fiche:", data);
 			            } else {
-			                // ✅ If new, add normally
 			                store.add(data);
 			                console.log("Added new fiche:", data);
 			            }
 			
-			            // ✅ Update UI
-			            let previewLink = row.querySelector(".pdf-preview");
-			            if (previewLink) {
-			                let blob = base64ToBlob(pdfBase64, "application/pdf");
-			                let blobUrl = URL.createObjectURL(blob);
+			            // ✅ Ensure row exists before updating preview
+			            if (row) {
+			                let previewLink = row.querySelector(".pdf-preview");
+			                if (previewLink) {
+			                    let blob = base64ToBlob(pdfBase64, "application/pdf");
+			                    let blobUrl = URL.createObjectURL(blob);
 			
-			                previewLink.href = blobUrl;
-			                previewLink.target = "_blank";
-			                previewLink.style.display = "block";
+			                    previewLink.href = blobUrl;
+			                    previewLink.target = "_blank";
+			                    previewLink.style.display = "block";
+			                }
 			            }
 			
 			            populateDropdowns();
@@ -2278,7 +2310,6 @@
 			        };
 			    };
 			}
-
 			// Check if Marque + Modèle exists and auto-load PDF
 			function checkAndLoadPDF(materiel, marque, modele, row) {
 			    if (!db) {
@@ -2327,40 +2358,6 @@
 			    }
 			
 			    return new Blob(byteArrays, { type: contentType });
-			}
-						
-			// Populate dropdown lists dynamically
-			function populateDropdowns() {
-			    const transaction = db.transaction(["fiches"], "readonly");
-			    const store = transaction.objectStore("fiches");
-			
-			    const marqueSet = new Set();
-			    const modeleSet = new Set();
-			
-			    store.openCursor().onsuccess = function (event) {
-			        const cursor = event.target.result;
-			        if (cursor) {
-			            marqueSet.add(cursor.value.marque);
-			            modeleSet.add(cursor.value.modele);
-			            cursor.continue();
-			        } else {
-			            document.querySelectorAll(".marque-input").forEach(input => {
-			                const listId = input.getAttribute("list");
-			                const dataList = document.getElementById(listId);
-			                dataList.innerHTML = Array.from(marqueSet)
-			                    .map(marque => `<option value="${marque}">${marque}</option>`)
-			                    .join("");
-			            });
-			
-			            document.querySelectorAll(".modele-input").forEach(input => {
-			                const listId = input.getAttribute("list");
-			                const dataList = document.getElementById(listId);
-			                dataList.innerHTML = Array.from(modeleSet)
-			                    .map(modele => `<option value="${modele}">${modele}</option>`)
-			                    .join("");
-			            });
-			        }
-			    };
 			}
 			
 			// Event Listeners for Dropdown Selection
