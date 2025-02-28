@@ -2184,7 +2184,8 @@
 			    }
 			});
 		</script>
-		<script>// Open IndexedDB
+		<script>
+			// Open IndexedDB
 			const dbName = "FichesTechniquesDB";
 			let db;
 			
@@ -2220,14 +2221,21 @@
 			    reader.readAsDataURL(pdfFile);
 			
 			    reader.onload = function() {
+			        let pdfBase64 = reader.result;
+			        if (!pdfBase64.startsWith("data:application/pdf;base64,")) {
+			            console.error("Invalid PDF format detected!", pdfBase64);
+			            return;
+			        }
+			
+			        console.log("PDF Stored as Base64:", pdfBase64.slice(0, 100)); // ✅ Debug first 100 chars
+			
 			        const data = {
 			            materiel: materiel.toUpperCase(),
 			            marque: marque.toUpperCase(),
 			            modele: modele.toUpperCase(),
-			            pdf: reader.result // Base64 encoded file
+			            pdf: pdfBase64
 			        };
 			
-			        // ✅ START a new transaction AFTER reading file
 			        const transaction = db.transaction(["fiches"], "readwrite");
 			        const store = transaction.objectStore("fiches");
 			
@@ -2235,16 +2243,17 @@
 			        addRequest.onsuccess = function() {
 			            console.log("Fiche saved:", data);
 			
-			            // ✅ Ensure "row" is correctly used before accessing it
-			            if (row) {
-			                let previewLink = row.querySelector(".pdf-preview");
-			                if (previewLink) {
-			                    previewLink.href = data.pdf;
-			                    previewLink.style.display = "block";
-			                }
+			            let previewLink = row.querySelector(".pdf-preview");
+			            if (previewLink) {
+			                let blob = base64ToBlob(pdfBase64, "application/pdf");
+			                let blobUrl = URL.createObjectURL(blob);
+			
+			                previewLink.href = blobUrl;
+			                previewLink.target = "_blank"; // ✅ Ensures correct opening
+			                previewLink.style.display = "block";
 			            }
 			
-			            populateDropdowns(); // Update dropdowns dynamically
+			            populateDropdowns(); // ✅ Update dropdowns dynamically
 			        };
 			
 			        addRequest.onerror = function(event) {
@@ -2252,7 +2261,6 @@
 			        };
 			    };
 			}
-
 			// Check if Marque + Modèle exists and auto-load PDF
 			function checkAndLoadPDF(materiel, marque, modele, row) {
 			    if (!db) {
@@ -2269,10 +2277,15 @@
 			        if (request.result) {
 			            console.log("Existing fiche found:", request.result);
 			
+			            let pdfData = request.result.pdf;
 			            let pdfPreview = row.querySelector(".pdf-preview");
-			            if (pdfPreview) {
-			                pdfPreview.href = request.result.pdf;
-			                pdfPreview.target = "_blank"; // ✅ Ensures it opens properly
+			
+			            if (pdfData && pdfPreview) {
+			                let blob = base64ToBlob(pdfData, "application/pdf");
+			                let blobUrl = URL.createObjectURL(blob);
+			
+			                pdfPreview.href = blobUrl;
+			                pdfPreview.target = "_blank"; // ✅ Ensures correct opening
 			                pdfPreview.style.display = "block";
 			            }
 			        } else {
@@ -2281,6 +2294,23 @@
 			        }
 			    };
 			}
+
+			function base64ToBlob(base64, contentType) {
+			    let byteCharacters = atob(base64.split(",")[1]); // Remove `data:application/pdf;base64,`
+			    let byteArrays = [];
+			
+			    for (let i = 0; i < byteCharacters.length; i += 512) {
+			        let slice = byteCharacters.slice(i, i + 512);
+			        let byteNumbers = new Array(slice.length);
+			        for (let j = 0; j < slice.length; j++) {
+			            byteNumbers[j] = slice.charCodeAt(j);
+			        }
+			        byteArrays.push(new Uint8Array(byteNumbers));
+			    }
+			
+			    return new Blob(byteArrays, { type: contentType });
+			}
+						
 			// Populate dropdown lists dynamically
 			function populateDropdowns() {
 			    const transaction = db.transaction(["fiches"], "readonly");
