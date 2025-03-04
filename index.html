@@ -2211,8 +2211,9 @@
 			    }
 			});
 		</script>
+		
 		<script>
-			document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", function () {
     const marqueInputs = document.querySelectorAll(".marque-input");
     const modeleInputs = document.querySelectorAll(".modele-input");
     const fileInputs = document.querySelectorAll(".file-upload");
@@ -2315,6 +2316,7 @@
         let modeleInput = row.querySelector(".modele-input");
         let dropzone = row.querySelector(".dropzone");
         let pdfPreview = row.querySelector(".pdf-preview");
+        let removeBtn = row.querySelector(".remove-file");
 
         function getFileKey() {
             let materiel = getMateriel(input);
@@ -2327,12 +2329,18 @@
         function updateFileDisplay() {
             let key = getFileKey();
             if (key && fileData[key]) {
-                let pdfBlob = dataURLtoBlob(fileData[key]); // Convert Base64 to Blob
+                let pdfBlob = dataURLtoBlob(fileData[key]);
                 let objectURL = URL.createObjectURL(pdfBlob);
                 pdfPreview.href = objectURL;
                 pdfPreview.style.display = "inline";
+                removeBtn.style.display = "inline"; // Show remove button
+                dropzone.style.display = "none"; // Hide dropzone
+                row.style.backgroundColor = "#e3f2fd"; // Light blue row styling
             } else {
                 pdfPreview.style.display = "none";
+                removeBtn.style.display = "none";
+                dropzone.style.display = "block"; // Show dropzone again
+                row.style.backgroundColor = ""; // Reset row styling
             }
         }
 
@@ -2353,6 +2361,15 @@
             reader.readAsDataURL(file);
         });
 
+        removeBtn.addEventListener("click", function () {
+            let key = getFileKey();
+            if (key && fileData[key]) {
+                delete fileData[key]; // Remove file data
+                saveFiles(fileData);
+                updateFileDisplay();
+            }
+        });
+
         updateFileDisplay();
     });
 
@@ -2371,7 +2388,8 @@
     }
 });
 		</script>
-		<script>
+		
+		<script>			
 			document.addEventListener('DOMContentLoaded', function() {
 			    // Define updateRowStyle function globally
 			    window.updateRowStyle = function(row) {
