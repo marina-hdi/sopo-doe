@@ -2186,41 +2186,54 @@
 		</script>
 		<script>
 		document.addEventListener("DOMContentLoaded", function () {
-		const marqueInputs = document.querySelectorAll(".marque-input");
-		const modeleInputs = document.querySelectorAll(".modele-input");
+		    const marqueInputs = document.querySelectorAll(".marque-input");
+		    const modeleInputs = document.querySelectorAll(".modele-input");
 		
-		let marqueData = new Set();
-		let modeleData = new Set();
+		    // Load existing data from localStorage
+		    let marqueData = new Set(JSON.parse(localStorage.getItem("marqueData")) || []);
+		    let modeleData = new Set(JSON.parse(localStorage.getItem("modeleData")) || []);
 		
-		function updateDatalist(datalistId, dataSet) {
-		const datalist = document.getElementById(datalistId);
-		datalist.innerHTML = ""; // Clear existing options
-		dataSet.forEach((item) => {
-			let option = document.createElement("option");
-		        option.value = item;
-		        datalist.appendChild(option);
-		});
-		}
-		
-		marqueInputs.forEach((input) => {
-		let datalistId = input.getAttribute("list");
-		input.addEventListener("input", function () {
-		        if (this.value.trim() && !marqueData.has(this.value)) {
-		        marqueData.add(this.value);
-		        updateDatalist(datalistId, marqueData);
+		    function updateDatalist(datalistId, dataSet) {
+		        const datalist = document.getElementById(datalistId);
+		        if (datalist) {
+		            datalist.innerHTML = ""; // Clear existing options
+		            dataSet.forEach((item) => {
+		                let option = document.createElement("option");
+		                option.value = item;
+		                datalist.appendChild(option);
+		            });
 		        }
-		});
-		});
+		    }
 		
-		modeleInputs.forEach((input) => {
-		let datalistId = input.getAttribute("list");
-		input.addEventListener("input", function () {
-		        if (this.value.trim() && !modeleData.has(this.value)) {
-		        modeleData.add(this.value);
-		        updateDatalist(datalistId, modeleData);
-		        }
-		});
-		});
+		    // Populate datalists on page load
+		    marqueInputs.forEach(input => updateDatalist(input.getAttribute("list"), marqueData));
+		    modeleInputs.forEach(input => updateDatalist(input.getAttribute("list"), modeleData));
+		
+		    function saveToLocalStorage(key, dataSet) {
+		        localStorage.setItem(key, JSON.stringify([...dataSet])); // Convert Set to array before saving
+		    }
+		
+		    marqueInputs.forEach((input) => {
+		        let datalistId = input.getAttribute("list");
+		        input.addEventListener("change", function () {
+		            if (this.value.trim() && !marqueData.has(this.value)) {
+		                marqueData.add(this.value);
+		                updateDatalist(datalistId, marqueData);
+		                saveToLocalStorage("marqueData", marqueData);
+		            }
+		        });
+		    });
+		
+		    modeleInputs.forEach((input) => {
+		        let datalistId = input.getAttribute("list");
+		        input.addEventListener("change", function () {
+		            if (this.value.trim() && !modeleData.has(this.value)) {
+		                modeleData.add(this.value);
+		                updateDatalist(datalistId, modeleData);
+		                saveToLocalStorage("modeleData", modeleData);
+		            }
+		        });
+		    });
 		});
 		</script>
 		<script>
