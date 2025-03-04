@@ -2193,19 +2193,19 @@
 		        return input.closest("tr").querySelector("td:first-child").textContent.trim();
 		    }
 		
-		    function loadData(key) {
-		        return new Set(JSON.parse(localStorage.getItem(key)) || []);
+		    function loadData() {
+		        return JSON.parse(localStorage.getItem("materielData")) || {};
 		    }
 		
-		    function saveData(key, dataSet) {
-		        localStorage.setItem(key, JSON.stringify([...dataSet]));
+		    function saveData(data) {
+		        localStorage.setItem("materielData", JSON.stringify(data));
 		    }
 		
-		    function updateDatalist(datalistId, dataSet) {
+		    function updateDatalist(datalistId, items) {
 		        const datalist = document.getElementById(datalistId);
 		        if (datalist) {
 		            datalist.innerHTML = "";
-		            dataSet.forEach((item) => {
+		            items.forEach(item => {
 		                let option = document.createElement("option");
 		                option.value = item;
 		                datalist.appendChild(option);
@@ -2213,38 +2213,70 @@
 		        }
 		    }
 		
-		    marqueInputs.forEach((input) => {
+		    // Load existing data from localStorage
+		    let materielData = loadData();
+		
+		    // Populate marque datalists on page load
+		    marqueInputs.forEach(input => {
 		        const materiel = getMateriel(input);
-		        const key = `marqueData_${materiel}`;
 		        const datalistId = input.getAttribute("list");
 		
-		        let data = loadData(key);
-		        updateDatalist(datalistId, data);
+		        if (materielData[materiel]) {
+		            updateDatalist(datalistId, Object.keys(materielData[materiel]));
+		        }
 		
 		        input.addEventListener("change", function () {
-		            if (this.value.trim() && !data.has(this.value)) {
-		                data.add(this.value);
-		                updateDatalist(datalistId, data);
-		                saveData(key, data);
+		            let marque = this.value.trim();
+		            if (!marque) return;
+		
+		            if (!materielData[materiel]) {
+		                materielData[materiel] = {};
+		            }
+		            if (!materielData[materiel][marque]) {
+		                materielData[materiel][marque] = []; // Initialize empty modele list
+		                saveData(materielData);
+		                updateDatalist(datalistId, Object.keys(materielData[materiel]));
 		            }
 		        });
 		    });
 		
-		    modeleInputs.forEach((input) => {
+		    // Handle modele input dynamically based on selected marque and materiel
+		    modeleInputs.forEach(input => {
 		        const materiel = getMateriel(input);
-		        const key = `modeleData_${materiel}`;
 		        const datalistId = input.getAttribute("list");
 		
-		        let data = loadData(key);
-		        updateDatalist(datalistId, data);
+		        let marqueInput = input.closest("tr").querySelector(".marque-input");
 		
+		        function updateModeleList() {
+		            let marque = marqueInput.value.trim();
+		            if (!marque || !materielData[materiel] || !materielData[materiel][marque]) {
+		                updateDatalist(datalistId, []);
+		                return;
+		            }
+		            updateDatalist(datalistId, materielData[materiel][marque]);
+		        }
+		
+		        // Update modele options when marque changes
+		        marqueInput.addEventListener("change", updateModeleList);
+		
+		        // Save modele associated with the selected marque and materiel
 		        input.addEventListener("change", function () {
-		            if (this.value.trim() && !data.has(this.value)) {
-		                data.add(this.value);
-		                updateDatalist(datalistId, data);
-		                saveData(key, data);
+		            let modele = this.value.trim();
+		            let marque = marqueInput.value.trim();
+		            if (!modele || !marque) return;
+		
+		            if (!materielData[materiel]) materielData[materiel] = {};
+		            if (!materielData[materiel][marque]) materielData[materiel][marque] = [];
+		
+		            if (!materielData[materiel][marque].includes(modele)) {
+		                materielData[materiel][marque].push(modele);
+		                saveData(materielData);
+		                updateDatalist(datalistId, materielData[materiel][marque]);
 		            }
 		        });
+		
+		        // Ensure the modele list updates correctly on page load
+		        updateModeleList();
 		    });
 		});
 		</script>
