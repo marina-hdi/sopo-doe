@@ -2184,142 +2184,44 @@
 			    }
 			});
 		</script>
-		<script>// Open IndexedDB
-			const dbName = "FichesTechniquesDB";
-			let db;
-			
-			const request = indexedDB.open(dbName, 1);
-			
-			request.onupgradeneeded = function (event) {
-			    db = event.target.result;
-			    if (!db.objectStoreNames.contains("fiches")) {
-			        let store = db.createObjectStore("fiches", { keyPath: "id", autoIncrement: true });
-			        store.createIndex("marque", "marque", { unique: false });
-			        store.createIndex("modele", "modele", { unique: false });
-			        store.createIndex("pdf", "pdf", { unique: false });
-			    }
-			};
-			
-			request.onsuccess = function (event) {
-			    db = event.target.result;
-			    populateDropdowns();
-			};
-			
-			request.onerror = function (event) {
-			    console.error("IndexedDB error:", event.target.error);
-			};
-			
-			// Save data when a new Marque + Modèle is entered
-			function saveFiche(materiel, marque, modele, pdfFile) {
-			    const transaction = db.transaction(["fiches"], "readwrite");
-			    const store = transaction.objectStore("fiches");
-			
-			    const reader = new FileReader();
-			    reader.readAsDataURL(pdfFile);
-			    reader.onload = function () {
-			        const data = {
-			            materiel: materiel.toUpperCase(),
-			            marque: marque.toUpperCase(),
-			            modele: modele.toUpperCase(),
-			            pdf: reader.result // Store file as Base64
-			        };
-			        store.add(data);
-			        populateDropdowns(); // Update dropdowns dynamically
-			    };
-			}
-			
-			// Check if Marque + Modèle exists and auto-load PDF
-			function checkAndLoadPDF(materiel, marque, modele, row) {
-			    const transaction = db.transaction(["fiches"], "readonly");
-			    const store = transaction.objectStore("fiches");
-			
-			    const index = store.index("marque");
-			    const request = index.openCursor();
-			
-			    request.onsuccess = function (event) {
-			        const cursor = event.target.result;
-			        if (cursor) {
-			            if (cursor.value.marque === marque.toUpperCase() && cursor.value.modele === modele.toUpperCase()) {
-			                console.log("PDF found! Auto-filling...");
-			                row.querySelector(".pdf-preview").href = cursor.value.pdf;
-			                row.querySelector(".pdf-preview").style.display = "block";
-			            }
-			            cursor.continue();
-			        }
-			    };
-			}
-			
-			// Populate dropdown lists dynamically
-			function populateDropdowns() {
-			    const transaction = db.transaction(["fiches"], "readonly");
-			    const store = transaction.objectStore("fiches");
-			
-			    const marqueSet = new Set();
-			    const modeleSet = new Set();
-			
-			    store.openCursor().onsuccess = function (event) {
-			        const cursor = event.target.result;
-			        if (cursor) {
-			            marqueSet.add(cursor.value.marque);
-			            modeleSet.add(cursor.value.modele);
-			            cursor.continue();
-			        } else {
-			            document.querySelectorAll(".marque-input").forEach(input => {
-			                const listId = input.getAttribute("list");
-			                const dataList = document.getElementById(listId);
-			                dataList.innerHTML = Array.from(marqueSet)
-			                    .map(marque => `<option value="${marque}">${marque}</option>`)
-			                    .join("");
-			            });
-			
-			            document.querySelectorAll(".modele-input").forEach(input => {
-			                const listId = input.getAttribute("list");
-			                const dataList = document.getElementById(listId);
-			                dataList.innerHTML = Array.from(modeleSet)
-			                    .map(modele => `<option value="${modele}">${modele}</option>`)
-			                    .join("");
-			            });
-			        }
-			    };
-			}
-			
-			// Event Listeners for Dropdown Selection
-			document.querySelectorAll(".marque-input").forEach(input => {
-			    input.addEventListener("change", function () {
-			        const row = this.closest(".fiches-techniques-row");
-			        const materiel = row.cells[0].innerText.trim();
-			        const modele = row.querySelector(".modele-input").value;
-			        checkAndLoadPDF(materiel, this.value, modele, row);
-			    });
-			});
-			
-			document.querySelectorAll(".modele-input").forEach(input => {
-			    input.addEventListener("change", function () {
-			        const row = this.closest(".fiches-techniques-row");
-			        const materiel = row.cells[0].innerText.trim();
-			        const marque = row.querySelector(".marque-input").value;
-			        checkAndLoadPDF(materiel, marque, this.value, row);
-			    });
-			});
-			
-			// Event Listener for File Upload and Save
-			document.querySelectorAll(".file-upload").forEach(input => {
-			    input.addEventListener("change", function (e) {
-			        const row = this.closest(".fiches-techniques-row");
-			        const materiel = row.cells[0].innerText.trim();
-			        const marque = row.querySelector(".marque-input").value;
-			        const modele = row.querySelector(".modele-input").value;
-			        const file = e.target.files[0];
-			
-			        if (marque && modele && file) {
-			            saveFiche(materiel, marque, modele, file);
-			            alert("Fiche saved successfully!");
-			        } else {
-			            alert("Veuillez renseigner la marque et le modèle.");
-			        }
-			    });
-			});
-			
+		<script>
+		document.addEventListener("DOMContentLoaded", function () {
+		const marqueInputs = document.querySelectorAll(".marque-input");
+		const modeleInputs = document.querySelectorAll(".modele-input");
+		
+		let marqueData = new Set();
+		let modeleData = new Set();
+		
+		function updateDatalist(datalistId, dataSet) {
+		const datalist = document.getElementById(datalistId);
+		datalist.innerHTML = ""; // Clear existing options
+		dataSet.forEach((item) => {
+			let option = document.createElement("option");
+		        option.value = item;
+		        datalist.appendChild(option);
+		});
+		}
+		
+		marqueInputs.forEach((input) => {
+		let datalistId = input.getAttribute("list");
+		input.addEventListener("input", function () {
+		        if (this.value.trim() && !marqueData.has(this.value)) {
+		        marqueData.add(this.value);
+		        updateDatalist(datalistId, marqueData);
+		        }
+		});
+		});
+		
+		modeleInputs.forEach((input) => {
+		let datalistId = input.getAttribute("list");
+		input.addEventListener("input", function () {
+		        if (this.value.trim() && !modeleData.has(this.value)) {
+		        modeleData.add(this.value);
+		        updateDatalist(datalistId, modeleData);
+		        }
+		});
+		});
+		});
 		</script>
 		<script>
 			document.addEventListener('DOMContentLoaded', function() {
