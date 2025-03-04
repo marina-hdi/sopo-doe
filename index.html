@@ -2214,9 +2214,7 @@
 
 		//file retrieve start
 		<script>
-			document.addEventListener("DOMContentLoaded", function () {
-    const marqueInputs = document.querySelectorAll(".marque-input");
-    const modeleInputs = document.querySelectorAll(".modele-input");
+document.addEventListener("DOMContentLoaded", function () {
     const fileInputs = document.querySelectorAll(".file-upload");
 
     function getMateriel(input) {
@@ -2240,77 +2238,7 @@
         return new Blob([u8arr], { type: mime });
     }
 
-    let materielData = loadData("materielData");
     let fileData = loadData("fileData");
-
-    function updateDatalist(datalistId, items) {
-        const datalist = document.getElementById(datalistId);
-        if (datalist) {
-            datalist.innerHTML = "";
-            items.forEach(item => {
-                let option = document.createElement("option");
-                option.value = item;
-                datalist.appendChild(option);
-            });
-        }
-    }
-
-    marqueInputs.forEach(input => {
-        const materiel = getMateriel(input);
-        const datalistId = input.getAttribute("list");
-
-        if (materielData[materiel]) {
-            updateDatalist(datalistId, Object.keys(materielData[materiel]));
-        }
-
-        input.addEventListener("change", function () {
-            let marque = this.value.trim();
-            if (!marque) return;
-
-            if (!materielData[materiel]) {
-                materielData[materiel] = {};
-            }
-            if (!materielData[materiel][marque]) {
-                materielData[materiel][marque] = [];
-                saveData("materielData", materielData);
-                updateDatalist(datalistId, Object.keys(materielData[materiel]));
-            }
-        });
-    });
-
-    modeleInputs.forEach(input => {
-        const materiel = getMateriel(input);
-        const datalistId = input.getAttribute("list");
-        let marqueInput = input.closest("tr").querySelector(".marque-input");
-
-        function updateModeleList() {
-            let marque = marqueInput.value.trim();
-            if (!marque || !materielData[materiel] || !materielData[materiel][marque]) {
-                updateDatalist(datalistId, []);
-                return;
-            }
-            updateDatalist(datalistId, materielData[materiel][marque]);
-        }
-
-        marqueInput.addEventListener("change", updateModeleList);
-
-        input.addEventListener("change", function () {
-            let modele = this.value.trim();
-            let marque = marqueInput.value.trim();
-            if (!modele || !marque) return;
-
-            if (!materielData[materiel]) materielData[materiel] = {};
-            if (!materielData[materiel][marque]) materielData[materiel][marque] = [];
-
-            if (!materielData[materiel][marque].includes(modele)) {
-                materielData[materiel][marque].push(modele);
-                saveData("materielData", materielData);
-                updateDatalist(datalistId, materielData[materiel][marque]);
-            }
-        });
-
-        updateModeleList();
-    });
 
     fileInputs.forEach(input => {
         let row = input.closest("tr");
@@ -2322,15 +2250,17 @@
 
         function getFileKey() {
             let materiel = getMateriel(input);
-            let marque = marqueInput.value.trim();
-            let modele = modeleInput.value.trim();
+            let marque = marqueInput?.value.trim();
+            let modele = modeleInput?.value.trim();
             if (!marque || !modele) return null;
             return `${materiel}-${marque}-${modele}`;
         }
 
         function updateFileDisplay() {
             let key = getFileKey();
-            if (key && fileData[key]) {
+            if (!key) return;
+
+            if (fileData[key]) {
                 let pdfBlob = dataURLtoBlob(fileData[key]);
                 let objectURL = URL.createObjectURL(pdfBlob);
 
@@ -2342,13 +2272,13 @@
             } else {
                 pdfPreview.style.display = "none"; // Hide eye icon
                 removeBtn.style.display = "none"; // Hide remove button
-                dropzone.style.display = "flex"; // Show dropzone again
+                dropzone.style.display = "block"; // Show dropzone again
                 row.style.backgroundColor = ""; // Reset row styling
             }
         }
 
-        marqueInput.addEventListener("change", updateFileDisplay);
-        modeleInput.addEventListener("change", updateFileDisplay);
+        marqueInput?.addEventListener("change", updateFileDisplay);
+        modeleInput?.addEventListener("change", updateFileDisplay);
 
         input.addEventListener("change", function () {
             let file = this.files[0];
@@ -2373,15 +2303,9 @@
             }
         });
 
-        updateFileDisplay();
-    });
-
-    document.getElementById("upload-form").addEventListener("submit", function (event) {
-        event.preventDefault();
-        alert("Form submitted! PDFs are stored and will be auto-loaded for existing Materiel-Marque-Modele combinations.");
+        updateFileDisplay(); // Ensure the row updates properly on page load
     });
 });
-
 		</script>
 		//file retrieve end
 		
