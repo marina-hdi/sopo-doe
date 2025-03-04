@@ -2214,7 +2214,7 @@
 
 		//file retrieve start
 		<script>
-		document.addEventListener("DOMContentLoaded", function () {
+			document.addEventListener("DOMContentLoaded", function () {
     const marqueInputs = document.querySelectorAll(".marque-input");
     const modeleInputs = document.querySelectorAll(".modele-input");
     const fileInputs = document.querySelectorAll(".file-upload");
@@ -2240,7 +2240,6 @@
         return new Blob([u8arr], { type: mime });
     }
 
-    // Load data from localStorage
     let materielData = loadData("materielData");
     let fileData = loadData("fileData");
 
@@ -2343,7 +2342,7 @@
             } else {
                 pdfPreview.style.display = "none"; // Hide eye icon
                 removeBtn.style.display = "none"; // Hide remove button
-                dropzone.style.display = "block"; // Show dropzone again
+                dropzone.style.display = "flex"; // Show dropzone again
                 row.style.backgroundColor = ""; // Reset row styling
             }
         }
@@ -2382,6 +2381,7 @@
         alert("Form submitted! PDFs are stored and will be auto-loaded for existing Materiel-Marque-Modele combinations.");
     });
 });
+
 		</script>
 		//file retrieve end
 		
