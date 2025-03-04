@@ -2188,6 +2188,7 @@
 		document.addEventListener("DOMContentLoaded", function () {
 		    const marqueInputs = document.querySelectorAll(".marque-input");
 		    const modeleInputs = document.querySelectorAll(".modele-input");
+		    const fileInputs = document.querySelectorAll(".file-upload");
 		
 		    function getMateriel(input) {
 		        return input.closest("tr").querySelector("td:first-child").textContent.trim();
@@ -2199,6 +2200,14 @@
 		
 		    function saveData(data) {
 		        localStorage.setItem("materielData", JSON.stringify(data));
+		    }
+		
+		    function loadFiles() {
+		        return JSON.parse(localStorage.getItem("fileData")) || {};
+		    }
+		
+		    function saveFiles(data) {
+		        localStorage.setItem("fileData", JSON.stringify(data));
 		    }
 		
 		    function updateDatalist(datalistId, items) {
@@ -2213,10 +2222,9 @@
 		        }
 		    }
 		
-		    // Load existing data from localStorage
 		    let materielData = loadData();
+		    let fileData = loadFiles();
 		
-		    // Populate marque datalists on page load
 		    marqueInputs.forEach(input => {
 		        const materiel = getMateriel(input);
 		        const datalistId = input.getAttribute("list");
@@ -2233,18 +2241,16 @@
 		                materielData[materiel] = {};
 		            }
 		            if (!materielData[materiel][marque]) {
-		                materielData[materiel][marque] = []; // Initialize empty modele list
+		                materielData[materiel][marque] = [];
 		                saveData(materielData);
 		                updateDatalist(datalistId, Object.keys(materielData[materiel]));
 		            }
 		        });
 		    });
 		
-		    // Handle modele input dynamically based on selected marque and materiel
 		    modeleInputs.forEach(input => {
 		        const materiel = getMateriel(input);
 		        const datalistId = input.getAttribute("list");
-		
 		        let marqueInput = input.closest("tr").querySelector(".marque-input");
 		
 		        function updateModeleList() {
@@ -2256,10 +2262,8 @@
 		            updateDatalist(datalistId, materielData[materiel][marque]);
 		        }
 		
-		        // Update modele options when marque changes
 		        marqueInput.addEventListener("change", updateModeleList);
 		
-		        // Save modele associated with the selected marque and materiel
 		        input.addEventListener("change", function () {
 		            let modele = this.value.trim();
 		            let marque = marqueInput.value.trim();
@@ -2275,8 +2279,57 @@
 		            }
 		        });
 		
-		        // Ensure the modele list updates correctly on page load
 		        updateModeleList();
+		    });
+		
+		    fileInputs.forEach(input => {
+		        let row = input.closest("tr");
+		        let marqueInput = row.querySelector(".marque-input");
+		        let modeleInput = row.querySelector(".modele-input");
+		        let dropzone = row.querySelector(".dropzone");
+		        let pdfPreview = row.querySelector(".pdf-preview");
+		
+		        function getFileKey() {
+		            let materiel = getMateriel(input);
+		            let marque = marqueInput.value.trim();
+		            let modele = modeleInput.value.trim();
+		            if (!marque || !modele) return null;
+		            return `${materiel}-${marque}-${modele}`;
+		        }
+		
+		        function updateFileDisplay() {
+		            let key = getFileKey();
+		            if (key && fileData[key]) {
+		                pdfPreview.href = fileData[key];
+		                pdfPreview.style.display = "inline";
+		            } else {
+		                pdfPreview.style.display = "none";
+		            }
+		        }
+		
+		        marqueInput.addEventListener("change", updateFileDisplay);
+		        modeleInput.addEventListener("change", updateFileDisplay);
+		
+		        input.addEventListener("change", function () {
+		            let file = this.files[0];
+		            let key = getFileKey();
+		            if (!file || !key) return;
+		
+		            let reader = new FileReader();
+		            reader.onload = function (e) {
+		                fileData[key] = e.target.result;
+		                saveFiles(fileData);
+		                updateFileDisplay();
+		            };
+		            reader.readAsDataURL(file);
+		        });
+		
+		        updateFileDisplay();
+		    });
+		
+		    document.getElementById("upload-form").addEventListener("submit", function (event) {
+		        event.preventDefault();
+		        alert("Form submitted! PDFs are stored and will be auto-loaded for existing Materiel-Marque-Modele combinations.");
 		    });
 		});
 		</script>
