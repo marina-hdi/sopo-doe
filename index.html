@@ -10,6 +10,7 @@
 		<title>CREATION DOE</title>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.0.0/dist/supabase.min.js"></script>
 		<style>
 			body {
 			font-family: "Golos Text", sans-serif;
@@ -2687,7 +2688,7 @@
 		<script>
 			console.log("Frontend JS loaded!");
 				
-				const supabase = supabase.createClient('https://YOUR_SUPABASE_URL', 'YOUR_SUPABASE_ANON_KEY');
+			const supabase = supabase.createClient('https://YOUR_SUPABASE_URL', 'YOUR_SUPABASE_ANON_KEY');
 			
 			document.getElementById('save-progress').addEventListener('click', async () => {
 			   // BUILD CUSTOM ID CORRECTLY
