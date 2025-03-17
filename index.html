@@ -125,17 +125,34 @@
 			box-sizing: border-box;
 			}
 			button {
-			background-color: #3b3a38;
-			color: white;
-			border: none;
-			cursor: pointer;
-			padding: 10px;
-			width: 40%;
-			align-self: flex-end;
-			border-radius: 3px;
+			    background-color: #3b3a38;
+			    color: white;
+			    border: none;
+			    cursor: pointer;
+			    padding: 10px;
+			    border-radius: 3px;
 			}
-			button:hover {
-			background-color: #85a832;
+			
+			.primary-btn {
+			    width: 40%;
+			    min-width: 120px;
+			}
+			
+			.save-btn,
+			.load-btn {
+			    width: 50%;
+			}
+			
+			.save-btn:hover {
+			    background-color: #007BFF; /* Blue */
+			}
+			
+			.load-btn:hover {
+			    background-color: #4DA8FF; /* Lighter Blue */
+			}
+			
+			.primary-btn:hover {
+			    background-color: #85a832;
 			}
 			.dropzone-container {
 			display: flex;
@@ -177,6 +194,7 @@
 			margin-right: 10px; /* Add margin to the right for spacing */
 			vertical-align: middle; /* Align with the button */
 			}
+	
 			@keyframes spin {
 			0% {
 			transform: rotate(0deg);
@@ -797,45 +815,42 @@
 <tr class="schemas-row">
 <td>SCHEMA HYDRAULIQUE</td>
 <td>
-<div class="dropzone" id="schema-hydraulique-dropzone">
-									Cliquez ou déposez
-								</div>
+<div class="dropzone" id="schema-hydraulique-dropzone">Cliquez ou déposez</div>
 <input id="schema-hydraulique-file" type="file"/>
 </td>
 </tr>
 <tr class="schemas-row">
 <td>SCHEMA ELECTRIQUE</td>
 <td>
-<div class="dropzone" id="schema-electrique-dropzone">
-									Cliquez ou déposez
-								</div>
+<div class="dropzone" id="schema-electrique-dropzone">Cliquez ou déposez</div>
 <input id="schema-electrique-file" type="file"/>
 </td>
 </tr>
 <tr class="schemas-row">
 <td>EQUILIBRAGE</td>
 <td>
-<div class="dropzone" id="equilibrage-dropzone">
-									Cliquez ou déposez
-								</div>
+<div class="dropzone" id="equilibrage-dropzone">Cliquez ou déposez</div>
 <input id="equilibrage-file" type="file"/>
 </td>
 </tr>
 </tbody>
 </table>
 <div style="
-					display: flex;
-					justify-content: flex-end;
-					align-items: center;
-					">
-<div class="loader" style="margin-right: 10px; display: none"></div>
-<button type="submit">CREER ET TELECHARGER</button>
-<button type="button" id="save-progress">💾 SAVE PROGRESS</button>
-<button type="button" id="load-progress">📂 LOAD PROGRESS</button>
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+">
+    <div class="loader" style="display: none;"></div>
+
+    <button type="submit" class="primary-btn">CREER ET TELECHARGER</button>
+
+    <div style="display: flex; gap: 5px; width: 60%">
+        <button type="button" id="save-progress" class="save-btn">ENREGISTRER</button>
+        <button type="button" id="load-progress" class="load-btn">CHARGER</button>
+    </div>
 </div>
-</form>
-<a id="download-link" style="display: none">Download Merged PDF</a>
-</div>
+
 <script>
 			// Postal Code to City Data
 			const postalCodeToCity = {
