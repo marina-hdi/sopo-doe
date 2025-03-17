@@ -6,8 +6,7 @@ exports.handler = async (event) => {
 
     const { error } = await supabase
         .from('progress')
-        .insert([data])
-        .select();
+        .insert([data]);
 
     if (error) {
         return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
