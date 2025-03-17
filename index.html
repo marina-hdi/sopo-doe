@@ -2710,6 +2710,10 @@ document.addEventListener("DOMContentLoaded", function () {
 	            modele: row.querySelector('.modele-input').value
 	        }))
 	    };
+
+	console.log("CUSTOM ID:", customID);
+    	console.log("PAYLOAD SENDING TO BACKEND:", payload);
+
 	
 	    const response = await fetch('/.netlify/functions/save-progress', {
 	        method: 'POST',
