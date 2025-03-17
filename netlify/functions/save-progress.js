@@ -4,6 +4,8 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 exports.handler = async (event) => {
     const data = JSON.parse(event.body);
 
+        console.log("BACKEND RECEIVED ID:", data.id);
+    
     const { error } = await supabase
         .from('progress')
         .insert([data]);
