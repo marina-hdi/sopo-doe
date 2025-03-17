@@ -1,0 +1,8 @@
+{
+  "name": "my-project",
+  "version": "1.0.0",
+  "main": "index.html",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0"
+  }
+}
