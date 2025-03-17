@@ -2688,7 +2688,7 @@
 		<script>
 			console.log("Frontend JS loaded!");
 				
-			const supabase = supabase.createClient('https://YOUR_SUPABASE_URL', 'YOUR_SUPABASE_ANON_KEY');
+			const supabaseClient = supabase.createClient('https://YOUR_SUPABASE_URL', 'YOUR_SUPABASE_ANON_KEY');
 			
 			document.getElementById('save-progress').addEventListener('click', async () => {
 			   // BUILD CUSTOM ID CORRECTLY
@@ -2729,8 +2729,7 @@
 			    const file = input.files[0];
 			    if (file) {
 			        const path = `${customID}/${file.name}`; // e.g., "29 AVENUE BERLIOZ - 75018 PARIS/myfile.pdf"
-			        const { data, error } = await supabase
-			            .storage
+			        const { data, error } = await supabaseClient.storage
 			            .from('pdfs') // 👈 Change 'uploads' to your actual bucket name
 			            .upload(path, file, { upsert: true });
 			
@@ -2738,7 +2737,7 @@
 			            alert(`Error uploading ${file.name}: ${error.message}`);
 			            return;
 			        }
-			        const { publicURL } = supabase
+			        const { publicURL } = supabaseClient
 			            .storage
 			            .from('pdfs')
 			            .getPublicUrl(path).data;
