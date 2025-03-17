@@ -2730,13 +2730,14 @@ document.addEventListener("DOMContentLoaded", function () {
     	console.log("PAYLOAD SENDING TO BACKEND:", payload);
 
 	
-	    const response = await fetch('/.netlify/functions/save-progress', {
-	        method: 'POST',
-	        body: JSON.stringify(payload)
-	    });
+	const response = await fetch('/.netlify/functions/save-progress', {
+	    method: 'POST',
+	    headers: { 'Content-Type': 'application/json' }, // 🔴 ADD THIS LINE
+	    body: JSON.stringify(payload)
+	});
 	
 	    const result = await response.json();
-	    alert('Progress saved! ID: ' + result.id);
+	    alert('Enregistré : ' + result.id);
 	});
 	
 	document.getElementById('load-progress').addEventListener('click', async () => {
