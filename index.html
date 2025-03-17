@@ -843,6 +843,7 @@
 			</div>
 			<button type="submit" class="primary-btn">CREER ET TELECHARGER</button>
 		</div>
+			<div id="file-retrieve-section" style="margin-top: 20px;"></div>
 		<script>
 			// Postal Code to City Data
 			const postalCodeToCity = {
@@ -2767,30 +2768,48 @@
 			});
 			
 			
-			document.getElementById('load-progress').addEventListener('click', async () => {
-			    const id = prompt('Enter your progress ID:');
-			
-			    const response = await fetch('/.netlify/functions/load-progress', {
-			        method: 'POST',
-			        body: JSON.stringify({ id })
-			    });
-			
-			    const data = await response.json();
-			
-			    // Populate your form with returned data
-			    document.getElementById('adresse').value = data.adresse || '';
-			    document.getElementById('postal-city').value = data.postalCity || '';
-			    document.getElementById('objet').value = data.objet || '';
-			    document.getElementById('date').value = data.date || '';
-			
-			    // Fill fiche rows
-			    document.querySelectorAll('.fiches-techniques-row').forEach((row, i) => {
-			        if (data.fiches[i]) {
-			            row.querySelector('.marque-input').value = data.fiches[i].marque || '';
-			            row.querySelector('.modele-input').value = data.fiches[i].modele || '';
-			        }
-			    });
-			});
+document.getElementById('load-progress').addEventListener('click', async () => {
+    const id = prompt('Enter your progress ID:');
+
+    const response = await fetch('/.netlify/functions/load-progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+    });
+
+    const data = await response.json();
+
+    // Populate your form with returned data
+    document.getElementById('adresse').value = data.adresse || '';
+    document.getElementById('postal-city').value = data.postalCity || '';
+    document.getElementById('objet').value = data.objet || '';
+    document.getElementById('date').value = data.date || '';
+
+    // Fill fiche rows
+    document.querySelectorAll('.fiches-techniques-row').forEach((row, i) => {
+        if (data.fiches && data.fiches[i]) {
+            row.querySelector('.marque-input').value = data.fiches[i].marque || '';
+            row.querySelector('.modele-input').value = data.fiches[i].modele || '';
+        }
+    });
+
+    // CLEAR old file preview section
+    const fileSection = document.getElementById('file-retrieve-section');
+    fileSection.innerHTML = '';
+
+    // Show file links if files exist
+    if (data.fileLinks && data.fileLinks.length > 0) {
+        data.fileLinks.forEach(file => {
+            const link = document.createElement('a');
+            link.href = file.url;
+            link.innerText = `Télécharger ${file.fileName}`;
+            link.target = "_blank";
+            fileSection.appendChild(link);
+            fileSection.appendChild(document.createElement('br'));
+        });
+    }
+});
+
 		</script>
 	</body>
 </html>
