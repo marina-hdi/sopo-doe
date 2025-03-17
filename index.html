@@ -2673,5 +2673,54 @@ document.addEventListener("DOMContentLoaded", function () {
 			    }
 			});
 		</script>
+	<scrip>
+		// Button listeners right inside your HTML <script> block
+document.getElementById('save-progress').addEventListener('click', async () => {
+    const payload = {
+        adresse: document.getElementById('adresse').value,
+        postalCity: document.getElementById('postal-city').value,
+        objet: document.getElementById('objet').value,
+        date: document.getElementById('date').value,
+        fiches: [...document.querySelectorAll('.fiches-techniques-row')].map(row => ({
+            marque: row.querySelector('.marque-input').value,
+            modele: row.querySelector('.modele-input').value
+        }))
+    };
+
+    const response = await fetch('/.netlify/functions/save-progress', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+    alert('Progress saved! ID: ' + result.id);
+});
+
+document.getElementById('load-progress').addEventListener('click', async () => {
+    const id = prompt('Enter your progress ID:');
+
+    const response = await fetch('/.netlify/functions/load-progress', {
+        method: 'POST',
+        body: JSON.stringify({ id })
+    });
+
+    const data = await response.json();
+
+    // Populate your form with returned data
+    document.getElementById('adresse').value = data.adresse || '';
+    document.getElementById('postal-city').value = data.postalCity || '';
+    document.getElementById('objet').value = data.objet || '';
+    document.getElementById('date').value = data.date || '';
+
+    // Fill fiche rows
+    document.querySelectorAll('.fiches-techniques-row').forEach((row, i) => {
+        if (data.fiches[i]) {
+            row.querySelector('.marque-input').value = data.fiches[i].marque || '';
+            row.querySelector('.modele-input').value = data.fiches[i].modele || '';
+        }
+    });
+});
+
+	</scrip>
 </body>
 </html>
