@@ -2674,6 +2674,30 @@ document.addEventListener("DOMContentLoaded", function () {
 			});
 		</script>
 	<script>
+		const adresse = document.getElementById('adresse').value.trim().toUpperCase();
+		const postalCity = document.getElementById('postal-city').value.trim();
+		
+		// Split postal & city
+		const [postalCode, ...cityParts] = postalCity.split(' ');
+		const city = cityParts.join(' ').toUpperCase();
+		
+		// Custom ID
+		const customID = `${adresse} - ${postalCode} ${city}`;
+		
+		// Now build your payload:
+		const payload = {
+		    id: customID,
+		    adresse: document.getElementById('adresse').value,
+		    postalCity: postalCity,
+		    objet: document.getElementById('objet').value,
+		    date: document.getElementById('date').value,
+		    fiches: [...document.querySelectorAll('.fiches-techniques-row')].map(row => ({
+		        marque: row.querySelector('.marque-input').value,
+		        modele: row.querySelector('.modele-input').value
+		    }))
+		};
+	</script>
+	<script>
 	console.log("Frontend JS loaded!");
 	document.getElementById('save-progress').addEventListener('click', async () => {
 	    const payload = {
