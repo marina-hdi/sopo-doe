@@ -124,8 +124,8 @@
 			width: 100%;
 			box-sizing: border-box;
 			}
+	
 			button {
-			    background-color: #3b3a38;
 			    color: white;
 			    border: none;
 			    cursor: pointer;
@@ -134,21 +134,23 @@
 			}
 			
 			.primary-btn {
+			    background-color: #3b3a38;
 			    width: 40%;
 			    min-width: 120px;
 			}
 			
 			.save-btn,
 			.load-btn {
+			    background-color: #1c1b1a;
 			    width: 50%;
 			}
 			
 			.save-btn:hover {
-			    background-color: #007BFF; /* Blue */
+			    background-color: #a1cfc8; /* Blue */
 			}
 			
 			.load-btn:hover {
-			    background-color: #4DA8FF; /* Lighter Blue */
+			    background-color: #498c82; /* Lighter Blue */
 			}
 			
 			.primary-btn:hover {
@@ -843,12 +845,13 @@
 ">
     <div class="loader" style="display: none;"></div>
 
-    <button type="submit" class="primary-btn">CREER ET TELECHARGER</button>
-
     <div style="display: flex; gap: 5px; width: 60%">
         <button type="button" id="save-progress" class="save-btn">ENREGISTRER</button>
         <button type="button" id="load-progress" class="load-btn">CHARGER</button>
     </div>
+	
+    <button type="submit" class="primary-btn">CREER ET TELECHARGER</button>
+	
 </div>
 
 <script>
