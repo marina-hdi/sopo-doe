@@ -2700,6 +2700,21 @@ document.addEventListener("DOMContentLoaded", function () {
 	<script>
 	console.log("Frontend JS loaded!");
 	document.getElementById('save-progress').addEventListener('click', async () => {
+
+		    const adresseInput = document.getElementById('adresse').value.trim();
+		    const postalCityInput = document.getElementById('postal-city').value.trim();
+		
+		    if (!adresseInput || !postalCityInput) {
+		        alert("Adresse or Postal/City is empty!");
+		        return; // stops the process if fields are missing
+		    }
+		
+		    const adresse = adresseInput.toUpperCase();
+		    const [postalCode, ...cityParts] = postalCityInput.split(' ');
+		    const city = cityParts.join(' ').toUpperCase();
+		    const customID = `${adresse} - ${postalCode} ${city}`;
+
+	
 	    const payload = {
 	        adresse: document.getElementById('adresse').value,
 	        postalCity: document.getElementById('postal-city').value,
