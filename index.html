@@ -2699,46 +2699,50 @@ document.addEventListener("DOMContentLoaded", function () {
 	</script>
 	<script>
 	console.log("Frontend JS loaded!");
-	document.getElementById('save-progress').addEventListener('click', async () => {
+document.getElementById('save-progress').addEventListener('click', async () => {
+    // BUILD CUSTOM ID CORRECTLY
+    const adresseInput = document.getElementById('adresse').value.trim();
+    const postalCityInput = document.getElementById('postal-city').value.trim();
 
-		    const adresseInput = document.getElementById('adresse').value.trim();
-		    const postalCityInput = document.getElementById('postal-city').value.trim();
-		
-		    if (!adresseInput || !postalCityInput) {
-		        alert("Adresse or Postal/City is empty!");
-		        return; // stops the process if fields are missing
-		    }
-		
-		    const adresse = adresseInput.toUpperCase();
-		    const [postalCode, ...cityParts] = postalCityInput.split(' ');
-		    const city = cityParts.join(' ').toUpperCase();
-		    const customID = `${adresse} - ${postalCode} ${city}`;
+    if (!adresseInput || !postalCityInput) {
+        alert("Adresse or Postal/City is empty!");
+        return; // STOP if missing fields
+    }
 
-	
-	    const payload = {
-	        adresse: document.getElementById('adresse').value,
-	        postalCity: document.getElementById('postal-city').value,
-	        objet: document.getElementById('objet').value,
-	        date: document.getElementById('date').value,
-	        fiches: [...document.querySelectorAll('.fiches-techniques-row')].map(row => ({
-	            marque: row.querySelector('.marque-input').value,
-	            modele: row.querySelector('.modele-input').value
-	        }))
-	    };
+    const adresse = adresseInput.toUpperCase();
+    const [postalCode, ...cityParts] = postalCityInput.split(' ');
+    const city = cityParts.join(' ').toUpperCase();
+    const customID = `${adresse} - ${postalCode} ${city}`;
 
-	console.log("CUSTOM ID:", customID);
-    	console.log("PAYLOAD SENDING TO BACKEND:", payload);
+    // BUILD PAYLOAD
+    const payload = {
+        id: customID,
+        adresse: adresseInput,
+        postalCity: postalCityInput,
+        objet: document.getElementById('objet').value,
+        date: document.getElementById('date').value,
+        fiches: [...document.querySelectorAll('.fiches-techniques-row')].map(row => ({
+            marque: row.querySelector('.marque-input').value,
+            modele: row.querySelector('.modele-input').value
+        }))
+    };
 
-	
-	const response = await fetch('/.netlify/functions/save-progress', {
-	    method: 'POST',
-	    headers: { 'Content-Type': 'application/json' }, // 🔴 ADD THIS LINE
-	    body: JSON.stringify(payload)
-	});
-	
-	    const result = await response.json();
-	    alert('Enregistré : ' + result.id);
-	});
+    // DEBUG PAYLOAD IN BROWSER CONSOLE:
+    console.log("CUSTOM ID:", customID);
+    console.log("PAYLOAD SENDING TO BACKEND:", payload);
+
+    // CORRECT FETCH WITH HEADERS:
+    const response = await fetch('/.netlify/functions/save-progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, // REQUIRED!
+        body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+    console.log("RESPONSE FROM BACKEND:", result);
+    alert('Progress saved! ID: ' + result.id);
+});
+
 	
 	document.getElementById('load-progress').addEventListener('click', async () => {
 	    const id = prompt('Enter your progress ID:');
