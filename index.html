@@ -2730,7 +2730,7 @@
 			        const path = `${customID}/${file.name}`; // e.g., "29 AVENUE BERLIOZ - 75018 PARIS/myfile.pdf"
 			        const { data, error } = await supabase
 			            .storage
-			            .from('uploads') // 👈 Change 'uploads' to your actual bucket name
+			            .from('pdfs') // 👈 Change 'uploads' to your actual bucket name
 			            .upload(path, file, { upsert: true });
 			
 			        if (error) {
@@ -2739,7 +2739,7 @@
 			        }
 			        const { publicURL } = supabase
 			            .storage
-			            .from('uploads')
+			            .from('pdfs')
 			            .getPublicUrl(path).data;
 			
 			        fileLinks.push({
