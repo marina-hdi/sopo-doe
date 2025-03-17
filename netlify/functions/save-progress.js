@@ -7,10 +7,13 @@ exports.handler = async (event) => {
     const { data: saved, error } = await supabase
         .from('progress')
         .insert([data]);
+        .select();
 
     if (error) {
         return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
     }
+    
     return { statusCode: 200, body: JSON.stringify({ id: saved[0].id }) };
+
 };
 
