@@ -14,5 +14,5 @@ exports.handler = async (event) => {
         return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
     }
 
-    return { statusCode: 200, body: JSON.stringify({ id: data.id }) };
+    return { statusCode: 200, body: JSON.stringify({ id: data.id || null }) };
 };
