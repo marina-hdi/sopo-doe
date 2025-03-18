@@ -2749,12 +2749,13 @@
 			
 			            const { publicURL } = supabaseClient.storage.from('pdfs').getPublicUrl(path).data;
 			
-			            fileLinks.push({
-			                section: section,
-			                rowIndex: i,
-			                fileName: file.name,
-			                url: publicURL
-			            });
+				fileLinks.push({
+				    section: section,
+				    inputId: input.id, // capture input ID!
+				    fileName: file.name,
+				    url: publicURL
+				});
+
 			        }
 			    }
 			
@@ -2824,8 +2825,10 @@
 			                rows = document.querySelectorAll('.schemas-row');
 			            }
 			
-			            const targetRow = rows[file.rowIndex];
-			            if (targetRow) {
+				const targetInput = document.getElementById(file.inputId);
+				const targetRow = targetInput ? targetInput.closest('tr') : null;
+
+					if (targetRow) {
 			                const link = document.createElement('a');
 			                link.href = file.url;
 			                link.innerText = `Télécharger ${file.fileName}`;
