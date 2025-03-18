@@ -2756,6 +2756,8 @@
 				    url: publicURL
 				});
 
+				console.log('Generated Supabase URL:', publicURL);
+
 			        }
 			    }
 			
@@ -2822,13 +2824,15 @@
             dropzone.innerText = file.fileName;
 
             // Optional: Add download link (still works!)
-            const link = document.createElement('a');
-            link.href = file.url;
-            link.innerText = `Télécharger ${file.fileName}`;
-            link.classList.add('file-link');
-            link.style.marginLeft = '10px';
-            link.target = "_blank";
-            dropzone.parentNode.appendChild(link);
+		const link = document.createElement('a');
+		link.href = file.url;
+		link.target = "_blank";
+		link.rel = "noopener noreferrer";
+		link.type = "application/pdf";
+		link.innerHTML = '<i class="material-icons">visibility</i>';
+		link.classList.add('file-link');
+		link.style.marginLeft = '10px';
+		dropzone.parentNode.appendChild(link);
         }
     }
 });
