@@ -2837,12 +2837,12 @@ document.getElementById('save-progress').addEventListener('click', async () => {
 		    const result = await response.json();
 		
 		    if (!result.ids || result.ids.length === 0) {
-		        alert('No saved progress found!');
+		        alert('Aucun enregistrement!');
 		        return;
 		    }
 		
 		    // Populate dropdown
-		    idDropdown.innerHTML = `<option value="">-- Sélectionnez un ID --</option>`;
+		    idDropdown.innerHTML = `<option value="">-- Sélectionner l'adresse --</option>`;
 		    result.ids.forEach(id => {
 		        const option = document.createElement('option');
 		        option.value = id;
@@ -2867,7 +2867,7 @@ document.getElementById('save-progress').addEventListener('click', async () => {
 		    const data = await response.json();
 		
 		    if (!data || !data.id) {
-		        alert("No progress found for this ID.");
+		        alert("Aucun enregistrement");
 		        return;
 		    }
 		
@@ -2920,7 +2920,7 @@ document.getElementById('save-progress').addEventListener('click', async () => {
 		        }
 		    }
 		
-		    alert("Progress loaded successfully.");
+		    alert("Tous les fichiers ot été chargés");
 		});
 
 	
