@@ -2773,73 +2773,65 @@
 			
 						
 			document.getElementById('load-progress').addEventListener('click', async () => {
-			    const id = prompt('Enter your progress ID:');
-			
-			    const response = await fetch('/.netlify/functions/load-progress', {
-			        method: 'POST',
-			        headers: { 'Content-Type': 'application/json' },
-			        body: JSON.stringify({ id })
-			    });
-			
-			    const data = await response.json();
-			
-			    // Populate your form with returned data
-			    document.getElementById('adresse').value = data.adresse || '';
-			    document.getElementById('postal-city').value = data.postalCity || '';
-			    document.getElementById('objet').value = data.objet || '';
-			    document.getElementById('date').value = data.date || '';
-			
-			    // Fill fiche rows (marque & modele)
-			    const ficheRows = document.querySelectorAll('.fiches-techniques-row');
-			    ficheRows.forEach((row, i) => {
-			        if (data.fiches && data.fiches[i]) {
-			            row.querySelector('.marque-input').value = data.fiches[i].marque || '';
-			            row.querySelector('.modele-input').value = data.fiches[i].modele || '';
-			        }
-			        const existingPreview = row.querySelector('.file-link');
-			        if (existingPreview) existingPreview.remove();
-			    });
-			
-			    // Proces rows cleanup
-			    document.querySelectorAll('.proces-verbaux-row').forEach(row => {
-			        const existing = row.querySelector('.file-link');
-			        if (existing) existing.remove();
-			    });
-			
-			    // Schemas rows cleanup
-			    document.querySelectorAll('.schemas-row').forEach(row => {
-			        const existing = row.querySelector('.file-link');
-			        if (existing) existing.remove();
-			    });
-			
-			    // Insert file links back into the correct rows
-			    if (data.fileLinks && data.fileLinks.length > 0) {
-			        data.fileLinks.forEach(file => {
-			            let rows = [];
-			
-			            if (file.section === 'fiches') {
-			                rows = document.querySelectorAll('.fiches-techniques-row');
-			            } else if (file.section === 'proces') {
-			                rows = document.querySelectorAll('.proces-verbaux-row');
-			            } else if (file.section === 'schemas') {
-			                rows = document.querySelectorAll('.schemas-row');
-			            }
-			
-				const targetInput = document.getElementById(file.inputId);
-				const targetRow = targetInput ? targetInput.closest('tr') : null;
+    const id = prompt('Enter your progress ID:');
 
-					if (targetRow) {
-			                const link = document.createElement('a');
-			                link.href = file.url;
-			                link.innerText = `Télécharger ${file.fileName}`;
-			                link.classList.add('file-link');
-			                link.style.marginLeft = '10px';
-			                link.target = "_blank";
-			                targetRow.appendChild(link);
-			            }
-			        });
-			    }
-			});
+    const response = await fetch('/.netlify/functions/load-progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+    });
+
+    const data = await response.json();
+
+    // Populate basic text fields
+    document.getElementById('adresse').value = data.adresse || '';
+    document.getElementById('postal-city').value = data.postalCity || '';
+    document.getElementById('objet').value = data.objet || '';
+    document.getElementById('date').value = data.date || '';
+
+    // Fill fiche rows (marque & modele)
+    const ficheRows = document.querySelectorAll('.fiches-techniques-row');
+    ficheRows.forEach((row, i) => {
+        if (data.fiches && data.fiches[i]) {
+            row.querySelector('.marque-input').value = data.fiches[i].marque || '';
+            row.querySelector('.modele-input').value = data.fiches[i].modele || '';
+        }
+    });
+
+    // Remove old links from all sections
+    document.querySelectorAll('.file-link').forEach(link => link.remove());
+
+    // Load files back into dropzones + inputs
+    if (data.fileLinks && data.fileLinks.length > 0) {
+        for (const file of data.fileLinks) {
+            const input = document.getElementById(file.inputId);
+            const dropzone = input ? input.closest('td').querySelector('.dropzone') : null;
+            if (!input || !dropzone) continue;
+
+            // Simulate input.files[0] via File object:
+            const response = await fetch(file.url);
+            const blob = await response.blob();
+            const virtualFile = new File([blob], file.fileName, { type: blob.type });
+
+            // Create a DataTransfer to simulate the upload into input
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(virtualFile);
+            input.files = dataTransfer.files;
+
+            // Update dropzone visually
+            dropzone.innerText = file.fileName;
+
+            // Optional: Add download link (still works!)
+            const link = document.createElement('a');
+            link.href = file.url;
+            link.innerText = `Télécharger ${file.fileName}`;
+            link.classList.add('file-link');
+            link.style.marginLeft = '10px';
+            link.target = "_blank";
+            dropzone.parentNode.appendChild(link);
+        }
+    }
+});
 		
 		</script>
 	</body>
