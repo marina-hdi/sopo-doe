@@ -2258,9 +2258,9 @@
             dropzone.style.display = "none";
         }
 
-        if (row) {
-            row.style.backgroundColor = "#e3f2fd";
-        }
+if (row) {
+    updateRowStyle(row); // Let your global logic handle the styling instead!
+}
 
     } else {
         if (pdfPreview) pdfPreview.style.display = "none";
