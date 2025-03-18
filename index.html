@@ -2207,25 +2207,38 @@
 			        }
 			
 			        function updateFileDisplay() {
-			            let key = getFileKey();
-			            if (!key) return;
-			
-			            if (fileData[key]) {
-			                let pdfBlob = dataURLtoBlob(fileData[key]);
-			                let objectURL = URL.createObjectURL(pdfBlob);
-			
-			                pdfPreview.href = objectURL;
-			                pdfPreview.style.display = "inline"; // Show eye icon
-			                removeBtn.style.display = "inline"; // Show remove button
-			                dropzone.style.display = "none"; // Hide dropzone
-			                row.style.backgroundColor = "#e3f2fd"; // Light blue row styling
-			            } else {
-			                pdfPreview.style.display = "none"; // Hide eye icon
-			                removeBtn.style.display = "none"; // Hide remove button
-			                dropzone.style.display = "block"; // Show dropzone again
-			                row.style.backgroundColor = ""; // Reset row styling
-			            }
-			        }
+    let key = getFileKey();
+    if (!key) return;
+
+    if (fileData[key]) {
+        let pdfBlob = dataURLtoBlob(fileData[key]);
+        let objectURL = URL.createObjectURL(pdfBlob);
+
+        if (pdfPreview) {
+            pdfPreview.href = objectURL;
+            pdfPreview.style.display = "inline";
+        }
+
+        if (removeBtn) {
+            removeBtn.style.display = "inline";
+        }
+
+        if (dropzone) {
+            dropzone.style.display = "none";
+        }
+
+        if (row) {
+            row.style.backgroundColor = "#e3f2fd";
+        }
+
+    } else {
+        if (pdfPreview) pdfPreview.style.display = "none";
+        if (removeBtn) removeBtn.style.display = "none";
+        if (dropzone) dropzone.style.display = "block";
+        if (row) row.style.backgroundColor = "";
+    }
+}
+
 			
 			        marqueInput?.addEventListener("change", updateFileDisplay);
 			        modeleInput?.addEventListener("change", updateFileDisplay);
@@ -2747,7 +2760,7 @@
 			                return;
 			            }
 			
-				const { data } = supabaseClient.storage.from('pdfs').getPublicUrl(path);
+				const { data: publicData } = supabaseClient.storage.from('pdfs').getPublicUrl(path);
 				const publicURL = `https://stvfbubpbwkjyhkfqpyt.supabase.co${data.publicUrl}`;
 
 			
