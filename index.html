@@ -2791,6 +2791,59 @@ document.getElementById('save-progress').addEventListener('click', async () => {
     alert('Progress saved! ID: ' + (result.id || customID));
 });
 
+			// Create dropdown element dynamically
+const idDropdown = document.createElement('select');
+idDropdown.id = 'progress-id-dropdown';
+idDropdown.style.display = 'none';
+idDropdown.style.marginLeft = '10px';
+idDropdown.style.padding = '5px';
+
+document.getElementById('load-progress').insertAdjacentElement('afterend', idDropdown);
+
+// Load all IDs when clicking "CHARGER"
+document.getElementById('load-progress').addEventListener('click', async () => {
+    const response = await fetch('/.netlify/functions/get-ids');
+    const result = await response.json();
+
+    if (!result.ids || result.ids.length === 0) {
+        alert('No saved progress found!');
+        return;
+    }
+
+    // Populate dropdown
+    idDropdown.innerHTML = `<option value="">-- Sélectionnez un ID --</option>`;
+    result.ids.forEach(id => {
+        const option = document.createElement('option');
+        option.value = id;
+        option.innerText = id;
+        idDropdown.appendChild(option);
+    });
+
+    idDropdown.style.display = 'inline-block';
+});
+
+// Handle ID selection
+idDropdown.addEventListener('change', async (e) => {
+    const id = e.target.value;
+    if (!id) return;
+
+    // Auto-load the selected ID
+    const response = await fetch('/.netlify/functions/load-progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id })
+    });
+
+    const data = await response.json();
+
+    if (!data || !data.id) {
+        alert("No progress found for this ID.");
+        return;
+    }
+
+    idDropdown.style.display = 'none'; // Auto-hide dropdown
+
+
 document.getElementById('load-progress').addEventListener('click', async () => {
     const id = prompt('Enter your progress ID:');
 
@@ -2865,8 +2918,8 @@ document.getElementById('load-progress').addEventListener('click', async () => {
     }
 
     alert("Progress loaded successfully.");
-});
-		
+});		
 		</script>
+
 	</body>
 </html>
