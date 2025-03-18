@@ -2700,226 +2700,196 @@
 			};
 		</script>
 		<script>
-			console.log("Frontend JS loaded!");
+		console.log("Frontend JS loaded!");
 				
-			const supabaseClient = supabase.createClient('https://stvfbubpbwkjyhkfqpyt.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dmZidWJwYndranloa2ZxcHl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIyMTgzNDksImV4cCI6MjA1Nzc5NDM0OX0.ZxvsBOmzbbhS6eFnqvv2xLsUl31spGM6Cc4iLRMTZOw');
-			
-document.getElementById('save-progress').addEventListener('click', async () => {
-    // Always re-pull values
-    const adresseInput = document.getElementById('adresse').value.trim();
-    const postalCityInput = document.getElementById('postal-city').value.trim();
+		const supabaseClient = supabase.createClient('https://stvfbubpbwkjyhkfqpyt.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dmZidWJwYndranloa2ZxcHl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIyMTgzNDksImV4cCI6MjA1Nzc5NDM0OX0.ZxvsBOmzbbhS6eFnqvv2xLsUl31spGM6Cc4iLRMTZOw');
 
-    if (!adresseInput || !postalCityInput) {
-        alert("Adresse or Postal/City is empty!");
-        return;
-    }
+		document.getElementById('save-progress').addEventListener('click', async () => {
+		    const adresseInput = document.getElementById('adresse').value.trim();
+		    const postalCityInput = document.getElementById('postal-city').value.trim();
+		
+		    if (!adresseInput || !postalCityInput) {
+		        alert("Adresse or Postal/City is empty!");
+		        return;
+		    }
+		
+		    const [postalCode, ...cityParts] = postalCityInput.split(' ').filter(Boolean);
+		    const city = cityParts.join(' ').toUpperCase();
+		    const adresse = adresseInput.toUpperCase();
+		    const customID = `${adresse} - ${postalCode} ${city}`;
+		
+		    if (!customID || customID.includes("undefined")) {
+		        alert("Invalid custom ID. Check address or postal/city inputs.");
+		        return;
+		    }
+		
+		    const payload = {
+		        id: customID,
+		        adresse: adresseInput,
+		        postalCity: postalCityInput,
+		        objet: document.getElementById('objet').value,
+		        date: document.getElementById('date').value,
+		        fiches: [...document.querySelectorAll('.fiches-techniques-row')].map(row => ({
+		            marque: row.querySelector('.marque-input').value,
+		            modele: row.querySelector('.modele-input').value
+		        }))
+		    };
+		
+		    const fileInputs = document.querySelectorAll('.fiches-techniques-row input[type="file"], .proces-verbaux-row input[type="file"], .schemas-row input[type="file"]');
+		    const fileLinks = [];
+		
+		    for (let i = 0; i < fileInputs.length; i++) {
+		        const input = fileInputs[i];
+		        const file = input.files[0];
+		
+		        if (file) {
+		            const parentRow = input.closest('.fiches-techniques-row') || input.closest('.proces-verbaux-row') || input.closest('.schemas-row');
+		
+		            let section = '';
+		            if (parentRow.classList.contains('fiches-techniques-row')) {
+		                section = 'fiches';
+		            } else if (parentRow.classList.contains('proces-verbaux-row')) {
+		                section = 'proces';
+		            } else if (parentRow.classList.contains('schemas-row')) {
+		                section = 'schemas';
+		            }
+		
+		            const path = `${customID}/${section}-${i + 1}-${file.name}`;
+		            const { error } = await supabaseClient.storage
+		                .from('pdfs')
+		                .upload(path, file, { upsert: true });
+		
+		            if (error) {
+		                alert(`Error uploading ${file.name}: ${error.message}`);
+		                return;
+		            }
+		
+		            const { data: publicData } = supabaseClient.storage.from('pdfs').getPublicUrl(path);
+		            const publicURL = publicData.publicUrl;
+		
+		            fileLinks.push({
+		                section: section,
+		                inputId: input.id,
+		                fileName: file.name,
+		                url: publicURL
+		            });
+		        }
+		    }
+		
+		    payload.fileLinks = fileLinks;
+		
+		    const response = await fetch('/.netlify/functions/save-progress', {
+		        method: 'POST',
+		        headers: { 'Content-Type': 'application/json' },
+		        body: JSON.stringify(payload)
+		    });
+		
+		    const result = await response.json();
+		    alert('Progress saved! ID: ' + (result.id || customID));
+		});
+		
+					// Create dropdown element dynamically
+		const idDropdown = document.createElement('select');
+		idDropdown.id = 'progress-id-dropdown';
+		idDropdown.style.display = 'none';
+		idDropdown.style.marginLeft = '10px';
+		idDropdown.style.padding = '5px';
+		
+		document.getElementById('load-progress').insertAdjacentElement('afterend', idDropdown);
+		
+		// Load all IDs when clicking "CHARGER"
+		document.getElementById('load-progress').addEventListener('click', async () => {
+		    const response = await fetch('/.netlify/functions/get-ids');
+		    const result = await response.json();
+		
+		    if (!result.ids || result.ids.length === 0) {
+		        alert('No saved progress found!');
+		        return;
+		    }
+		
+		    // Populate dropdown
+		    idDropdown.innerHTML = `<option value="">-- Sélectionnez un ID --</option>`;
+		    result.ids.forEach(id => {
+		        const option = document.createElement('option');
+		        option.value = id;
+		        option.innerText = id;
+		        idDropdown.appendChild(option);
+		    });
+		
+		    idDropdown.style.display = 'inline-block';
+		});
+		
+		// Handle ID selection & full load logic
+		idDropdown.addEventListener('change', async (e) => {
+		    const id = e.target.value;
+		    if (!id) return;
+		
+		    const response = await fetch('/.netlify/functions/load-progress', {
+		        method: 'POST',
+		        headers: { 'Content-Type': 'application/json' },
+		        body: JSON.stringify({ id: id })
+		    });
+		
+		    const data = await response.json();
+		
+		    if (!data || !data.id) {
+		        alert("No progress found for this ID.");
+		        return;
+		    }
+		
+		    idDropdown.style.display = 'none';
+		
+		    document.getElementById('adresse').value = data.adresse || '';
+		    document.getElementById('postal-city').value = data.postalCity || '';
+		    document.getElementById('objet').value = data.objet || '';
+		    document.getElementById('date').value = data.date || '';
+		
+		    const ficheRows = document.querySelectorAll('.fiches-techniques-row');
+		    ficheRows.forEach((row, i) => {
+		        if (data.fiches && data.fiches[i]) {
+		            row.querySelector('.marque-input').value = data.fiches[i].marque || '';
+		            row.querySelector('.modele-input').value = data.fiches[i].modele || '';
+		        }
+		    });
+		
+		    document.querySelectorAll('.file-link').forEach(link => link.remove());
+		
+		    if (data.fileLinks && Array.isArray(data.fileLinks)) {
+		        for (const file of data.fileLinks) {
+		            const input = document.getElementById(file.inputId);
+		            const dropzone = input ? input.closest('td').querySelector('.dropzone') : null;
+		            if (!input || !dropzone) continue;
+		
+		            try {
+		                const fetchResponse = await fetch(file.url);
+		                const blob = await fetchResponse.blob();
+		                const virtualFile = new File([blob], file.fileName, { type: blob.type });
+		
+		                const dataTransfer = new DataTransfer();
+		                dataTransfer.items.add(virtualFile);
+		                input.files = dataTransfer.files;
+		
+		                dropzone.innerText = file.fileName;
+		
+		                const link = document.createElement('a');
+		                link.href = file.url;
+		                link.target = "_blank";
+		                link.rel = "noopener noreferrer";
+		                link.type = "application/pdf";
+		                link.innerHTML = '<i class="material-icons">visibility</i>';
+		                link.classList.add('file-link');
+		                link.style.marginLeft = '10px';
+		                dropzone.parentNode.appendChild(link);
+		            } catch (e) {
+		                console.error(`Error fetching file ${file.fileName}:`, e);
+		            }
+		        }
+		    }
+		
+		    alert("Progress loaded successfully.");
+		});
 
-    // Safely parse postal code & city
-    const [postalCode, ...cityParts] = postalCityInput.split(' ').filter(Boolean);
-    const city = cityParts.join(' ').toUpperCase();
-    const adresse = adresseInput.toUpperCase();
-    const customID = `${adresse} - ${postalCode} ${city}`;
-
-    if (!customID || customID.includes("undefined")) {
-        alert("Invalid custom ID. Check address or postal/city inputs.");
-        return;
-    }
-
-    const payload = {
-        id: customID,
-        adresse: adresseInput,
-        postalCity: postalCityInput,
-        objet: document.getElementById('objet').value,
-        date: document.getElementById('date').value,
-        fiches: [...document.querySelectorAll('.fiches-techniques-row')].map(row => ({
-            marque: row.querySelector('.marque-input').value,
-            modele: row.querySelector('.modele-input').value
-        }))
-    };
-
-    // Upload files
-    const fileInputs = document.querySelectorAll('.fiches-techniques-row input[type="file"], .proces-verbaux-row input[type="file"], .schemas-row input[type="file"]');
-    const fileLinks = [];
-
-    for (let i = 0; i < fileInputs.length; i++) {
-        const input = fileInputs[i];
-        const file = input.files[0];
-
-        if (file) {
-            const parentRow = input.closest('.fiches-techniques-row') || input.closest('.proces-verbaux-row') || input.closest('.schemas-row');
-
-            let section = '';
-            if (parentRow.classList.contains('fiches-techniques-row')) {
-                section = 'fiches';
-            } else if (parentRow.classList.contains('proces-verbaux-row')) {
-                section = 'proces';
-            } else if (parentRow.classList.contains('schemas-row')) {
-                section = 'schemas';
-            }
-
-            const path = `${customID}/${section}-${i + 1}-${file.name}`;
-            const { error } = await supabaseClient.storage
-                .from('pdfs')
-                .upload(path, file, { upsert: true });
-
-            if (error) {
-                alert(`Error uploading ${file.name}: ${error.message}`);
-                return;
-            }
-
-            const { data: publicData } = supabaseClient.storage.from('pdfs').getPublicUrl(path);
-            const publicURL = publicData.publicUrl;
-
-            fileLinks.push({
-                section: section,
-                inputId: input.id,
-                fileName: file.name,
-                url: publicURL
-            });
-        }
-    }
-
-    payload.fileLinks = fileLinks;
-
-    const response = await fetch('/.netlify/functions/save-progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-
-    const result = await response.json();
-    alert('Progress saved! ID: ' + (result.id || customID));
-});
-
-			// Create dropdown element dynamically
-const idDropdown = document.createElement('select');
-idDropdown.id = 'progress-id-dropdown';
-idDropdown.style.display = 'none';
-idDropdown.style.marginLeft = '10px';
-idDropdown.style.padding = '5px';
-
-document.getElementById('load-progress').insertAdjacentElement('afterend', idDropdown);
-
-// Load all IDs when clicking "CHARGER"
-document.getElementById('load-progress').addEventListener('click', async () => {
-    const response = await fetch('/.netlify/functions/get-ids');
-    const result = await response.json();
-
-    if (!result.ids || result.ids.length === 0) {
-        alert('No saved progress found!');
-        return;
-    }
-
-    // Populate dropdown
-    idDropdown.innerHTML = `<option value="">-- Sélectionnez un ID --</option>`;
-    result.ids.forEach(id => {
-        const option = document.createElement('option');
-        option.value = id;
-        option.innerText = id;
-        idDropdown.appendChild(option);
-    });
-
-    idDropdown.style.display = 'inline-block';
-});
-
-// Handle ID selection
-idDropdown.addEventListener('change', async (e) => {
-    const id = e.target.value;
-    if (!id) return;
-
-    // Auto-load the selected ID
-    const response = await fetch('/.netlify/functions/load-progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: id })
-    });
-
-    const data = await response.json();
-
-    if (!data || !data.id) {
-        alert("No progress found for this ID.");
-        return;
-    }
-
-    idDropdown.style.display = 'none'; // Auto-hide dropdown
-
-
-document.getElementById('load-progress').addEventListener('click', async () => {
-    const id = prompt('Enter your progress ID:');
-
-    if (!id || id.trim() === '') {
-        alert("Progress ID is empty or invalid.");
-        return;
-    }
-
-    const response = await fetch('/.netlify/functions/load-progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: id.trim() })
-    });
-
-    const data = await response.json();
-
-    if (!data || !data.id) {
-        alert("No progress found for this ID.");
-        return;
-    }
-
-    // Populate fields safely
-    document.getElementById('adresse').value = data.adresse || '';
-    document.getElementById('postal-city').value = data.postalCity || '';
-    document.getElementById('objet').value = data.objet || '';
-    document.getElementById('date').value = data.date || '';
-
-    // Fill fiche rows (marque & modele)
-    const ficheRows = document.querySelectorAll('.fiches-techniques-row');
-    ficheRows.forEach((row, i) => {
-        if (data.fiches && data.fiches[i]) {
-            row.querySelector('.marque-input').value = data.fiches[i].marque || '';
-            row.querySelector('.modele-input').value = data.fiches[i].modele || '';
-        }
-    });
-
-    // Clean all existing links
-    document.querySelectorAll('.file-link').forEach(link => link.remove());
-
-    // Restore file links into inputs + dropzones
-    if (data.fileLinks && Array.isArray(data.fileLinks)) {
-        for (const file of data.fileLinks) {
-            const input = document.getElementById(file.inputId);
-            const dropzone = input ? input.closest('td').querySelector('.dropzone') : null;
-            if (!input || !dropzone) continue;
-
-            // Fetch & recreate file
-            try {
-                const fetchResponse = await fetch(file.url);
-                const blob = await fetchResponse.blob();
-                const virtualFile = new File([blob], file.fileName, { type: blob.type });
-
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(virtualFile);
-                input.files = dataTransfer.files;
-
-                dropzone.innerText = file.fileName;
-
-                const link = document.createElement('a');
-                link.href = file.url;
-                link.target = "_blank";
-                link.rel = "noopener noreferrer";
-                link.type = "application/pdf";
-                link.innerHTML = '<i class="material-icons">visibility</i>';
-                link.classList.add('file-link');
-                link.style.marginLeft = '10px';
-                dropzone.parentNode.appendChild(link);
-            } catch (e) {
-                console.error(`Error fetching file ${file.fileName}:`, e);
-            }
-        }
-    }
-
-    alert("Progress loaded successfully.");
-});		
+	
 		</script>
-
 	</body>
 </html>
