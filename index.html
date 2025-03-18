@@ -2759,7 +2759,9 @@
 			                alert(`Error uploading ${file.name}: ${error.message}`);
 			                return;
 			            }
-			
+
+					console.log('Uploading with path:', path);
+
 				const { data: publicData } = supabaseClient.storage.from('pdfs').getPublicUrl(path);
 					console.log('Supabase publicData:', publicData);
 
