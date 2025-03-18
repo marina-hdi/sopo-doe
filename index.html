@@ -2705,94 +2705,88 @@
 			const supabaseClient = supabase.createClient('https://stvfbubpbwkjyhkfqpyt.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dmZidWJwYndranloa2ZxcHl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIyMTgzNDksImV4cCI6MjA1Nzc5NDM0OX0.ZxvsBOmzbbhS6eFnqvv2xLsUl31spGM6Cc4iLRMTZOw');
 			
 			document.getElementById('save-progress').addEventListener('click', async () => {
-			    const adresseInput = document.getElementById('adresse').value.trim();
-			    const postalCityInput = document.getElementById('postal-city').value.trim();
-			
-			    if (!adresseInput || !postalCityInput) {
-			        alert("Adresse or Postal/City is empty!");
-			        return;
-			    }
-			
-			    const adresse = adresseInput.toUpperCase();
-			    const [postalCode, ...cityParts] = postalCityInput.split(' ');
-			    const city = cityParts.join(' ').toUpperCase();
-			    const customID = `${adresse} - ${postalCode} ${city}`;
-			
-			    const payload = {
-			        id: customID,
-			        adresse: adresseInput,
-			        postalCity: postalCityInput,
-			        objet: document.getElementById('objet').value,
-			        date: document.getElementById('date').value,
-			        fiches: [...document.querySelectorAll('.fiches-techniques-row')].map(row => ({
-			            marque: row.querySelector('.marque-input').value,
-			            modele: row.querySelector('.modele-input').value
-			        }))
-			    };
-			
-			    // FILE UPLOADS for ALL SECTIONS
-			const fileInputs = document.querySelectorAll('.fiches-techniques-row input[type="file"], .proces-verbaux-row input[type="file"], .schemas-row input[type="file"]');
-			const fileLinks = [];
-			
-			    for (let i = 0; i < fileInputs.length; i++) {
-			        const input = fileInputs[i];
-			        const file = input.files[0];
-			
-			        if (file) {
-			            const parentRow = input.closest('.fiches-techniques-row') || input.closest('.proces-verbaux-row') || input.closest('.schemas-row');
-			
-			            let section = '';
-			            if (parentRow.classList.contains('fiches-techniques-row')) {
-			                section = 'fiches';
-			            } else if (parentRow.classList.contains('proces-verbaux-row')) {
-			                section = 'proces';
-			            } else if (parentRow.classList.contains('schemas-row')) {
-			                section = 'schemas';
-			            }
-			
-			            const path = `${customID}/${section}-${i + 1}-${file.name}`;
-			            const { data, error } = await supabaseClient.storage
-			                .from('pdfs')
-			                .upload(path, file, { upsert: true });
-			
-			            if (error) {
-			                alert(`Error uploading ${file.name}: ${error.message}`);
-			                return;
-			            }
+    const adresseInput = document.getElementById('adresse').value.trim();
+    const postalCityInput = document.getElementById('postal-city').value.trim();
 
-					console.log('Uploading with path:', path);
+    if (!adresseInput || !postalCityInput) {
+        alert("Adresse or Postal/City is empty!");
+        return;
+    }
 
-				const { data: publicData } = supabaseClient.storage.from('pdfs').getPublicUrl(path);
-					console.log('Supabase publicData:', publicData);
-				const publicURL = `https://stvfbubpbwkjyhkfqpyt.supabase.co${data.publicUrl}`;
+    const adresse = adresseInput.toUpperCase();
+    const [postalCode, ...cityParts] = postalCityInput.split(' ');
+    const city = cityParts.join(' ').toUpperCase();
+    const customID = `${adresse} - ${postalCode} ${city}`;
 
-			
-				fileLinks.push({
-				    section: section,
-				    inputId: input.id, // capture input ID!
-				    fileName: file.name,
-				    url: publicURL
-				});
+    const payload = {
+        id: customID,
+        adresse: adresseInput,
+        postalCity: postalCityInput,
+        objet: document.getElementById('objet').value,
+        date: document.getElementById('date').value,
+        fiches: [...document.querySelectorAll('.fiches-techniques-row')].map(row => ({
+            marque: row.querySelector('.marque-input').value,
+            modele: row.querySelector('.modele-input').value
+        }))
+    };
 
-				console.log('Generated Supabase URL:', publicURL);
+    // Uploads for ALL SECTIONS
+    const fileInputs = document.querySelectorAll('.fiches-techniques-row input[type="file"], .proces-verbaux-row input[type="file"], .schemas-row input[type="file"]');
+    const fileLinks = [];
 
-			        }
-			    }
-			
-			    payload.fileLinks = fileLinks;
-			
-			    const response = await fetch('/.netlify/functions/save-progress', {
-			        method: 'POST',
-			        headers: { 'Content-Type': 'application/json' },
-			        body: JSON.stringify(payload)
-			    });
-			
-			    const result = await response.json();
-			    alert('Progress saved! ID: ' + result.id);
-			});
-			
-						
-			document.getElementById('load-progress').addEventListener('click', async () => {
+    for (let i = 0; i < fileInputs.length; i++) {
+        const input = fileInputs[i];
+        const file = input.files[0];
+
+        if (file) {
+            const parentRow = input.closest('.fiches-techniques-row') || input.closest('.proces-verbaux-row') || input.closest('.schemas-row');
+
+            let section = '';
+            if (parentRow.classList.contains('fiches-techniques-row')) {
+                section = 'fiches';
+            } else if (parentRow.classList.contains('proces-verbaux-row')) {
+                section = 'proces';
+            } else if (parentRow.classList.contains('schemas-row')) {
+                section = 'schemas';
+            }
+
+            const path = `${customID}/${section}-${i + 1}-${file.name}`;
+            const { error } = await supabaseClient.storage
+                .from('pdfs')
+                .upload(path, file, { upsert: true });
+
+            if (error) {
+                alert(`Error uploading ${file.name}: ${error.message}`);
+                return;
+            }
+
+            // Fix: Supabase returns FULL publicUrl automatically
+            const { data: publicData } = supabaseClient.storage.from('pdfs').getPublicUrl(path);
+            const publicURL = publicData.publicUrl;
+
+            fileLinks.push({
+                section: section,
+                inputId: input.id,
+                fileName: file.name,
+                url: publicURL
+            });
+
+            console.log('Public URL generated:', publicURL);
+        }
+    }
+
+    payload.fileLinks = fileLinks;
+
+    const response = await fetch('/.netlify/functions/save-progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+    alert('Progress saved! ID: ' + result.id);
+});
+document.getElementById('load-progress').addEventListener('click', async () => {
     const id = prompt('Enter your progress ID:');
 
     const response = await fetch('/.netlify/functions/load-progress', {
@@ -2818,7 +2812,7 @@
         }
     });
 
-    // Remove old links from all sections
+    // Remove old links
     document.querySelectorAll('.file-link').forEach(link => link.remove());
 
     // Load files back into dropzones + inputs
@@ -2829,11 +2823,11 @@
             if (!input || !dropzone) continue;
 
             // Simulate input.files[0] via File object:
-            const response = await fetch(file.url);
-            const blob = await response.blob();
+            const fetchResponse = await fetch(file.url);
+            const blob = await fetchResponse.blob();
             const virtualFile = new File([blob], file.fileName, { type: blob.type });
 
-            // Create a DataTransfer to simulate the upload into input
+            // Populate file input
             const dataTransfer = new DataTransfer();
             dataTransfer.items.add(virtualFile);
             input.files = dataTransfer.files;
@@ -2841,16 +2835,16 @@
             // Update dropzone visually
             dropzone.innerText = file.fileName;
 
-            // Optional: Add download link (still works!)
-		const link = document.createElement('a');
-		link.href = file.url;
-		link.target = "_blank";
-		link.rel = "noopener noreferrer";
-		link.type = "application/pdf";
-		link.innerHTML = '<i class="material-icons">visibility</i>';
-		link.classList.add('file-link');
-		link.style.marginLeft = '10px';
-		dropzone.parentNode.appendChild(link);
+            // Eye icon link
+            const link = document.createElement('a');
+            link.href = file.url;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.type = "application/pdf";
+            link.innerHTML = '<i class="material-icons">visibility</i>';
+            link.classList.add('file-link');
+            link.style.marginLeft = '10px';
+            dropzone.parentNode.appendChild(link);
         }
     }
 });
