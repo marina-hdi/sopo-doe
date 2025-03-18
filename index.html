@@ -2761,7 +2761,9 @@
 			            }
 			
 				const { data: publicData } = supabaseClient.storage.from('pdfs').getPublicUrl(path);
-				const publicURL = `https://stvfbubpbwkjyhkfqpyt.supabase.co${data.publicUrl}`;
+					console.log('Supabase publicData:', publicData);
+
+				// const publicURL = `https://stvfbubpbwkjyhkfqpyt.supabase.co${data.publicUrl}`;
 
 			
 				fileLinks.push({
