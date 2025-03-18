@@ -2704,7 +2704,8 @@
 				
 			const supabaseClient = supabase.createClient('https://stvfbubpbwkjyhkfqpyt.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dmZidWJwYndranloa2ZxcHl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIyMTgzNDksImV4cCI6MjA1Nzc5NDM0OX0.ZxvsBOmzbbhS6eFnqvv2xLsUl31spGM6Cc4iLRMTZOw');
 			
-			document.getElementById('save-progress').addEventListener('click', async () => {
+document.getElementById('save-progress').addEventListener('click', async () => {
+    // Always re-pull values
     const adresseInput = document.getElementById('adresse').value.trim();
     const postalCityInput = document.getElementById('postal-city').value.trim();
 
@@ -2713,10 +2714,16 @@
         return;
     }
 
-    const adresse = adresseInput.toUpperCase();
-    const [postalCode, ...cityParts] = postalCityInput.split(' ');
+    // Safely parse postal code & city
+    const [postalCode, ...cityParts] = postalCityInput.split(' ').filter(Boolean);
     const city = cityParts.join(' ').toUpperCase();
+    const adresse = adresseInput.toUpperCase();
     const customID = `${adresse} - ${postalCode} ${city}`;
+
+    if (!customID || customID.includes("undefined")) {
+        alert("Invalid custom ID. Check address or postal/city inputs.");
+        return;
+    }
 
     const payload = {
         id: customID,
@@ -2730,7 +2737,7 @@
         }))
     };
 
-    // Uploads for ALL SECTIONS
+    // Upload files
     const fileInputs = document.querySelectorAll('.fiches-techniques-row input[type="file"], .proces-verbaux-row input[type="file"], .schemas-row input[type="file"]');
     const fileLinks = [];
 
@@ -2760,7 +2767,6 @@
                 return;
             }
 
-            // Fix: Supabase returns FULL publicUrl automatically
             const { data: publicData } = supabaseClient.storage.from('pdfs').getPublicUrl(path);
             const publicURL = publicData.publicUrl;
 
@@ -2770,8 +2776,6 @@
                 fileName: file.name,
                 url: publicURL
             });
-
-            console.log('Public URL generated:', publicURL);
         }
     }
 
@@ -2784,20 +2788,31 @@
     });
 
     const result = await response.json();
-    alert('Progress saved! ID: ' + result.id);
+    alert('Progress saved! ID: ' + (result.id || customID));
 });
+
 document.getElementById('load-progress').addEventListener('click', async () => {
     const id = prompt('Enter your progress ID:');
+
+    if (!id || id.trim() === '') {
+        alert("Progress ID is empty or invalid.");
+        return;
+    }
 
     const response = await fetch('/.netlify/functions/load-progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
+        body: JSON.stringify({ id: id.trim() })
     });
 
     const data = await response.json();
 
-    // Populate basic text fields
+    if (!data || !data.id) {
+        alert("No progress found for this ID.");
+        return;
+    }
+
+    // Populate fields safely
     document.getElementById('adresse').value = data.adresse || '';
     document.getElementById('postal-city').value = data.postalCity || '';
     document.getElementById('objet').value = data.objet || '';
@@ -2812,41 +2827,44 @@ document.getElementById('load-progress').addEventListener('click', async () => {
         }
     });
 
-    // Remove old links
+    // Clean all existing links
     document.querySelectorAll('.file-link').forEach(link => link.remove());
 
-    // Load files back into dropzones + inputs
-    if (data.fileLinks && data.fileLinks.length > 0) {
+    // Restore file links into inputs + dropzones
+    if (data.fileLinks && Array.isArray(data.fileLinks)) {
         for (const file of data.fileLinks) {
             const input = document.getElementById(file.inputId);
             const dropzone = input ? input.closest('td').querySelector('.dropzone') : null;
             if (!input || !dropzone) continue;
 
-            // Simulate input.files[0] via File object:
-            const fetchResponse = await fetch(file.url);
-            const blob = await fetchResponse.blob();
-            const virtualFile = new File([blob], file.fileName, { type: blob.type });
+            // Fetch & recreate file
+            try {
+                const fetchResponse = await fetch(file.url);
+                const blob = await fetchResponse.blob();
+                const virtualFile = new File([blob], file.fileName, { type: blob.type });
 
-            // Populate file input
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(virtualFile);
-            input.files = dataTransfer.files;
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(virtualFile);
+                input.files = dataTransfer.files;
 
-            // Update dropzone visually
-            dropzone.innerText = file.fileName;
+                dropzone.innerText = file.fileName;
 
-            // Eye icon link
-            const link = document.createElement('a');
-            link.href = file.url;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-            link.type = "application/pdf";
-            link.innerHTML = '<i class="material-icons">visibility</i>';
-            link.classList.add('file-link');
-            link.style.marginLeft = '10px';
-            dropzone.parentNode.appendChild(link);
+                const link = document.createElement('a');
+                link.href = file.url;
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.type = "application/pdf";
+                link.innerHTML = '<i class="material-icons">visibility</i>';
+                link.classList.add('file-link');
+                link.style.marginLeft = '10px';
+                dropzone.parentNode.appendChild(link);
+            } catch (e) {
+                console.error(`Error fetching file ${file.fileName}:`, e);
+            }
         }
     }
+
+    alert("Progress loaded successfully.");
 });
 		
 		</script>
