@@ -843,7 +843,7 @@
 			</div>
 			<button type="submit" class="primary-btn">CREER ET TELECHARGER</button>
 		</div>
-			<div id="file-retrieve-section" style="margin-top: 20px;"></div>
+		<div id="file-retrieve-section" style="margin-top: 20px;"></div>
 		<script>
 			// Postal Code to City Data
 			const postalCodeToCity = {
@@ -2692,83 +2692,81 @@
 			const supabaseClient = supabase.createClient('https://stvfbubpbwkjyhkfqpyt.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dmZidWJwYndranloa2ZxcHl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIyMTgzNDksImV4cCI6MjA1Nzc5NDM0OX0.ZxvsBOmzbbhS6eFnqvv2xLsUl31spGM6Cc4iLRMTZOw');
 			
 			document.getElementById('save-progress').addEventListener('click', async () => {
-			   // BUILD CUSTOM ID CORRECTLY
-			   const adresseInput = document.getElementById('adresse').value.trim();
-			   const postalCityInput = document.getElementById('postal-city').value.trim();
+			 // BUILD CUSTOM ID CORRECTLY
+			 const adresseInput = document.getElementById('adresse').value.trim();
+			 const postalCityInput = document.getElementById('postal-city').value.trim();
 			
-			   if (!adresseInput || !postalCityInput) {
-			       alert("Adresse or Postal/City is empty!");
-			       return; // STOP if missing fields
-			   }
+			 if (!adresseInput || !postalCityInput) {
+			     alert("Adresse or Postal/City is empty!");
+			     return; // STOP if missing fields
+			 }
 			
-			   const adresse = adresseInput.toUpperCase();
-			   const [postalCode, ...cityParts] = postalCityInput.split(' ');
-			   const city = cityParts.join(' ').toUpperCase();
-			   const customID = `${adresse} - ${postalCode} ${city}`;
+			 const adresse = adresseInput.toUpperCase();
+			 const [postalCode, ...cityParts] = postalCityInput.split(' ');
+			 const city = cityParts.join(' ').toUpperCase();
+			 const customID = `${adresse} - ${postalCode} ${city}`;
 			
-			   // BUILD PAYLOAD
-			   const payload = {
-			       id: customID,
-			       adresse: adresseInput,
-			       postalCity: postalCityInput,
-			       objet: document.getElementById('objet').value,
-			       date: document.getElementById('date').value,
-			       fiches: [...document.querySelectorAll('.fiches-techniques-row')].map(row => ({
-			           marque: row.querySelector('.marque-input').value,
-			           modele: row.querySelector('.modele-input').value
-			       }))
-			   };
+			 // BUILD PAYLOAD
+			 const payload = {
+			     id: customID,
+			     adresse: adresseInput,
+			     postalCity: postalCityInput,
+			     objet: document.getElementById('objet').value,
+			     date: document.getElementById('date').value,
+			     fiches: [...document.querySelectorAll('.fiches-techniques-row')].map(row => ({
+			         marque: row.querySelector('.marque-input').value,
+			         modele: row.querySelector('.modele-input').value
+			     }))
+			 };
 			
-			   // DEBUG PAYLOAD IN BROWSER CONSOLE:
-			   console.log("CUSTOM ID:", customID);
-			   console.log("PAYLOAD SENDING TO BACKEND:", payload);
-
-			const fileInputs = document.querySelectorAll('.file-upload');
-			const fileLinks = [];
+			 // FILE UPLOADS + capture row index for later
+			 const fileInputs = document.querySelectorAll('.file-upload');
+			 const fileLinks = [];
 			
-			for (const input of fileInputs) {
-			    const file = input.files[0];
-			    if (file) {
-			        const path = `${customID}/${file.name}`; // e.g., "29 AVENUE BERLIOZ - 75018 PARIS/myfile.pdf"
-			        const { data, error } = await supabaseClient.storage
-			            .from('pdfs') // 👈 Change 'uploads' to your actual bucket name
-			            .upload(path, file, { upsert: true });
+			 for (let i = 0; i < fileInputs.length; i++) {
+			     const input = fileInputs[i];
+			     const file = input.files[0];
 			
-			        if (error) {
-			            alert(`Error uploading ${file.name}: ${error.message}`);
-			            return;
-			        }
-			        const { publicURL } = supabaseClient
-			            .storage
-			            .from('pdfs')
-			            .getPublicUrl(path).data;
+			     if (file) {
+			         const path = `${customID}/fiche-${i + 1}-${file.name}`;
+			         const { data, error } = await supabaseClient.storage
+			             .from('pdfs') // <- your bucket name here
+			             .upload(path, file, { upsert: true });
 			
-			        fileLinks.push({
-			            inputId: input.id,
-			            fileName: file.name,
-			            url: publicURL
-			        });
-			    }
-			}
+			         if (error) {
+			             alert(`Error uploading ${file.name}: ${error.message}`);
+			             return;
+			         }
 			
-			// Add file URLs to payload
-			payload.fileLinks = fileLinks;
-
-				
-			   // CORRECT FETCH WITH HEADERS:
-			   const response = await fetch('/.netlify/functions/save-progress', {
-			       method: 'POST',
-			       headers: { 'Content-Type': 'application/json' }, // REQUIRED!
-			       body: JSON.stringify(payload)
-			   });
+			         const { publicURL } = supabaseClient
+			             .storage
+			             .from('pdfs')
+			             .getPublicUrl(path).data;
 			
-			   const result = await response.json();
-			   console.log("RESPONSE FROM BACKEND:", result);
-			   alert('Progress saved! ID: ' + result.id);
+			         fileLinks.push({
+			             rowIndex: i, // this is NEW to match back to the correct row later
+			             fileName: file.name,
+			             url: publicURL
+			         });
+			     }
+			 }
+			
+			 // Add file URLs to payload
+			 payload.fileLinks = fileLinks;
+			
+			 // SEND TO BACKEND
+			 const response = await fetch('/.netlify/functions/save-progress', {
+			     method: 'POST',
+			     headers: { 'Content-Type': 'application/json' },
+			     body: JSON.stringify(payload)
+			 });
+			
+			 const result = await response.json();
+			 console.log("RESPONSE FROM BACKEND:", result);
+			 alert('Progress saved! ID: ' + result.id);
 			});
 			
-			
-document.getElementById('load-progress').addEventListener('click', async () => {
+			document.getElementById('load-progress').addEventListener('click', async () => {
     const id = prompt('Enter your progress ID:');
 
     const response = await fetch('/.netlify/functions/load-progress', {
@@ -2785,31 +2783,38 @@ document.getElementById('load-progress').addEventListener('click', async () => {
     document.getElementById('objet').value = data.objet || '';
     document.getElementById('date').value = data.date || '';
 
-    // Fill fiche rows
-    document.querySelectorAll('.fiches-techniques-row').forEach((row, i) => {
+    // Fill fiche rows (marque & modele)
+    const ficheRows = document.querySelectorAll('.fiches-techniques-row');
+    ficheRows.forEach((row, i) => {
         if (data.fiches && data.fiches[i]) {
             row.querySelector('.marque-input').value = data.fiches[i].marque || '';
             row.querySelector('.modele-input').value = data.fiches[i].modele || '';
         }
+        // 🧹 Optional: Clear old file previews inside the row
+        const existingPreview = row.querySelector('.file-link');
+        if (existingPreview) {
+            existingPreview.remove();
+        }
     });
 
-    // CLEAR old file preview section
-    const fileSection = document.getElementById('file-retrieve-section');
-    fileSection.innerHTML = '';
-
-    // Show file links if files exist
+    // Attach file links inside the correct fiche row (based on rowIndex)
     if (data.fileLinks && data.fileLinks.length > 0) {
         data.fileLinks.forEach(file => {
-            const link = document.createElement('a');
-            link.href = file.url;
-            link.innerText = `Télécharger ${file.fileName}`;
-            link.target = "_blank";
-            fileSection.appendChild(link);
-            fileSection.appendChild(document.createElement('br'));
+            const targetRow = ficheRows[file.rowIndex];
+            if (targetRow) {
+                const link = document.createElement('a');
+                link.href = file.url;
+                link.innerText = `Télécharger ${file.fileName}`;
+                link.classList.add('file-link'); // for future styling
+                link.style.marginLeft = '10px';
+                link.target = "_blank";
+                targetRow.appendChild(link);
+            }
         });
     }
 });
 
+			
 		</script>
 	</body>
 </html>
