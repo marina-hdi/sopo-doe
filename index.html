@@ -2734,91 +2734,94 @@
 				
 		const supabaseClient = supabase.createClient('https://stvfbubpbwkjyhkfqpyt.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0dmZidWJwYndranloa2ZxcHl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIyMTgzNDksImV4cCI6MjA1Nzc5NDM0OX0.ZxvsBOmzbbhS6eFnqvv2xLsUl31spGM6Cc4iLRMTZOw');
 
-		document.getElementById('save-progress').addEventListener('click', async () => {
-		    const adresseInput = document.getElementById('adresse').value.trim();
-		    const postalCityInput = document.getElementById('postal-city').value.trim();
+document.getElementById('save-progress').addEventListener('click', async () => {
+    const adresseInput = document.getElementById('adresse').value.trim();
+    const postalCityInput = document.getElementById('postal-city').value.trim();
+
+    if (!adresseInput || !postalCityInput) {
+        alert("Adresse or Postal/City is empty!");
+        return;
+    }
+
+    const [postalCode, ...cityParts] = postalCityInput.split(' ').filter(Boolean);
+    const city = cityParts.join(' ').toUpperCase();
+    const adresse = adresseInput.toUpperCase();
+    const customID = `${adresse} - ${postalCode} ${city}`;
+
+    if (!customID || customID.includes("undefined")) {
+        alert("Invalid custom ID. Check address or postal/city inputs.");
+        return;
+    }
+
+    const payload = {
+        id: customID,
+        adresse: adresseInput,
+        postalCity: postalCityInput,
+        objet: document.getElementById('objet').value,
+        date: document.getElementById('date').value,
+        fiches: [...document.querySelectorAll('.fiches-techniques-row')].map(row => ({
+            marque: row.querySelector('.marque-input').value,
+            modele: row.querySelector('.modele-input').value
+        }))
+    };
+
+    const fileInputs = document.querySelectorAll('.fiches-techniques-row input[type="file"], .proces-verbaux-row input[type="file"], .schemas-row input[type="file"]');
+    const fileLinks = [];
+
+    for (let i = 0; i < fileInputs.length; i++) {
+        const input = fileInputs[i];
+        const file = input.files[0];
+
+        // ✅ We now handle both NEW uploads and already loaded virtual files
+        if (file) {
+            const parentRow = input.closest('.fiches-techniques-row') || input.closest('.proces-verbaux-row') || input.closest('.schemas-row');
+
+            let section = '';
+            if (parentRow.classList.contains('fiches-techniques-row')) {
+                section = 'fiches';
+            } else if (parentRow.classList.contains('proces-verbaux-row')) {
+                section = 'proces';
+            } else if (parentRow.classList.contains('schemas-row')) {
+                section = 'schemas';
+            }
+
+            const path = `${customID}/${section}-${i + 1}-${file.name}`;
+            const { error } = await supabaseClient.storage
+                .from('pdfs')
+                .upload(path, file, { upsert: true }); // ALWAYS upsert!
+
+            if (error) {
+                alert(`Error uploading ${file.name}: ${error.message}`);
+                return;
+            }
+
+            const { data: publicData } = supabaseClient.storage.from('pdfs').getPublicUrl(path);
+            const publicURL = publicData.publicUrl;
+
+            fileLinks.push({
+                section: section,
+                inputId: input.id,
+                fileName: file.name,
+                url: publicURL
+            });
+        }
+    }
+
+    // ✅ Replace all fileLinks (including new files or overwrites)
+    payload.fileLinks = fileLinks;
+
+    const response = await fetch('/.netlify/functions/save-progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+    alert('Enregistré : ' + (result.id || customID));
+});
+
 		
-		    if (!adresseInput || !postalCityInput) {
-		        alert("Adresse or Postal/City is empty!");
-		        return;
-		    }
-		
-		    const [postalCode, ...cityParts] = postalCityInput.split(' ').filter(Boolean);
-		    const city = cityParts.join(' ').toUpperCase();
-		    const adresse = adresseInput.toUpperCase();
-		    const customID = `${adresse} - ${postalCode} ${city}`;
-		
-		    if (!customID || customID.includes("undefined")) {
-		        alert("Invalid custom ID. Check address or postal/city inputs.");
-		        return;
-		    }
-		
-		    const payload = {
-		        id: customID,
-		        adresse: adresseInput,
-		        postalCity: postalCityInput,
-		        objet: document.getElementById('objet').value,
-		        date: document.getElementById('date').value,
-		        fiches: [...document.querySelectorAll('.fiches-techniques-row')].map(row => ({
-		            marque: row.querySelector('.marque-input').value,
-		            modele: row.querySelector('.modele-input').value
-		        }))
-		    };
-		
-		    const fileInputs = document.querySelectorAll('.fiches-techniques-row input[type="file"], .proces-verbaux-row input[type="file"], .schemas-row input[type="file"]');
-		    const fileLinks = [];
-		
-		    for (let i = 0; i < fileInputs.length; i++) {
-		        const input = fileInputs[i];
-		        const file = input.files[0];
-		
-		        if (file) {
-		            const parentRow = input.closest('.fiches-techniques-row') || input.closest('.proces-verbaux-row') || input.closest('.schemas-row');
-		
-		            let section = '';
-		            if (parentRow.classList.contains('fiches-techniques-row')) {
-		                section = 'fiches';
-		            } else if (parentRow.classList.contains('proces-verbaux-row')) {
-		                section = 'proces';
-		            } else if (parentRow.classList.contains('schemas-row')) {
-		                section = 'schemas';
-		            }
-		
-		            const path = `${customID}/${section}-${i + 1}-${file.name}`;
-		            const { error } = await supabaseClient.storage
-		                .from('pdfs')
-		                .upload(path, file, { upsert: true });
-		
-		            if (error) {
-		                alert(`Error uploading ${file.name}: ${error.message}`);
-		                return;
-		            }
-		
-		            const { data: publicData } = supabaseClient.storage.from('pdfs').getPublicUrl(path);
-		            const publicURL = publicData.publicUrl;
-		
-		            fileLinks.push({
-		                section: section,
-		                inputId: input.id,
-		                fileName: file.name,
-		                url: publicURL
-		            });
-		        }
-		    }
-		
-		    payload.fileLinks = fileLinks;
-		
-		    const response = await fetch('/.netlify/functions/save-progress', {
-		        method: 'POST',
-		        headers: { 'Content-Type': 'application/json' },
-		        body: JSON.stringify(payload)
-		    });
-		
-		    const result = await response.json();
-		    alert('Progress saved! ID: ' + (result.id || customID));
-		});
-		
-					// Create dropdown element dynamically
+		// Create dropdown element dynamically
 		const idDropdown = document.createElement('select');
 		idDropdown.id = 'progress-id-dropdown';
 		idDropdown.style.display = 'none';
