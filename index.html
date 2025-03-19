@@ -2701,15 +2701,13 @@ document.getElementById('save-progress').addEventListener('click', async () => {
         return;
     }
 
-    const [postalCode, ...cityParts] = postalCityInput.split(' ').filter(Boolean);
-    const city = cityParts.join(' ').toUpperCase();
     const adresse = adresseInput.toUpperCase();
+    const [postalCode, ...cityParts] = postalCityInput.split(' ');
+    const city = cityParts.join(' ').toUpperCase();
     const customID = `${adresse} - ${postalCode} ${city}`;
 
-    if (!customID || customID.includes("undefined")) {
-        alert("Invalid custom ID. Check address or postal/city inputs.");
-        return;
-    }
+    // 🚨 Sanitize ID for Supabase key (replace spaces)
+    const safeID = customID.replace(/\s+/g, '_');
 
     const payload = {
         id: customID,
@@ -2730,7 +2728,6 @@ document.getElementById('save-progress').addEventListener('click', async () => {
         const input = fileInputs[i];
         const file = input.files[0];
 
-        // ✅ We now handle both NEW uploads and already loaded virtual files
         if (file) {
             const parentRow = input.closest('.fiches-techniques-row') || input.closest('.proces-verbaux-row') || input.closest('.schemas-row');
 
@@ -2743,10 +2740,13 @@ document.getElementById('save-progress').addEventListener('click', async () => {
                 section = 'schemas';
             }
 
-            const path = `${customID}/${section}-${i + 1}-${file.name}`;
+            // 🚨 Sanitize filename too
+            const cleanFileName = file.name.replace(/\s+/g, '_');
+
+            const path = `${safeID}/${section}-${i + 1}-${cleanFileName}`;
             const { error } = await supabaseClient.storage
                 .from('pdfs')
-                .upload(path, file, { upsert: true }); // ALWAYS upsert!
+                .upload(path, file, { upsert: true });
 
             if (error) {
                 alert(`Error uploading ${file.name}: ${error.message}`);
@@ -2765,7 +2765,6 @@ document.getElementById('save-progress').addEventListener('click', async () => {
         }
     }
 
-    // ✅ Replace all fileLinks (including new files or overwrites)
     payload.fileLinks = fileLinks;
 
     const response = await fetch('/.netlify/functions/save-progress', {
@@ -2777,6 +2776,7 @@ document.getElementById('save-progress').addEventListener('click', async () => {
     const result = await response.json();
     alert('Enregistré : ' + (result.id || customID));
 });
+
 
 		
 		// Create dropdown element dynamically
