@@ -2701,13 +2701,10 @@ document.getElementById('save-progress').addEventListener('click', async () => {
         return;
     }
 
-    const adresse = adresseInput.toUpperCase();
-    const [postalCode, ...cityParts] = postalCityInput.split(' ');
+    const [postalCode, ...cityParts] = postalCityInput.split(' ').filter(Boolean);
     const city = cityParts.join(' ').toUpperCase();
+    const adresse = adresseInput.toUpperCase();
     const customID = `${adresse} - ${postalCode} ${city}`;
-
-    // 🚨 Sanitize ID for Supabase key (replace spaces)
-    const safeID = customID.replace(/\s+/g, '_');
 
     const payload = {
         id: customID,
@@ -2720,6 +2717,14 @@ document.getElementById('save-progress').addEventListener('click', async () => {
             modele: row.querySelector('.modele-input').value
         }))
     };
+
+    // Sanitizer function 💪
+    function sanitize(str) {
+        return str
+            .replace(/\s+/g, '_')                   // Spaces -> _
+            .replace(/[^a-zA-Z0-9_\-\.]/g, '')      // Remove special chars except _ - .
+            .toLowerCase();
+    }
 
     const fileInputs = document.querySelectorAll('.fiches-techniques-row input[type="file"], .proces-verbaux-row input[type="file"], .schemas-row input[type="file"]');
     const fileLinks = [];
@@ -2740,10 +2745,11 @@ document.getElementById('save-progress').addEventListener('click', async () => {
                 section = 'schemas';
             }
 
-            // 🚨 Sanitize filename too
-            const cleanFileName = file.name.replace(/\s+/g, '_');
+            const safeID = sanitize(customID);
+            const cleanFileName = sanitize(file.name);
 
             const path = `${safeID}/${section}-${i + 1}-${cleanFileName}`;
+
             const { error } = await supabaseClient.storage
                 .from('pdfs')
                 .upload(path, file, { upsert: true });
@@ -2776,8 +2782,6 @@ document.getElementById('save-progress').addEventListener('click', async () => {
     const result = await response.json();
     alert('Enregistré : ' + (result.id || customID));
 });
-
-
 		
 		// Create dropdown element dynamically
 		const idDropdown = document.createElement('select');
