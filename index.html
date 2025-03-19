@@ -2195,273 +2195,230 @@
 			});
 		</script>
 		<script>
-			document.addEventListener("DOMContentLoaded", function () {
-			    const fileInputs = document.querySelectorAll(".file-upload");
-			
-			    function getMateriel(input) {
-			        return input.closest("tr").querySelector("td:first-child").textContent.trim();
-			    }
-			
-			    function loadData(key) {
-			        return JSON.parse(localStorage.getItem(key)) || {};
-			    }
-			
-			    function saveData(key, data) {
-			        localStorage.setItem(key, JSON.stringify(data));
-			    }
-			
-			    function dataURLtoBlob(dataURL) {
-			        let arr = dataURL.split(","), mime = arr[0].match(/:(.*?);/)[1];
-			        let bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-			        while (n--) {
-			            u8arr[n] = bstr.charCodeAt(n);
-			        }
-			        return new Blob([u8arr], { type: mime });
-			    }
-			
-			    let fileData = loadData("fileData");
-			
-			    fileInputs.forEach(input => {
-			        let row = input.closest("tr");
-			        let marqueInput = row.querySelector(".marque-input");
-			        let modeleInput = row.querySelector(".modele-input");
-			        let dropzone = row.querySelector(".dropzone");
-			        let pdfPreview = row.querySelector(".pdf-preview");
-			        let removeBtn = row.querySelector(".remove-file");
-			
-			        function getFileKey() {
-			            let materiel = getMateriel(input);
-			            let marque = marqueInput?.value.trim();
-			            let modele = modeleInput?.value.trim();
-			            if (!marque || !modele) return null;
-			            return `${materiel}-${marque}-${modele}`;
-			        }
-			
-			        function updateFileDisplay() {
-    let key = getFileKey();
-    if (!key) return;
-
-    if (fileData[key]) {
-        let pdfBlob = dataURLtoBlob(fileData[key]);
-        let objectURL = URL.createObjectURL(pdfBlob);
-
-        if (pdfPreview) {
-            pdfPreview.href = objectURL;
-            pdfPreview.style.display = "inline";
-        }
-
-        if (removeBtn) {
-            removeBtn.style.display = "inline";
-        }
-
-        if (dropzone) {
-            dropzone.style.display = "none";
-        }
-
-if (row) {
-    updateRowStyle(row); // Let your global logic handle the styling instead!
-}
-
-    } else {
-        if (pdfPreview) pdfPreview.style.display = "none";
-        if (removeBtn) removeBtn.style.display = "none";
-        if (dropzone) dropzone.style.display = "block";
-        if (row) row.style.backgroundColor = "";
-    }
-}
-
-			
-			        marqueInput?.addEventListener("change", updateFileDisplay);
-			        modeleInput?.addEventListener("change", updateFileDisplay);
-			
-			        input.addEventListener("change", function () {
-			            let file = this.files[0];
-			            let key = getFileKey();
-			            if (!file || !key) return;
-			
-			            let reader = new FileReader();
-			            reader.onload = function (e) {
-			                fileData[key] = e.target.result;
-			                saveData("fileData", fileData);
-			                updateFileDisplay();
-			            };
-			            reader.readAsDataURL(file);
-			        });
-			
-			        removeBtn.addEventListener("click", function () {
-			            let key = getFileKey();
-			            if (key && fileData[key]) {
-			                delete fileData[key]; // Remove file from storage
-			                saveData("fileData", fileData);
-			                updateFileDisplay();
-			            }
-			        });
-			
-			        updateFileDisplay(); // Ensure the row updates properly on page load
-			    });
-			});
-					
+		document.addEventListener("DOMContentLoaded", function () {
+		    const fileInputs = document.querySelectorAll(".file-upload");
+		
+		    function getMateriel(input) {
+		        return input.closest("tr").querySelector("td:first-child").textContent.trim();
+		    }
+		
+		    function loadData(key) {
+		        return JSON.parse(localStorage.getItem(key)) || {};
+		    }
+		
+		    function saveData(key, data) {
+		        localStorage.setItem(key, JSON.stringify(data));
+		    }
+		
+		    function dataURLtoBlob(dataURL) {
+		        let arr = dataURL.split(","), mime = arr[0].match(/:(.*?);/)[1];
+		        let bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+		        while (n--) {
+		            u8arr[n] = bstr.charCodeAt(n);
+		        }
+		        return new Blob([u8arr], { type: mime });
+		    }
+		
+		    let fileData = loadData("fileData");
+		
+		    fileInputs.forEach(input => {
+		        let row = input.closest("tr");
+		        let marqueInput = row.querySelector(".marque-input");
+		        let modeleInput = row.querySelector(".modele-input");
+		        let dropzone = row.querySelector(".dropzone");
+		        let pdfPreview = row.querySelector(".pdf-preview");
+		        let removeBtn = row.querySelector(".remove-file");
+		
+		        function getFileKey() {
+		            let materiel = getMateriel(input);
+		            let marque = marqueInput?.value.trim();
+		            let modele = modeleInput?.value.trim();
+		            if (!marque || !modele) return null;
+		            return `${materiel}-${marque}-${modele}`;
+		        }
+		
+		        function updateFileDisplay() {
+		            let key = getFileKey();
+		            if (!key) return;
+		
+		            if (fileData[key]) {
+		                let pdfBlob = dataURLtoBlob(fileData[key]);
+		                let objectURL = URL.createObjectURL(pdfBlob);
+		
+		                if (pdfPreview) {
+		                    pdfPreview.href = objectURL;
+		                    pdfPreview.style.display = "inline";
+		                }
+		                if (removeBtn) {
+		                    removeBtn.style.display = "inline";
+		                }
+		
+		                // No more hiding the dropzone!
+		                if (dropzone) {
+		                    dropzone.style.display = "block"; // Always show!
+		                    dropzone.innerText = input.files[0]?.name || 'Cliquez ou déposez';
+		                }
+		
+		            } else {
+		                if (pdfPreview) pdfPreview.style.display = "none";
+		                if (removeBtn) removeBtn.style.display = "none";
+		                if (dropzone) {
+		                    dropzone.style.display = "block";
+		                    dropzone.innerText = 'Cliquez ou déposez';
+		                }
+		            }
+		
+		            if (row) updateRowStyle(row);
+		        }
+		
+		        marqueInput?.addEventListener("change", updateFileDisplay);
+		        modeleInput?.addEventListener("change", updateFileDisplay);
+		
+		        input.addEventListener("change", function () {
+		            let file = this.files[0];
+		            let key = getFileKey();
+		            if (!file || !key) return;
+		
+		            let reader = new FileReader();
+		            reader.onload = function (e) {
+		                fileData[key] = e.target.result;
+		                saveData("fileData", fileData);
+		                updateFileDisplay();
+		            };
+		            reader.readAsDataURL(file);
+		        });
+		
+		        removeBtn.addEventListener("click", function () {
+		            let key = getFileKey();
+		            if (key && fileData[key]) {
+		                delete fileData[key];
+		                saveData("fileData", fileData);
+		                input.value = ''; // Clear file input too
+		                updateFileDisplay();
+		            }
+		        });
+		
+		        updateFileDisplay();
+		    });
+		});					
 		</script>
-		<script>			
+		<script>
 			document.addEventListener('DOMContentLoaded', function() {
-			    // Define updateRowStyle function globally
-			    window.updateRowStyle = function(row) {
-			        const fileInput = row.querySelector('input[type="file"]');
-			        const marqueInput = row.querySelectorAll('input[type="text"]')[0];
-			        const modeleInput = row.querySelectorAll('input[type="text"]')[1];
-			
-			        const fileSelected = fileInput && fileInput.files.length > 0;
-			        const marqueFilled = marqueInput ? marqueInput.value.trim() !== '' : false;
-			        const modeleFilled = modeleInput ? modeleInput.value.trim() !== '' : false;
-			
-			        // "Fiches Techniques" section styles
-			        if (row.classList.contains('fiches-techniques-row')) {
-			            if (fileSelected && !marqueFilled && !modeleFilled) {
-			                row.style.backgroundColor = '#ffd4d4'; // Light red background
-			                row.style.fontWeight = 'bold';
-			                row.style.color = '#a13a38'; // Red text
-			            } else if (fileSelected && marqueFilled && !modeleFilled) {
-			                row.style.backgroundColor = '#ffd4d4'; // Light red background
-			                row.style.fontWeight = 'bold';
-			                row.style.color = '#a13a38'; // Red text
-			            } else if (fileSelected && !marqueFilled && modeleFilled) {
-			                row.style.backgroundColor = '#ffd4d4'; // Light red background
-			                row.style.fontWeight = 'bold';
-			                row.style.color = '#a13a38'; // Red text
-			            } else if (!fileSelected && marqueFilled && modeleFilled) {
-			                row.style.backgroundColor = '#ffd4d4'; // Light red background
-			                row.style.fontWeight = 'bold';
-			                row.style.color = '#a13a38'; // Red text
-			            } else if (!fileSelected && !marqueFilled && modeleFilled) {
-			                row.style.backgroundColor = '#ffd4d4'; // Light red background
-			                row.style.fontWeight = 'bold';
-			                row.style.color = '#a13a38'; // Red text
-			            } else if (!fileSelected && marqueFilled && !modeleFilled) {
-			                row.style.backgroundColor = '#ffd4d4'; // Light red background
-			                row.style.fontWeight = 'bold';
-			                row.style.color = '#a13a38'; // Red text
-			            } else if (fileSelected && marqueFilled && modeleFilled) {
-			                row.style.backgroundColor = '#d1ebf0'; // Light blue background
-			                row.style.fontWeight = 'bold';
-			                row.style.color = '#3290a1'; // Blue text
-			            } else {
-			                row.style.backgroundColor = ''; // Reset background
-			                row.style.fontWeight = 'normal';
-			                row.style.color = ''; // Reset color
-			            }
-			        }
-			
-			        // "Process Verbaux" section styles
-			        else if (row.classList.contains('proces-verbaux-row')) {
-			            if (fileSelected) {
-			                row.style.backgroundColor = '#d8e1f0'; // Light blue background
-			                row.style.fontWeight = 'bold';
-			                row.style.color = '#1e375c'; // Dark blue text
-			            } else {
-			                row.style.backgroundColor = ''; // Reset background
-			                row.style.fontWeight = 'normal';
-			                row.style.color = ''; // Reset color
-			            }
-			        }
-			
-			        // "Schemas" section styles
-			        else if (row.classList.contains('schemas-row')) {
-			            if (fileSelected) {
-			                row.style.backgroundColor = '#fae5d2'; // Light orange background
-			                row.style.fontWeight = 'bold';
-			                row.style.color = '#cc6b16'; // Orange text
-			            } else {
-			                row.style.backgroundColor = ''; // Reset background
-			                row.style.fontWeight = 'normal';
-			                row.style.color = ''; // Reset color
-			            }
-			        }
-			    };
-			
-			    // Attach event listeners for style updates
-			    document.querySelectorAll('.fiches-techniques-row, .proces-verbaux-row, .schemas-row').forEach(row => {
-			        row.querySelectorAll('input').forEach(input => {
-			            input.addEventListener('input', () => updateRowStyle(row));
-			        });
-			    });
-			
-			    // Initialize each dropzone and add remove icon
-			    function initializeDropzone(dropzoneId, fileInputId) {
-			        const dropzoneContainer = document.getElementById(dropzoneId).parentNode;
-			        const dropzone = document.getElementById(dropzoneId);
-			        const fileInput = document.getElementById(fileInputId);
-			        const removeIcon = dropzoneContainer.querySelector('.remove-file');
-			
-			        // Clicking on dropzone opens file input dialog
-			        dropzone.addEventListener('click', () => fileInput.click());
-			
-			        // Styling on drag over and drag leave
-			        dropzone.addEventListener('dragover', (e) => {
-			            e.preventDefault();
-			            dropzone.classList.add('dragover');
-			        });
-			        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-			
-			        // Handling file drop
-			        dropzone.addEventListener('drop', (e) => {
-			            e.preventDefault();
-			            dropzone.classList.remove('dragover');
-			            const file = e.dataTransfer.files[0];
-			            if (file) {
-			                fileInput.files = e.dataTransfer.files;
-			                dropzone.innerText = file.name;
-			                removeIcon.style.display = 'inline'; // Show remove icon
-			                updateRowStyle(dropzone.closest('tr')); // Update style on file addition
-			            }
-			        });
-			
-			        // Handle file change event (when selecting file through file dialog)
-			        fileInput.addEventListener('change', () => {
-			            const file = fileInput.files[0];
-			            if (file) {
-			                dropzone.innerText = file.name;
-			                removeIcon.style.display = 'inline';
-			            } else {
-			                dropzone.innerText = 'Cliquez ou déposez';
-			                removeIcon.style.display = 'none';
-			            }
-			            updateRowStyle(dropzone.closest('tr')); // Update style on file change
-			        });
-			
-			    // Remove file functionality
-			    removeIcon.addEventListener('click', () => {
-			        fileInput.value = ''; // Clear file input
-			        dropzone.innerText = 'Cliquez ou déposez'; // Reset dropzone text
-			        removeIcon.style.display = 'none'; // Hide remove icon
-			
-			        // Clear marque and modele inputs
-			        const inputs = dropzone.closest('tr').querySelectorAll('input[type="text"]');
-			        if (inputs.length >= 2) {
-			            inputs[0].value = ''; // Clear marque input
-			            inputs[1].value = ''; // Clear modele input
-			        }
-			
-			        updateRowStyle(dropzone.closest('tr')); // Update style on file removal
-			    });
-			
-			    }
-			
-			    // Initialize each dropzone with file input, drag-and-drop, and remove functionality
-			    document.querySelectorAll('.fiches-techniques-row, .proces-verbaux-row, .schemas-row').forEach(row => {
-			        const dropzone = row.querySelector('.dropzone');
-			        const fileInput = row.querySelector('input[type="file"]');
-			
-			        if (dropzone && fileInput) {
-			            const container = document.createElement('div');
-			            container.className = 'dropzone-container';
-			            dropzone.parentNode.insertBefore(container, dropzone);
-			            container.appendChild(dropzone);
-			            dropzone.insertAdjacentHTML('afterend', '<span class="remove-file" style="display: none;">&times;</span>');
-			            initializeDropzone(dropzone.id, fileInput.id);
-			            container.appendChild(dropzone.nextElementSibling); // Add remove icon to container
-			        }
-			    });
-			});
+    // Define updateRowStyle function globally
+    window.updateRowStyle = function(row) {
+        const fileInput = row.querySelector('input[type="file"]');
+        const marqueInput = row.querySelector('.marque-input');
+        const modeleInput = row.querySelector('.modele-input');
+
+        const fileSelected = fileInput && fileInput.files.length > 0;
+        const marqueFilled = marqueInput ? marqueInput.value.trim() !== '' : false;
+        const modeleFilled = modeleInput ? modeleInput.value.trim() !== '' : false;
+
+        // Reset styling first
+        row.style.backgroundColor = '';
+        row.style.fontWeight = 'normal';
+        row.style.color = '';
+
+        if (row.classList.contains('fiches-techniques-row')) {
+            if (fileSelected && marqueFilled && modeleFilled) {
+                row.style.backgroundColor = '#d1ebf0'; // light blue
+                row.style.color = '#3290a1'; // blue text
+                row.style.fontWeight = 'bold';
+            } else if (fileSelected || marqueFilled || modeleFilled) {
+                row.style.backgroundColor = '#ffd4d4'; // light red
+                row.style.color = '#a13a38'; // red text
+                row.style.fontWeight = 'bold';
+            }
+        } else if (row.classList.contains('proces-verbaux-row')) {
+            if (fileSelected) {
+                row.style.backgroundColor = '#d8e1f0'; // light blue
+                row.style.color = '#1e375c'; // Dark blue text
+                row.style.fontWeight = 'bold';
+            }
+        } else if (row.classList.contains('schemas-row')) {
+            if (fileSelected) {
+                row.style.backgroundColor = '#fae5d2'; // Light orange background
+                row.style.color = '#cc6b16'; // Orange text
+                row.style.fontWeight = 'bold';
+            }
+        }
+    };
+
+    // Attach event listeners for dynamic styling on input change
+    document.querySelectorAll('.fiches-techniques-row, .proces-verbaux-row, .schemas-row').forEach(row => {
+        row.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', () => updateRowStyle(row));
+        });
+    });
+
+    // Dropzone logic
+    function initializeDropzone(dropzoneId, fileInputId) {
+        const dropzoneContainer = document.getElementById(dropzoneId).parentNode;
+        const dropzone = document.getElementById(dropzoneId);
+        const fileInput = document.getElementById(fileInputId);
+        const removeIcon = dropzoneContainer.querySelector('.remove-file');
+
+        dropzone.addEventListener('click', () => fileInput.click());
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                fileInput.files = e.dataTransfer.files;
+                dropzone.innerText = file.name;
+                removeIcon.style.display = 'inline';
+                updateRowStyle(dropzone.closest('tr'));
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (file) {
+                dropzone.innerText = file.name;
+                removeIcon.style.display = 'inline';
+            } else {
+                dropzone.innerText = 'Cliquez ou déposez';
+                removeIcon.style.display = 'none';
+            }
+            updateRowStyle(dropzone.closest('tr'));
+        });
+
+        removeIcon.addEventListener('click', () => {
+            fileInput.value = '';
+            dropzone.innerText = 'Cliquez ou déposez';
+            removeIcon.style.display = 'none';
+
+            const inputs = dropzone.closest('tr').querySelectorAll('input[type="text"]');
+            if (inputs.length >= 2) {
+                inputs[0].value = '';
+                inputs[1].value = '';
+            }
+
+            updateRowStyle(dropzone.closest('tr'));
+        });
+    }
+
+    document.querySelectorAll('.fiches-techniques-row, .proces-verbaux-row, .schemas-row').forEach(row => {
+        const dropzone = row.querySelector('.dropzone');
+        const fileInput = row.querySelector('input[type="file"]');
+        if (dropzone && fileInput) {
+            const container = document.createElement('div');
+            container.className = 'dropzone-container';
+            dropzone.parentNode.insertBefore(container, dropzone);
+            container.appendChild(dropzone);
+            dropzone.insertAdjacentHTML('afterend', '<span class="remove-file" style="display: none;">&times;</span>');
+            initializeDropzone(dropzone.id, fileInput.id);
+            container.appendChild(dropzone.nextElementSibling);
+        }
+    });
+});
 		</script>
 		<script>
 			document.getElementById('upload-form').addEventListener('submit', async function(e) {
