@@ -1032,6 +1032,54 @@
 						<input id="tubage-file" type="file"/>
 					</td>
 				</tr>
+				<tr class="proces-verbaux-row">
+			    <td>PORTE D’ACCÈS</td>
+			    <td>
+			        <div class="dropzone" id="porte-acces-dropzone">Cliquez ou déposez</div>
+			        <input id="porte-acces-file" type="file" />
+			    </td>
+			</tr>
+			
+			<tr class="proces-verbaux-row">
+			    <td>RAMONAGE</td>
+			    <td>
+			        <div class="dropzone" id="ramonage-dropzone">Cliquez ou déposez</div>
+			        <input id="ramonage-file" type="file" />
+			    </td>
+			</tr>
+			
+			<tr class="proces-verbaux-row">
+			    <td>CERTIFICAT D’ÉTANCHÉITÉ</td>
+			    <td>
+			        <div class="dropzone" id="certificat-etancheite-dropzone">Cliquez ou déposez</div>
+			        <input id="certificat-etancheite-file" type="file" />
+			    </td>
+			</tr>
+			
+			<tr class="proces-verbaux-row">
+			    <td>ANALYSE D’EAU</td>
+			    <td>
+			        <div class="dropzone" id="analyse-eau-dropzone">Cliquez ou déposez</div>
+			        <input id="analyse-eau-file" type="file" />
+			    </td>
+			</tr>
+			
+			<tr class="proces-verbaux-row">
+			    <td>CERTIFICAT DE NEUTRALISATION</td>
+			    <td>
+			        <div class="dropzone" id="certificat-neutralisation-dropzone">Cliquez ou déposez</div>
+			        <input id="certificat-neutralisation-file" type="file" />
+			    </td>
+			</tr>
+			
+			<tr class="proces-verbaux-row">
+			    <td>SUIVI DES DÉCHETS</td>
+			    <td>
+			        <div class="dropzone" id="suivi-dechets-dropzone">Cliquez ou déposez</div>
+			        <input id="suivi-dechets-file" type="file" />
+			    </td>
+			</tr>
+
 			</tbody>
 		</table>
 		<!-- Schemas Table -->
@@ -2734,8 +2782,14 @@
 			            { name: 'PORTE', file: document.getElementById('porte-file').files[0] },
 			            { name: 'QUALIGAZ', file: document.getElementById('qualigaz-file').files[0] },
 			            { name: 'RAPPORT DESEMBOUAGE', file: document.getElementById('rapport-desembouage-file').files[0] },
-			            { name: 'TUBAGE', file: document.getElementById('tubage-file').files[0] }
-			        ],
+			            { name: 'TUBAGE', file: document.getElementById('tubage-file').files[0] },
+					    { name: 'PORTE D’ACCÈS', file: document.getElementById('porte-acces-file').files[0] },
+					    { name: 'RAMONAGE', file: document.getElementById('ramonage-file').files[0] },
+					    { name: 'CERTIFICAT D’ÉTANCHÉITÉ', file: document.getElementById('certificat-etancheite-file').files[0] },
+					    { name: 'ANALYSE D’EAU', file: document.getElementById('analyse-eau-file').files[0] },
+					    { name: 'CERTIFICAT DE NEUTRALISATION', file: document.getElementById('certificat-neutralisation-file').files[0] },
+					    { name: 'SUIVI DES DÉCHETS', file: document.getElementById('suivi-dechets-file').files[0] }
+					 ],
 			        "SCHEMAS": [
 			            { name: 'SCHEMA HYDRAULIQUE', file: document.getElementById('schema-hydraulique-file').files[0] },
 			            { name: 'SCHEMA ELECTRIQUE', file: document.getElementById('schema-electrique-file').files[0] },
@@ -3109,5 +3163,6 @@ document.getElementById('save-progress').addEventListener('click', async () => {
 		</script>
 	</body>
 </html>
+
 
 
