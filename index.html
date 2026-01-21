@@ -944,6 +944,13 @@
 					</td>
 				</tr>
 				<tr class="proces-verbaux-row">
+					<td>COMPTEUR IMPULSION</td>
+					<td>
+						<div class="dropzone" id="compteur-impulsiondropzone">Cliquez ou déposez</div>
+						<input id="compteur-impulsion-file" type="file"/>
+					</td>
+				</tr>
+				<tr class="proces-verbaux-row">
 					<td>DEGAZAGE CUVE FIOUL</td>
 					<td>
 						<div class="dropzone" id="degazage-cuvedropzone">Cliquez ou déposez</div>
@@ -2771,6 +2778,7 @@
 			],
 			        "PROCES VERBAUX": [
 			            { name: 'CERTIFICAT DE DECHARGE D\'AMIANTE', file: document.getElementById('certificat-amiante-file').files[0] },
+			            { name: 'COMPTEUR IMPULSION', file: document.getElementById('compteur-impulsion-file').files[0] },
 			            { name: 'DEGAZAGE CUVE FIOUL', file: document.getElementById('degazage-cuve-file').files[0] },
 			            { name: 'DETECTION GAZ', file: document.getElementById('detection-gaz-file').files[0] },
 			            { name: 'FLOCAGE', file: document.getElementById('flocage-file').files[0] },
@@ -3164,6 +3172,7 @@ document.getElementById('save-progress').addEventListener('click', async () => {
 		</script>
 	</body>
 </html>
+
 
 
 
