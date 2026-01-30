@@ -937,6 +937,13 @@
 			</thead>
 			<tbody>
 				<tr class="proces-verbaux-row">
+					<td>APAVE</td>
+					<td>
+						<div class="dropzone" id="apave-dropzone">Cliquez ou déposez</div>
+						<input id="apave-file" type="file"/>
+					</td>
+				</tr>
+				<tr class="proces-verbaux-row">
 					<td>CERTIFICAT DE DECHARGE D'AMIANTE</td>
 					<td>
 						<div class="dropzone" id="certificat-amiantedropzone">Cliquez ou déposez</div>
@@ -2777,6 +2784,7 @@
 		    { name: 'VENTILATION HAUTE', file: document.getElementById('ventilation-haute-file').files[0], marque: document.querySelectorAll('.fiches-techniques-row input[type="text"]')[80].value.toUpperCase(), modele: document.querySelectorAll('.fiches-techniques-row input[type="text"]')[81].value.toUpperCase() }
 			],
 			        "PROCES VERBAUX": [
+			            { name: 'APAVE', file: document.getElementById('apave-file').files[0] },
 			            { name: 'CERTIFICAT DE DECHARGE D\'AMIANTE', file: document.getElementById('certificat-amiante-file').files[0] },
 			            { name: 'COMPTEUR IMPULSION', file: document.getElementById('compteur-impulsion-file').files[0] },
 			            { name: 'DEGAZAGE CUVE FIOUL', file: document.getElementById('degazage-cuve-file').files[0] },
@@ -3172,6 +3180,7 @@ document.getElementById('save-progress').addEventListener('click', async () => {
 		</script>
 	</body>
 </html>
+
 
 
 
