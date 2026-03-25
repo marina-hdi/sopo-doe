@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>DOE v2</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app">
+    <aside class="sidebar">
+        <h2>DOE</h2>
+        <nav>
+            <button class="nav-item active">Nouveau DOE</button>
+            <button class="nav-item">Brouillons</button>
+            <button class="nav-item">Enregistrés</button>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <input placeholder="Adresse chantier..." />
+            <div class="actions">
+                <button>Enregistrer</button>
+                <button>Exporter</button>
+            </div>
+        </header>
+
+        <section class="steps">
+            <div class="step active">1. Infos</div>
+            <div class="step">2. Fiches</div>
+            <div class="step">3. PV</div>
+            <div class="step">4. Schémas</div>
+            <div class="step">5. Export</div>
+        </section>
+
+        <section class="content">
+            <h1>Bienvenue dans DOE v2</h1>
+            <p>Structure prête pour migration progressive 🚀</p>
+        </section>
+    </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
