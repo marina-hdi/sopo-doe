@@ -1,0 +1,66 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f5f6f8;
+}
+
+.app {
+    display: flex;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 220px;
+    background: #1f2a37;
+    color: white;
+    padding: 20px;
+}
+
+.nav-item {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 10px;
+    background: transparent;
+    color: white;
+    border: none;
+    text-align: left;
+}
+
+.nav-item.active {
+    border-left: 4px solid white;
+}
+
+.main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.topbar {
+    background: white;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.steps {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+}
+
+.step {
+    padding: 8px 12px;
+    background: #e2e8f0;
+    border-radius: 6px;
+}
+
+.step.active {
+    background: #1f2a37;
+    color: white;
+}
+
+.content {
+    padding: 20px;
+}
