@@ -18,28 +18,39 @@
     </aside>
 
     <main class="main">
-    <header class="topbar glass">
-    <input placeholder="Adresse chantier..." />
-            <div class="actions">
-                <button>Enregistrer</button>
-                <button>Exporter</button>
-            </div>
-        </header>
+   <header class="topbar glass">
+    <input id="site-search" placeholder="Adresse chantier..." />
+    <div class="actions">
+        <button type="button" class="secondary-action">Enregistrer</button>
+        <button type="button">Exporter</button>
+    </div>
+</header>
 
-        <section class="steps">
-            <div class="step active">1. Infos</div>
-            <div class="step">2. Fiches</div>
-            <div class="step">3. PV</div>
-            <div class="step">4. Schémas</div>
-            <div class="step">5. Export</div>
-        </section>
+<section class="steps" id="step-tabs">
+    <button class="step active" data-step="0">1. Infos</button>
+    <button class="step" data-step="1">2. Fiches</button>
+    <button class="step" data-step="2">3. PV</button>
+    <button class="step" data-step="3">4. Schémas</button>
+    <button class="step" data-step="4">5. Export</button>
+</section>
 
-        <section class="content glass">
-            <h1>Créer un DOE</h1>
-            <p>Commencez par renseigner les informations du chantier</p>
-        </section>
-    </main>
-</div>
+<section class="content glass">
+    <div class="content-header">
+        <div>
+            <p class="eyebrow">DOE builder</p>
+            <h1 id="step-title">Créer un DOE</h1>
+            <p id="step-description">Commencez par renseigner les informations du chantier.</p>
+        </div>
+        <div class="step-meta" id="step-meta">Étape 1 sur 5</div>
+    </div>
+
+    <div id="step-content"></div>
+
+    <div class="content-footer">
+        <button type="button" id="prev-step" class="footer-btn secondary-action">Précédent</button>
+        <button type="button" id="next-step" class="footer-btn">Suivant</button>
+    </div>
+</section>
 
 <script src="app.js"></script>
 </body>
