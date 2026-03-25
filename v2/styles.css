@@ -173,3 +173,191 @@ h1 {
 
     pointer-events: none;
 }
+
+.step-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.8fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.panel {
+    background: rgba(255,255,255,0.42);
+    border: 1px solid rgba(255,255,255,0.55);
+    border-radius: 22px;
+    padding: 22px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+}
+
+.panel h3,
+.panel h4 {
+    margin: 0 0 8px;
+}
+
+.panel-muted {
+    color: #6f7378;
+    font-size: 14px;
+    margin-bottom: 18px;
+}
+
+.section-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    gap: 12px;
+}
+
+.dynamic-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.dynamic-card {
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 10px 25px rgba(0, 68, 140, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dynamic-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(0, 68, 140, 0.10);
+}
+
+.dynamic-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.dynamic-card-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    color: #1D1E18;
+}
+
+.dynamic-card-title::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #1699D1;
+    box-shadow: 0 0 0 6px rgba(22, 153, 209, 0.12);
+}
+
+.field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.field.full {
+    grid-column: 1 / -1;
+}
+
+.field label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6f7378;
+}
+
+.field input,
+.field select,
+.field textarea {
+    width: 100%;
+    border: 1px solid rgba(171,171,171,0.25);
+    background: rgba(255,255,255,0.92);
+    border-radius: 14px;
+    padding: 12px 14px;
+    color: #1D1E18;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+    outline: none;
+    border-color: rgba(22,153,209,0.7);
+    box-shadow: 0 0 0 4px rgba(22,153,209,0.12);
+    transform: translateY(-1px);
+}
+
+.add-row-btn {
+    background: #00448C;
+    color: white;
+    border: none;
+    border-radius: 14px;
+    padding: 12px 16px;
+    font-weight: 600;
+}
+
+.remove-row-btn {
+    background: rgba(206, 35, 42, 0.10);
+    color: #CE232A;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-weight: 600;
+}
+
+.summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.summary-item {
+    background: rgba(255,255,255,0.70);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.summary-item span {
+    color: #6f7378;
+    font-size: 14px;
+}
+
+.summary-item strong {
+    color: #00448C;
+    font-size: 16px;
+}
+
+.empty-state {
+    background: rgba(255,255,255,0.58);
+    border: 1px dashed rgba(171,171,171,0.5);
+    border-radius: 18px;
+    padding: 24px;
+    text-align: center;
+    color: #6f7378;
+}
+
+@media (max-width: 980px) {
+    .step-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .field-grid {
+        grid-template-columns: 1fr;
+    }
+}
