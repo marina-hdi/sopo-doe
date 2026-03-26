@@ -95,7 +95,7 @@ function renderAddressBanner() {
 
     return `
         <div class="current-address-banner">
-            <span class="current-address-label">Adresse actuelle</span>
+            <span class="current-address-label">Chantier</span>
             <strong>${addressLine ? escapeHtml(addressLine) : "Adresse non renseignée"}</strong>
         </div>
     `;
@@ -282,19 +282,9 @@ function renderSummary() {
                     </div>
                 </div>
 
-                <div class="export-status-block">
-                    <span class="export-pill">
-                        ${isDoeReady() ? "DOE assez rempli pour continuer" : "DOE encore incomplet"}
-                    </span>
-                </div>
             </div>
         </div>
     `;
-}
-
-function isDoeReady() {
-    const { infos } = state.data;
-    return Boolean(infos.adresse && infos.ville && infos.cp);
 }
 
 /* ========================
