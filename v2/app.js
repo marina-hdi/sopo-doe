@@ -8,9 +8,12 @@ let state = {
     data: {
         infos: {
             adresse: "",
-            ville: "",
+            natureTravaux: "",
             cp: "",
-            description: ""
+            ville: "",
+            dateReception: "",
+            dateDoe: "",
+            notes: ""
         },
         fiches: [],
         pv: [],
@@ -49,6 +52,7 @@ const stepsConfig = [
 ======================== */
 const steps = document.querySelectorAll(".step");
 const content = document.getElementById("step-content");
+const chantierBannerZone = document.getElementById("chantier-banner-zone");
 const nextStepBtn = document.getElementById("next-step");
 const prevStepBtn = document.getElementById("prev-step");
 
@@ -71,6 +75,8 @@ function goToStep(index) {
 }
 
 function renderStep() {
+    renderChantierBanner();
+
     const step = stepsConfig[state.currentStep];
     content.innerHTML = "";
     step.render();
@@ -80,7 +86,7 @@ function renderStep() {
 }
 
 /* ========================
-   ADDRESS BAR
+   CHANTIER BANNER
 ======================== */
 function getCurrentAddressLine() {
     const { adresse, cp, ville } = state.data.infos;
@@ -88,15 +94,21 @@ function getCurrentAddressLine() {
     return parts.join(", ");
 }
 
-function renderAddressBanner() {
-    if (state.currentStep === 0) return "";
-
+function renderChantierBanner() {
     const addressLine = getCurrentAddressLine();
 
-    return `
-        <div class="current-address-banner">
-            <span class="current-address-label">Chantier</span>
-            <strong>${addressLine ? escapeHtml(addressLine) : "Adresse non renseignée"}</strong>
+    chantierBannerZone.innerHTML = `
+        <div class="chantier-banner">
+            <div class="chantier-banner-text">
+                <span class="chantier-label">Chantier</span>
+                <div class="chantier-value">
+                    ${addressLine ? escapeHtml(addressLine) : "Adresse non renseignée"}
+                </div>
+            </div>
+
+            <div class="banner-actions">
+                <button type="button" class="banner-btn">Enregistrer</button>
+            </div>
         </div>
     `;
 }
@@ -113,44 +125,63 @@ function renderInfos() {
                 <div class="section-toolbar">
                     <div>
                         <h3>Informations chantier</h3>
-                        <p class="panel-muted">Renseignez les informations de base du DOE.</p>
                     </div>
                 </div>
 
                 <div class="field-grid">
-                    <div class="field">
+                    <div class="field span-7">
                         <label>Adresse</label>
                         <input
                             value="${escapeHtml(infos.adresse || "")}"
-                            placeholder="Ex. 12 rue des Lilas"
                             onchange="updateInfo('adresse', this.value)"
                         />
                     </div>
 
-                    <div class="field">
-                        <label>Ville</label>
+                    <div class="field span-5">
+                        <label>Nature des travaux</label>
                         <input
-                            value="${escapeHtml(infos.ville || "")}"
-                            placeholder="Ex. Paris"
-                            onchange="updateInfo('ville', this.value)"
+                            value="${escapeHtml(infos.natureTravaux || "")}"
+                            onchange="updateInfo('natureTravaux', this.value)"
                         />
                     </div>
 
-                    <div class="field">
-                        <label>Code postal</label>
+                    <div class="field span-2">
+                        <label>CP</label>
                         <input
                             value="${escapeHtml(infos.cp || "")}"
-                            placeholder="Ex. 75020"
                             onchange="updateInfo('cp', this.value)"
                         />
                     </div>
 
+                    <div class="field span-5">
+                        <label>Ville</label>
+                        <input
+                            value="${escapeHtml(infos.ville || "")}"
+                            onchange="updateInfo('ville', this.value)"
+                        />
+                    </div>
+
+                    <div class="field span-2">
+                        <label>Date de réception</label>
+                        <input
+                            value="${escapeHtml(infos.dateReception || "")}"
+                            onchange="updateInfo('dateReception', this.value)"
+                        />
+                    </div>
+
+                    <div class="field span-3">
+                        <label>Date DOE</label>
+                        <input
+                            value="${escapeHtml(infos.dateDoe || "")}"
+                            onchange="updateInfo('dateDoe', this.value)"
+                        />
+                    </div>
+
                     <div class="field full">
-                        <label>Description</label>
+                        <label>Notes</label>
                         <textarea
-                            placeholder="Ajoutez une note utile..."
-                            onchange="updateInfo('description', this.value)"
-                        >${escapeHtml(infos.description || "")}</textarea>
+                            onchange="updateInfo('notes', this.value)"
+                        >${escapeHtml(infos.notes || "")}</textarea>
                     </div>
                 </div>
             </div>
@@ -160,6 +191,7 @@ function renderInfos() {
 
 function updateInfo(key, value) {
     state.data.infos[key] = value;
+    renderChantierBanner();
 }
 
 /* ========================
@@ -169,8 +201,6 @@ function renderDynamicSection(key, fields) {
     const list = state.data[key];
 
     content.innerHTML = `
-        ${renderAddressBanner()}
-
         <div class="single-panel-layout">
             <div class="panel">
                 <div class="section-toolbar">
@@ -209,7 +239,7 @@ function renderRow(key, item, index, fields) {
 
             <div class="field-grid">
                 ${fields.map(field => `
-                    <div class="field ${field === "description" ? "full" : ""}">
+                    <div class="field span-4">
                         <label>${prettyLabel(field)}</label>
                         <input
                             value="${escapeHtml(item[field] || "")}"
@@ -244,14 +274,11 @@ function renderSummary() {
     const { infos, fiches, pv, schemas } = state.data;
 
     content.innerHTML = `
-        ${renderAddressBanner()}
-
         <div class="single-panel-layout">
             <div class="panel">
                 <div class="section-toolbar">
                     <div>
                         <h3>Export</h3>
-                        <p class="panel-muted">Vérifiez le contenu avant génération.</p>
                     </div>
                 </div>
 
@@ -281,7 +308,6 @@ function renderSummary() {
                         <strong>${schemas.length}</strong>
                     </div>
                 </div>
-
             </div>
         </div>
     `;
@@ -313,11 +339,7 @@ function prettyLabel(field) {
         type: "Type",
         marque: "Marque",
         modele: "Modèle",
-        fichier: "Fichier",
-        adresse: "Adresse",
-        ville: "Ville",
-        cp: "Code postal",
-        description: "Description"
+        fichier: "Fichier"
     };
     return map[field] || field;
 }
@@ -327,11 +349,7 @@ function prettyPlaceholder(field) {
         type: "Ex. Chaudière",
         marque: "Ex. Viessmann",
         modele: "Ex. Vitocrossal 200",
-        fichier: "Nom du document",
-        adresse: "Ex. 12 rue des Lilas",
-        ville: "Ex. Paris",
-        cp: "Ex. 75020",
-        description: "Ajoutez une note utile..."
+        fichier: "Nom du document"
     };
     return map[field] || "";
 }
