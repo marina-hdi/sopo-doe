@@ -23,28 +23,23 @@ let state = {
 ======================== */
 const stepsConfig = [
     {
-        title: "Créer un DOE",
-        description: "Commencez par renseigner les informations du chantier.",
+        title: "Infos",
         render: renderInfos
     },
     {
         title: "Fiches techniques",
-        description: "Ajoutez les équipements.",
         render: () => renderDynamicSection("fiches", ["type", "marque", "modele"])
     },
     {
         title: "Procès-verbaux",
-        description: "Ajoutez les documents liés au chantier.",
         render: () => renderDynamicSection("pv", ["type", "fichier"])
     },
     {
         title: "Schémas",
-        description: "Ajoutez les schémas utiles au DOE.",
         render: () => renderDynamicSection("schemas", ["type", "fichier"])
     },
     {
         title: "Export",
-        description: "Vérifiez le contenu avant génération.",
         render: renderSummary
     }
 ];
@@ -54,9 +49,6 @@ const stepsConfig = [
 ======================== */
 const steps = document.querySelectorAll(".step");
 const content = document.getElementById("step-content");
-const title = document.getElementById("step-title");
-const description = document.getElementById("step-description");
-const meta = document.getElementById("step-meta");
 const nextStepBtn = document.getElementById("next-step");
 const prevStepBtn = document.getElementById("prev-step");
 
@@ -80,16 +72,33 @@ function goToStep(index) {
 
 function renderStep() {
     const step = stepsConfig[state.currentStep];
-
-    title.innerText = step.title;
-    description.innerText = step.description;
-    meta.innerText = `Étape ${state.currentStep + 1} sur ${stepsConfig.length}`;
-
     content.innerHTML = "";
     step.render();
 
     prevStepBtn.style.visibility = state.currentStep === 0 ? "hidden" : "visible";
     nextStepBtn.style.visibility = state.currentStep === stepsConfig.length - 1 ? "hidden" : "visible";
+}
+
+/* ========================
+   ADDRESS BAR
+======================== */
+function getCurrentAddressLine() {
+    const { adresse, cp, ville } = state.data.infos;
+    const parts = [adresse, cp, ville].filter(Boolean);
+    return parts.join(", ");
+}
+
+function renderAddressBanner() {
+    if (state.currentStep === 0) return "";
+
+    const addressLine = getCurrentAddressLine();
+
+    return `
+        <div class="current-address-banner">
+            <span class="current-address-label">Adresse actuelle</span>
+            <strong>${addressLine ? escapeHtml(addressLine) : "Adresse non renseignée"}</strong>
+        </div>
+    `;
 }
 
 /* ========================
@@ -99,10 +108,14 @@ function renderInfos() {
     const infos = state.data.infos;
 
     content.innerHTML = `
-        <div class="step-layout">
+        <div class="single-panel-layout">
             <div class="panel">
-                <h3>Informations chantier</h3>
-                <p class="panel-muted">Renseignez les informations de base du DOE.</p>
+                <div class="section-toolbar">
+                    <div>
+                        <h3>Informations chantier</h3>
+                        <p class="panel-muted">Renseignez les informations de base du DOE.</p>
+                    </div>
+                </div>
 
                 <div class="field-grid">
                     <div class="field">
@@ -141,26 +154,6 @@ function renderInfos() {
                     </div>
                 </div>
             </div>
-
-            <div class="panel">
-                <h4>Résumé</h4>
-                <p class="panel-muted">Vue rapide des informations actuelles.</p>
-
-                <div class="summary-list">
-                    <div class="summary-item">
-                        <span>Adresse</span>
-                        <strong>${infos.adresse ? escapeHtml(infos.adresse) : "—"}</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span>Ville</span>
-                        <strong>${infos.ville ? escapeHtml(infos.ville) : "—"}</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span>Code postal</span>
-                        <strong>${infos.cp ? escapeHtml(infos.cp) : "—"}</strong>
-                    </div>
-                </div>
-            </div>
         </div>
     `;
 }
@@ -176,7 +169,9 @@ function renderDynamicSection(key, fields) {
     const list = state.data[key];
 
     content.innerHTML = `
-        <div class="step-layout">
+        ${renderAddressBanner()}
+
+        <div class="single-panel-layout">
             <div class="panel">
                 <div class="section-toolbar">
                     <div>
@@ -199,26 +194,6 @@ function renderDynamicSection(key, fields) {
                         </div>
                         `
                 }
-            </div>
-
-            <div class="panel">
-                <h4>Résumé</h4>
-                <p class="panel-muted">Vue rapide de la section actuelle.</p>
-
-                <div class="summary-list">
-                    <div class="summary-item">
-                        <span>Total éléments</span>
-                        <strong>${list.length}</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span>Section</span>
-                        <strong>${getSectionTitle(key)}</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span>Champs par ligne</span>
-                        <strong>${fields.length}</strong>
-                    </div>
-                </div>
             </div>
         </div>
     `;
@@ -269,10 +244,16 @@ function renderSummary() {
     const { infos, fiches, pv, schemas } = state.data;
 
     content.innerHTML = `
-        <div class="step-layout">
+        ${renderAddressBanner()}
+
+        <div class="single-panel-layout">
             <div class="panel">
-                <h3>Résumé du DOE</h3>
-                <p class="panel-muted">Vérifiez les informations avant export.</p>
+                <div class="section-toolbar">
+                    <div>
+                        <h3>Export</h3>
+                        <p class="panel-muted">Vérifiez le contenu avant génération.</p>
+                    </div>
+                </div>
 
                 <div class="summary-list">
                     <div class="summary-item">
@@ -300,15 +281,12 @@ function renderSummary() {
                         <strong>${schemas.length}</strong>
                     </div>
                 </div>
-            </div>
 
-            <div class="panel export-card">
-                <h4>État du DOE</h4>
-                <p class="panel-muted">Petit check rapide avant la suite.</p>
-
-                <span class="export-pill">
-                    ${isDoeReady() ? "DOE assez rempli pour continuer" : "DOE encore incomplet"}
-                </span>
+                <div class="export-status-block">
+                    <span class="export-pill">
+                        ${isDoeReady() ? "DOE assez rempli pour continuer" : "DOE encore incomplet"}
+                    </span>
+                </div>
             </div>
         </div>
     `;
