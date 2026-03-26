@@ -1,53 +1,52 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DOE v2</title>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DOE v2</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-
-<div class="app">
+  <div class="app-shell">
     <aside class="sidebar">
-        <div>
-            <h2>DOE</h2>
-            <nav>
-                <button class="nav-item active">Nouveau DOE</button>
-                <button class="nav-item">Brouillons</button>
-                <button class="nav-item">Enregistrés</button>
-            </nav>
+      <div class="sidebar-inner">
+        <div class="sidebar-top">
+          <div class="sidebar-brand">DOE</div>
+
+          <nav class="sidebar-nav">
+            <button class="sidebar-link">Accueil</button>
+            <button class="sidebar-link active">Nouveau</button>
+            <button class="sidebar-link">Brouillons</button>
+            <button class="sidebar-link">Enregistrés</button>
+          </nav>
         </div>
-        <div class="sidebar-footer">
-            <span>v2 shell</span>
-        </div>
+      </div>
     </aside>
 
-    <main class="main">
-        <section class="content glass">
-            <div class="content-top-actions">
-                <button type="button" class="footer-btn secondary-action">Enregistrer</button>
-                <button type="button" class="footer-btn">Exporter</button>
-            </div>
-
-            <section class="steps" id="step-tabs">
-                <button class="step active" data-step="0">1. Infos</button>
-                <button class="step" data-step="1">2. Fiches</button>
-                <button class="step" data-step="2">3. PV</button>
-                <button class="step" data-step="3">4. Schémas</button>
-                <button class="step" data-step="4">5. Export</button>
-            </section>
-
-            <div id="step-content"></div>
-
-            <div class="content-footer">
-                <button type="button" id="prev-step" class="footer-btn secondary-action">Précédent</button>
-                <button type="button" id="next-step" class="footer-btn">Suivant</button>
-            </div>
+    <main class="workspace">
+      <div class="workspace-inner glass">
+        <section class="top-steps" id="step-tabs">
+          <button class="step active" data-step="0">1. Infos</button>
+          <button class="step" data-step="1">2. Fiches</button>
+          <button class="step" data-step="2">3. PV</button>
+          <button class="step" data-step="3">4. Schémas</button>
+          <button class="step" data-step="4">5. Export</button>
         </section>
-    </main>
-</div>
 
-<script src="app.js"></script>
+        <section id="chantier-banner-zone"></section>
+
+        <section class="main-panel glass-soft">
+          <div id="step-content"></div>
+
+          <div class="main-panel-footer">
+            <button type="button" id="prev-step" class="footer-btn secondary-action">Précédent</button>
+            <button type="button" id="next-step" class="footer-btn">Suivant</button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
