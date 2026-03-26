@@ -13,7 +13,7 @@ let state = loadAutosave() || getEmptyState();
 ======================== */
 const stepsConfig = [
     { title: "Infos", render: renderInfos },
-    { title: "Fiches techniques", render: () => renderDynamicSection("fiches", ["type", "marque", "modele"]) },
+    { title: "Fiches techniques", render: () => renderDynamicSection("fiches", ["type", "marque", "modele", "fichier"]) },
     { title: "Procès-verbaux", render: () => renderDynamicSection("pv", ["type", "fichier"]) },
     { title: "Schémas", render: () => renderDynamicSection("schemas", ["type", "fichier"]) },
     { title: "Export", render: renderSummary }
@@ -59,6 +59,8 @@ function renderStep() {
 
     prevStepBtn.style.visibility = state.currentStep === 0 ? "hidden" : "visible";
     nextStepBtn.style.visibility = state.currentStep === stepsConfig.length - 1 ? "hidden" : "visible";
+
+    initDropzones();
 }
 
 /* ========================
@@ -239,6 +241,9 @@ function renderDynamicSection(key, fields) {
 }
 
 function renderRow(key, item, index, fields) {
+    const nonFileFields = fields.filter(field => field !== "fichier");
+    const hasFileField = fields.includes("fichier");
+
     return `
         <div class="dynamic-card">
             <div class="dynamic-card-header">
@@ -246,47 +251,72 @@ function renderRow(key, item, index, fields) {
                 <button class="remove-row-btn" onclick="removeRow('${key}', ${index})">Supprimer</button>
             </div>
 
-            <div class="field-grid">
-                ${fields.map(field => {
-                    if (field === "fichier") {
-                        return `
-                            <div class="field span-6">
-                                <label>Fichier</label>
+            <div class="row-inline-layout">
+                ${nonFileFields.map(field => `
+                    <div class="field row-inline-field ${getInlineSpanClass(nonFileFields.length)}">
+                        <label>${prettyLabel(field)}</label>
+                        <input
+                            value="${escapeHtml(item[field] || "")}"
+                            placeholder="${prettyPlaceholder(field)}"
+                            onchange="updateRow('${key}', ${index}, '${field}', this.value)"
+                        />
+                    </div>
+                `).join("")}
 
-                                <input 
+                ${
+                    hasFileField
+                        ? `
+                        <div class="field row-inline-upload">
+                            <label>Fichier</label>
+                            <div class="upload-inline">
+                                <input
+                                    id="file-input-${key}-${index}"
+                                    class="hidden-file-input"
                                     type="file"
                                     accept=".pdf,image/*"
                                     onchange="handleFileUpload('${key}', ${index}, this)"
                                 />
 
+                                <div
+                                    class="dropzone-inline"
+                                    data-input-id="file-input-${key}-${index}"
+                                    data-section="${key}"
+                                    data-index="${index}"
+                                >
+                                    Déposer ou cliquer
+                                </div>
+
+                                <div class="file-name-inline ${item.fileName ? "has-file" : ""}">
+                                    ${item.fileName ? escapeHtml(item.fileName) : "Aucun fichier"}
+                                </div>
+
                                 ${
-                                    item.fileName
+                                    item.file
                                         ? `
-                                            <div class="file-preview">${escapeHtml(item.fileName)}</div>
-                                            <button class="draft-btn load" type="button" onclick="openFile('${key}', ${index})">
+                                            <button
+                                                class="preview-inline-btn"
+                                                type="button"
+                                                onclick="openFile('${key}', ${index})"
+                                            >
                                                 Voir
                                             </button>
                                           `
                                         : ""
                                 }
                             </div>
-                        `;
-                    }
-
-                    return `
-                        <div class="field span-4">
-                            <label>${prettyLabel(field)}</label>
-                            <input
-                                value="${escapeHtml(item[field] || "")}"
-                                placeholder="${prettyPlaceholder(field)}"
-                                onchange="updateRow('${key}', ${index}, '${field}', this.value)"
-                            />
                         </div>
-                    `;
-                }).join("")}
+                        `
+                        : ""
+                }
             </div>
         </div>
     `;
+}
+
+function getInlineSpanClass(fieldCount) {
+    if (fieldCount === 1) return "span-wide";
+    if (fieldCount === 2) return "span-medium";
+    return "span-small";
 }
 
 function addRow(key) {
@@ -331,6 +361,46 @@ function openFile(section, index) {
     if (!file) return;
 
     window.open(file, "_blank");
+}
+
+function initDropzones() {
+    const dropzones = document.querySelectorAll(".dropzone-inline");
+
+    dropzones.forEach(dropzone => {
+        const inputId = dropzone.dataset.inputId;
+        const section = dropzone.dataset.section;
+        const index = Number(dropzone.dataset.index);
+        const input = document.getElementById(inputId);
+
+        if (!input) return;
+
+        dropzone.addEventListener("click", () => {
+            input.click();
+        });
+
+        dropzone.addEventListener("dragover", (event) => {
+            event.preventDefault();
+            dropzone.classList.add("dragover");
+        });
+
+        dropzone.addEventListener("dragleave", () => {
+            dropzone.classList.remove("dragover");
+        });
+
+        dropzone.addEventListener("drop", (event) => {
+            event.preventDefault();
+            dropzone.classList.remove("dragover");
+
+            const files = event.dataTransfer.files;
+            if (!files || !files.length) return;
+
+            const dt = new DataTransfer();
+            dt.items.add(files[0]);
+            input.files = dt.files;
+
+            handleFileUpload(section, index, input);
+        });
+    });
 }
 
 /* ========================
@@ -525,7 +595,7 @@ function getSectionTitle(key) {
 
 function getSectionSubtitle(key) {
     const map = {
-        fiches: "Ajoutez les équipements, marques et modèles.",
+        fiches: "Ajoutez les équipements, marques, modèles et fichiers.",
         pv: "Ajoutez les documents de réception, contrôle ou mise en service.",
         schemas: "Ajoutez les schémas hydrauliques, électriques ou d’équilibrage."
     };
