@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DOE v2</title>
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -9,48 +10,45 @@
 
 <div class="app">
     <aside class="sidebar">
-        <h2>DOE</h2>
-        <nav>
-            <button class="nav-item active">Nouveau DOE</button>
-            <button class="nav-item">Brouillons</button>
-            <button class="nav-item">Enregistrés</button>
-        </nav>
+        <div>
+            <h2>DOE</h2>
+            <nav>
+                <button class="nav-item active">Nouveau DOE</button>
+                <button class="nav-item">Brouillons</button>
+                <button class="nav-item">Enregistrés</button>
+            </nav>
+        </div>
+        <div class="sidebar-footer">
+            <span>v2 shell</span>
+        </div>
     </aside>
 
     <main class="main">
-   <header class="topbar glass">
-    <input id="site-search" placeholder="Adresse chantier..." />
-    <div class="actions">
-        <button type="button" class="secondary-action">Enregistrer</button>
-        <button type="button">Exporter</button>
-    </div>
-</header>
+        <header class="topbar glass">
+            <div class="actions">
+                <button type="button" class="secondary-action">Enregistrer</button>
+                <button type="button">Exporter</button>
+            </div>
+        </header>
 
-<section class="steps" id="step-tabs">
-    <button class="step active" data-step="0">1. Infos</button>
-    <button class="step" data-step="1">2. Fiches</button>
-    <button class="step" data-step="2">3. PV</button>
-    <button class="step" data-step="3">4. Schémas</button>
-    <button class="step" data-step="4">5. Export</button>
-</section>
+        <section class="steps" id="step-tabs">
+            <button class="step active" data-step="0">1. Infos</button>
+            <button class="step" data-step="1">2. Fiches</button>
+            <button class="step" data-step="2">3. PV</button>
+            <button class="step" data-step="3">4. Schémas</button>
+            <button class="step" data-step="4">5. Export</button>
+        </section>
 
-<section class="content glass">
-    <div class="content-header">
-        <div>
-            <p class="eyebrow">DOE builder</p>
-            <h1 id="step-title">Créer un DOE</h1>
-            <p id="step-description">Commencez par renseigner les informations du chantier.</p>
-        </div>
-        <div class="step-meta" id="step-meta">Étape 1 sur 5</div>
-    </div>
+        <section class="content glass">
+            <div id="step-content"></div>
 
-    <div id="step-content"></div>
-
-    <div class="content-footer">
-        <button type="button" id="prev-step" class="footer-btn secondary-action">Précédent</button>
-        <button type="button" id="next-step" class="footer-btn">Suivant</button>
-    </div>
-</section>
+            <div class="content-footer">
+                <button type="button" id="prev-step" class="footer-btn secondary-action">Précédent</button>
+                <button type="button" id="next-step" class="footer-btn">Suivant</button>
+            </div>
+        </section>
+    </main>
+</div>
 
 <script src="app.js"></script>
 </body>
