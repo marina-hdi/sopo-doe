@@ -247,16 +247,38 @@ function renderRow(key, item, index, fields) {
             </div>
 
             <div class="field-grid">
-                ${fields.map(field => `
-                    <div class="field span-4">
-                        <label>${prettyLabel(field)}</label>
-                        <input
-                            value="${escapeHtml(item[field] || "")}"
-                            placeholder="${prettyPlaceholder(field)}"
-                            onchange="updateRow('${key}', ${index}, '${field}', this.value)"
-                        />
-                    </div>
-                `).join("")}
+                ${fields.map(field => {
+                    if (field === "fichier") {
+                        return `
+                            <div class="field span-6">
+                                <label>Fichier</label>
+
+                                <input 
+                                    type="file"
+                                    accept=".pdf,image/*"
+                                    onchange="handleFileUpload('${key}', ${index}, this)"
+                                />
+
+                                ${
+                                    item.fileName
+                                        ? `<div class="file-preview">${escapeHtml(item.fileName)}</div>`
+                                        : ""
+                                }
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="field span-4">
+                            <label>${prettyLabel(field)}</label>
+                            <input
+                                value="${escapeHtml(item[field] || "")}"
+                                placeholder="${prettyPlaceholder(field)}"
+                                onchange="updateRow('${key}', ${index}, '${field}', this.value)"
+                            />
+                        </div>
+                    `;
+                }).join("")}
             </div>
         </div>
     `;
@@ -277,6 +299,26 @@ function removeRow(key, index) {
 function updateRow(key, index, field, value) {
     state.data[key][index][field] = value;
     saveAutosave();
+}
+
+function handleFileUpload(section, index, input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+        const base64 = e.target.result;
+
+        state.data[section][index].file = base64;
+        state.data[section][index].fileName = file.name;
+        state.data[section][index].fileType = file.type;
+
+        saveAutosave();
+        renderStep();
+    };
+
+    reader.readAsDataURL(file);
 }
 
 /* ========================
