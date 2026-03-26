@@ -1,4 +1,4 @@
-console.log("DOE v2 dynamic system + autosave + drafts 🚀");
+console.log("DOE v2 dynamic system + autosave + drafts + files 🚀");
 
 const AUTOSAVE_KEY = "doe_v2_autosave";
 const DRAFTS_KEY = "doe_v2_saved_drafts";
@@ -261,7 +261,12 @@ function renderRow(key, item, index, fields) {
 
                                 ${
                                     item.fileName
-                                        ? `<div class="file-preview">${escapeHtml(item.fileName)}</div>`
+                                        ? `
+                                            <div class="file-preview">${escapeHtml(item.fileName)}</div>
+                                            <button class="draft-btn load" type="button" onclick="openFile('${key}', ${index})">
+                                                Voir
+                                            </button>
+                                          `
                                         : ""
                                 }
                             </div>
@@ -319,6 +324,13 @@ function handleFileUpload(section, index, input) {
     };
 
     reader.readAsDataURL(file);
+}
+
+function openFile(section, index) {
+    const file = state.data[section]?.[index]?.file;
+    if (!file) return;
+
+    window.open(file, "_blank");
 }
 
 /* ========================
@@ -564,11 +576,13 @@ prevStepBtn.onclick = () => {
     }
 };
 
-openDraftsBtn.onclick = openDraftsModal;
-closeDraftsBtn.onclick = closeDraftsModal;
-draftsModal.addEventListener("click", (event) => {
-    if (event.target === draftsModal) closeDraftsModal();
-});
+if (openDraftsBtn) openDraftsBtn.onclick = openDraftsModal;
+if (closeDraftsBtn) closeDraftsBtn.onclick = closeDraftsModal;
+if (draftsModal) {
+    draftsModal.addEventListener("click", (event) => {
+        if (event.target === draftsModal) closeDraftsModal();
+    });
+}
 
 /* ========================
    INIT
@@ -586,3 +600,5 @@ window.saveDraft = saveDraft;
 window.clearAutosave = clearAutosave;
 window.loadDraft = loadDraft;
 window.deleteDraft = deleteDraft;
+window.openFile = openFile;
+window.handleFileUpload = handleFileUpload;
