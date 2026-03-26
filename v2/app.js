@@ -1,52 +1,22 @@
-console.log("DOE v2 dynamic system + autosave 🚀");
+console.log("DOE v2 dynamic system + autosave + drafts 🚀");
 
 const AUTOSAVE_KEY = "doe_v2_autosave";
+const DRAFTS_KEY = "doe_v2_saved_drafts";
 
 /* ========================
    GLOBAL STATE
 ======================== */
-let state = loadAutosave() || {
-    currentStep: 0,
-    data: {
-        infos: {
-            adresse: "",
-            natureTravaux: "",
-            cp: "",
-            ville: "",
-            dateReception: "",
-            dateDoe: "",
-            notes: ""
-        },
-        fiches: [],
-        pv: [],
-        schemas: []
-    }
-};
+let state = loadAutosave() || getEmptyState();
 
 /* ========================
    STEP CONFIG
 ======================== */
 const stepsConfig = [
-    {
-        title: "Infos",
-        render: renderInfos
-    },
-    {
-        title: "Fiches techniques",
-        render: () => renderDynamicSection("fiches", ["type", "marque", "modele"])
-    },
-    {
-        title: "Procès-verbaux",
-        render: () => renderDynamicSection("pv", ["type", "fichier"])
-    },
-    {
-        title: "Schémas",
-        render: () => renderDynamicSection("schemas", ["type", "fichier"])
-    },
-    {
-        title: "Export",
-        render: renderSummary
-    }
+    { title: "Infos", render: renderInfos },
+    { title: "Fiches techniques", render: () => renderDynamicSection("fiches", ["type", "marque", "modele"]) },
+    { title: "Procès-verbaux", render: () => renderDynamicSection("pv", ["type", "fichier"]) },
+    { title: "Schémas", render: () => renderDynamicSection("schemas", ["type", "fichier"]) },
+    { title: "Export", render: renderSummary }
 ];
 
 /* ========================
@@ -57,6 +27,11 @@ const content = document.getElementById("step-content");
 const chantierBannerZone = document.getElementById("chantier-banner-zone");
 const nextStepBtn = document.getElementById("next-step");
 const prevStepBtn = document.getElementById("prev-step");
+
+const draftsModal = document.getElementById("drafts-modal");
+const draftsList = document.getElementById("drafts-list");
+const openDraftsBtn = document.getElementById("open-drafts-btn");
+const closeDraftsBtn = document.getElementById("close-drafts-btn");
 
 /* ========================
    STEP SWITCHING
@@ -69,9 +44,7 @@ function goToStep(index) {
     state.currentStep = index;
 
     steps.forEach(step => step.classList.remove("active"));
-    if (steps[index]) {
-        steps[index].classList.add("active");
-    }
+    if (steps[index]) steps[index].classList.add("active");
 
     saveAutosave();
     renderStep();
@@ -89,12 +62,43 @@ function renderStep() {
 }
 
 /* ========================
+   EMPTY STATE
+======================== */
+function getEmptyState() {
+    return {
+        currentStep: 0,
+        data: {
+            infos: {
+                adresse: "",
+                natureTravaux: "",
+                cp: "",
+                ville: "",
+                dateReception: "",
+                dateDoe: "",
+                notes: ""
+            },
+            fiches: [],
+            pv: [],
+            schemas: []
+        }
+    };
+}
+
+/* ========================
    CHANTIER BANNER
 ======================== */
 function getCurrentAddressLine() {
     const { adresse, cp, ville } = state.data.infos;
     const parts = [adresse, cp, ville].filter(Boolean);
     return parts.join(", ");
+}
+
+function getDraftDisplayTitle() {
+    const { adresse, ville, cp } = state.data.infos;
+    if (adresse || ville || cp) {
+        return [adresse, cp, ville].filter(Boolean).join(", ");
+    }
+    return "Brouillon sans adresse";
 }
 
 function renderChantierBanner() {
@@ -110,7 +114,7 @@ function renderChantierBanner() {
             </div>
 
             <div class="banner-actions">
-                <button type="button" class="banner-btn" onclick="manualSave()">Enregistrer</button>
+                <button type="button" class="banner-btn" onclick="saveDraft()">Enregistrer</button>
                 <button type="button" class="footer-btn secondary-action" onclick="clearAutosave()">Effacer</button>
             </div>
         </div>
@@ -342,36 +346,115 @@ function loadAutosave() {
     }
 }
 
-function manualSave() {
-    saveAutosave();
-    alert("Brouillon enregistré localement.");
-}
-
 function clearAutosave() {
-    const confirmed = confirm("Effacer le brouillon local ?");
+    const confirmed = confirm("Effacer le brouillon local en cours ?");
     if (!confirmed) return;
 
     localStorage.removeItem(AUTOSAVE_KEY);
-
-    state = {
-        currentStep: 0,
-        data: {
-            infos: {
-                adresse: "",
-                natureTravaux: "",
-                cp: "",
-                ville: "",
-                dateReception: "",
-                dateDoe: "",
-                notes: ""
-            },
-            fiches: [],
-            pv: [],
-            schemas: []
-        }
-    };
-
+    state = getEmptyState();
     goToStep(0);
+}
+
+/* ========================
+   DRAFTS STORAGE
+======================== */
+function getAllDrafts() {
+    try {
+        const raw = localStorage.getItem(DRAFTS_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch (error) {
+        console.error("Erreur lecture brouillons :", error);
+        return [];
+    }
+}
+
+function setAllDrafts(drafts) {
+    localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
+}
+
+function buildDraftPayload() {
+    return {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        title: getDraftDisplayTitle(),
+        updatedAt: new Date().toISOString(),
+        state: JSON.parse(JSON.stringify(state))
+    };
+}
+
+function saveDraft() {
+    const drafts = getAllDrafts();
+    const payload = buildDraftPayload();
+
+    drafts.unshift(payload);
+    setAllDrafts(drafts);
+    saveAutosave();
+    alert("Brouillon enregistré.");
+}
+
+function openDraftsModal() {
+    renderDraftsList();
+    draftsModal.classList.remove("hidden");
+}
+
+function closeDraftsModal() {
+    draftsModal.classList.add("hidden");
+}
+
+function renderDraftsList() {
+    const drafts = getAllDrafts();
+
+    if (drafts.length === 0) {
+        draftsList.innerHTML = `
+            <div class="empty-drafts">
+                Aucun brouillon enregistré pour le moment.
+            </div>
+        `;
+        return;
+    }
+
+    draftsList.innerHTML = drafts.map(draft => `
+        <div class="draft-item">
+            <div class="draft-main">
+                <div class="draft-title">${escapeHtml(draft.title || "Brouillon")}</div>
+                <div class="draft-meta">
+                    Dernière mise à jour : ${formatDraftDate(draft.updatedAt)}
+                </div>
+            </div>
+
+            <div class="draft-actions">
+                <button class="draft-btn load" onclick="loadDraft('${draft.id}')">Ouvrir</button>
+                <button class="draft-btn delete" onclick="deleteDraft('${draft.id}')">Supprimer</button>
+            </div>
+        </div>
+    `).join("");
+}
+
+function loadDraft(draftId) {
+    const drafts = getAllDrafts();
+    const draft = drafts.find(item => item.id === draftId);
+    if (!draft) return;
+
+    state = draft.state;
+    saveAutosave();
+    closeDraftsModal();
+    goToStep(state.currentStep || 0);
+}
+
+function deleteDraft(draftId) {
+    const confirmed = confirm("Supprimer ce brouillon ?");
+    if (!confirmed) return;
+
+    const drafts = getAllDrafts().filter(item => item.id !== draftId);
+    setAllDrafts(drafts);
+    renderDraftsList();
+}
+
+function formatDraftDate(value) {
+    try {
+        return new Date(value).toLocaleString("fr-FR");
+    } catch {
+        return value || "Date inconnue";
+    }
 }
 
 /* ========================
@@ -439,6 +522,12 @@ prevStepBtn.onclick = () => {
     }
 };
 
+openDraftsBtn.onclick = openDraftsModal;
+closeDraftsBtn.onclick = closeDraftsModal;
+draftsModal.addEventListener("click", (event) => {
+    if (event.target === draftsModal) closeDraftsModal();
+});
+
 /* ========================
    INIT
 ======================== */
@@ -451,5 +540,7 @@ window.updateInfo = updateInfo;
 window.addRow = addRow;
 window.removeRow = removeRow;
 window.updateRow = updateRow;
-window.manualSave = manualSave;
+window.saveDraft = saveDraft;
 window.clearAutosave = clearAutosave;
+window.loadDraft = loadDraft;
+window.deleteDraft = deleteDraft;
