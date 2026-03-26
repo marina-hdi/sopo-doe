@@ -560,3 +560,38 @@ h1 {
         grid-template-columns: 1fr;
     }
 }
+
+.content-top-actions {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.single-panel-layout {
+    display: block;
+}
+
+.current-address-banner {
+    margin-bottom: 18px;
+    padding: 14px 18px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.76);
+    border: 1px solid rgba(255,255,255,0.7);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+}
+
+.current-address-label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #3d4451;
+}
+
+.current-address-banner strong {
+    color: #1D1E18;
+    font-size: 15px;
+}
