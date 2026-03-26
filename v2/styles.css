@@ -669,3 +669,127 @@ textarea {
     color: #00448C;
     font-weight: 600;
 }
+
+.hidden-file-input {
+    display: none;
+}
+
+.row-inline-layout {
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+    flex-wrap: nowrap;
+}
+
+.row-inline-field {
+    min-width: 0;
+}
+
+.row-inline-field.span-small {
+    flex: 1 1 180px;
+}
+
+.row-inline-field.span-medium {
+    flex: 1 1 240px;
+}
+
+.row-inline-field.span-wide {
+    flex: 1 1 320px;
+}
+
+.row-inline-upload {
+    flex: 1.4 1 520px;
+    min-width: 0;
+}
+
+.upload-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.dropzone-inline {
+    flex: 0 0 180px;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    border-radius: 14px;
+    border: 1.5px dashed rgba(0, 68, 140, 0.35);
+    background: rgba(0, 68, 140, 0.05);
+    color: #00448C;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    white-space: nowrap;
+}
+
+.dropzone-inline:hover,
+.dropzone-inline.dragover {
+    background: rgba(22, 153, 209, 0.10);
+    border-color: rgba(22, 153, 209, 0.7);
+    color: #1699D1;
+}
+
+.file-name-inline {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    border-radius: 14px;
+    background: rgba(0, 68, 140, 0.06);
+    color: #7b8190;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-name-inline.has-file {
+    color: #00448C;
+    font-weight: 600;
+}
+
+.preview-inline-btn {
+    flex: 0 0 96px;
+    min-height: 48px;
+    border: none;
+    border-radius: 14px;
+    background: #00448C;
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.preview-inline-btn:hover {
+    background: #1699D1;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 1100px) {
+    .row-inline-layout {
+        flex-wrap: wrap;
+    }
+
+    .row-inline-field,
+    .row-inline-upload {
+        flex: 1 1 100%;
+    }
+
+    .upload-inline {
+        flex-wrap: wrap;
+    }
+
+    .dropzone-inline,
+    .preview-inline-btn {
+        flex: 1 1 auto;
+    }
+
+    .file-name-inline {
+        flex: 1 1 100%;
+    }
+}
