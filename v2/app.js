@@ -1,9 +1,11 @@
-console.log("DOE v2 dynamic system 🚀");
+console.log("DOE v2 dynamic system + autosave 🚀");
+
+const AUTOSAVE_KEY = "doe_v2_autosave";
 
 /* ========================
    GLOBAL STATE
 ======================== */
-let state = {
+let state = loadAutosave() || {
     currentStep: 0,
     data: {
         infos: {
@@ -71,6 +73,7 @@ function goToStep(index) {
         steps[index].classList.add("active");
     }
 
+    saveAutosave();
     renderStep();
 }
 
@@ -107,7 +110,8 @@ function renderChantierBanner() {
             </div>
 
             <div class="banner-actions">
-                <button type="button" class="banner-btn">Enregistrer</button>
+                <button type="button" class="banner-btn" onclick="manualSave()">Enregistrer</button>
+                <button type="button" class="footer-btn secondary-action" onclick="clearAutosave()">Effacer</button>
             </div>
         </div>
     `;
@@ -191,6 +195,7 @@ function renderInfos() {
 
 function updateInfo(key, value) {
     state.data.infos[key] = value;
+    saveAutosave();
     renderChantierBanner();
 }
 
@@ -255,16 +260,19 @@ function renderRow(key, item, index, fields) {
 
 function addRow(key) {
     state.data[key].push({});
+    saveAutosave();
     renderStep();
 }
 
 function removeRow(key, index) {
     state.data[key].splice(index, 1);
+    saveAutosave();
     renderStep();
 }
 
 function updateRow(key, index, field, value) {
     state.data[key][index][field] = value;
+    saveAutosave();
 }
 
 /* ========================
@@ -311,6 +319,59 @@ function renderSummary() {
             </div>
         </div>
     `;
+}
+
+/* ========================
+   AUTOSAVE
+======================== */
+function saveAutosave() {
+    try {
+        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
+    } catch (error) {
+        console.error("Erreur autosave :", error);
+    }
+}
+
+function loadAutosave() {
+    try {
+        const raw = localStorage.getItem(AUTOSAVE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+        console.error("Erreur chargement autosave :", error);
+        return null;
+    }
+}
+
+function manualSave() {
+    saveAutosave();
+    alert("Brouillon enregistré localement.");
+}
+
+function clearAutosave() {
+    const confirmed = confirm("Effacer le brouillon local ?");
+    if (!confirmed) return;
+
+    localStorage.removeItem(AUTOSAVE_KEY);
+
+    state = {
+        currentStep: 0,
+        data: {
+            infos: {
+                adresse: "",
+                natureTravaux: "",
+                cp: "",
+                ville: "",
+                dateReception: "",
+                dateDoe: "",
+                notes: ""
+            },
+            fiches: [],
+            pv: [],
+            schemas: []
+        }
+    };
+
+    goToStep(0);
 }
 
 /* ========================
@@ -381,7 +442,7 @@ prevStepBtn.onclick = () => {
 /* ========================
    INIT
 ======================== */
-renderStep();
+goToStep(state.currentStep || 0);
 
 /* ========================
    EXPOSE FUNCTIONS
@@ -390,3 +451,5 @@ window.updateInfo = updateInfo;
 window.addRow = addRow;
 window.removeRow = removeRow;
 window.updateRow = updateRow;
+window.manualSave = manualSave;
+window.clearAutosave = clearAutosave;
