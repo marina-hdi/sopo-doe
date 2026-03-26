@@ -16,7 +16,7 @@
           <nav class="sidebar-nav">
             <button class="sidebar-link">Accueil</button>
             <button class="sidebar-link active">Nouveau</button>
-            <button class="sidebar-link">Brouillons</button>
+            <button class="sidebar-link" id="open-drafts-btn">Brouillons</button>
             <button class="sidebar-link">Enregistrés</button>
           </nav>
         </div>
@@ -45,6 +45,16 @@
         </section>
       </div>
     </main>
+  </div>
+
+  <div class="modal-backdrop hidden" id="drafts-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Brouillons enregistrés</h3>
+        <button class="icon-btn" id="close-drafts-btn">✕</button>
+      </div>
+      <div id="drafts-list" class="drafts-list"></div>
+    </div>
   </div>
 
   <script src="app.js"></script>
