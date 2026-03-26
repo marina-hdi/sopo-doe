@@ -648,3 +648,13 @@ textarea {
     border: 1px dashed rgba(171,171,171,0.4);
     border-radius: 18px;
 }
+
+.file-preview {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: rgba(0, 68, 140, 0.08);
+    border-radius: 10px;
+    font-size: 14px;
+    color: #00448C;
+    font-weight: 600;
+}
