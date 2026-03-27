@@ -293,22 +293,25 @@ function renderRow(key, item, index, fields) {
                                 ${
                                      item.file
                                          ? `
-                                             <button
+                                          <button
                                               class="icon-btn-inline preview"
                                               type="button"
-                                              title="Voir le fichier"
-                                              onclick="openFile('${key}', ${index})"
+                                              aria-label="Voir le fichier"
+                                              onclick="openFile('${key}', ${index}, this)"
                                           >
-                                              <span class="material-symbols-outlined">visibility</span>
+                                              <span class="material-symbols-outlined icon-default">visibility</span>
+                                              <span class="material-symbols-outlined icon-spinner">progress_activity</span>
+                                              <span class="icon-tooltip">Voir</span>
                                           </button>
                                           
                                           <button
                                               class="icon-btn-inline delete"
                                               type="button"
-                                              title="Supprimer le fichier"
+                                              aria-label="Supprimer le fichier"
                                               onclick="deleteFile('${key}', ${index})"
                                           >
-                                              <span class="material-symbols-outlined">delete</span>
+                                              <span class="material-symbols-outlined icon-default">delete</span>
+                                              <span class="icon-tooltip">Supprimer</span>
                                           </button>
                                            `
                                          : ""
