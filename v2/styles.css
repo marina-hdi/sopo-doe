@@ -26,6 +26,10 @@ textarea {
     font: inherit;
 }
 
+button {
+    font-family: inherit;
+}
+
 /* ===== APP LAYOUT ===== */
 .app-shell {
     display: grid;
@@ -439,49 +443,12 @@ textarea {
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.field select {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    border: 1px solid rgba(171,171,171,0.25);
-    background-color: rgba(255,255,255,0.96);
-    border-radius: 14px;
-    padding: 12px 50px 12px 14px;
-    color: #1D1E18;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%235f6673' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
-    background-repeat: no-repeat;
-    background-position: right 16px center;
-    background-size: 16px 16px;
-}
-
 .field input:focus,
-.field select:focus,
 .field textarea:focus {
     outline: none;
     border-color: rgba(22,153,209,0.7);
     box-shadow: 0 0 0 4px rgba(22,153,209,0.12);
     transform: translateY(-1px);
-}
-
-.field select.is-placeholder {
-    color: #9aa1ad;
-    font-style: italic;
-}
-
-/* Native dropdown open list styling is very limited cross-browser. */
-/* These help slightly on some browsers, but not reliably everywhere. */
-.field select option[disabled] {
-    color: #9aa1ad;
-    font-style: italic;
-}
-
-.field select option {
-    color: #1D1E18;
-    background: #ffffff;
 }
 
 .field textarea {
@@ -495,35 +462,206 @@ textarea {
     color: #7b8190;
 }
 
-/* ===== DATE INPUT ===== */
-.field input[type="date"] {
-    width: 100%;
+/* ===== INFOS CUSTOM LAYOUT ===== */
+.infos-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.infos-left,
+.infos-right {
+    display: grid;
+    gap: 14px;
     min-width: 0;
-    max-width: 100%;
+}
+
+.infos-right-dates {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.notes-field textarea {
+    width: 100%;
+    min-height: 180px;
+    height: 180px;
+}
+
+/* ===== CUSTOM SELECT ===== */
+.custom-select {
+    position: relative;
+}
+
+.custom-select-trigger {
+    width: 100%;
+    min-height: 48px;
     border: 1px solid rgba(171,171,171,0.25);
     background: rgba(255,255,255,0.96);
     border-radius: 14px;
-    padding: 12px 50px 12px 14px;
+    padding: 12px 44px 12px 14px;
     color: #1D1E18;
+    text-align: left;
+    cursor: pointer;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    position: relative;
+}
+
+.custom-select-trigger:hover {
+    border-color: rgba(22,153,209,0.35);
+}
+
+.custom-select-trigger:focus,
+.custom-select.is-open .custom-select-trigger {
+    outline: none;
+    border-color: rgba(22,153,209,0.7);
+    box-shadow: 0 0 0 4px rgba(22,153,209,0.12);
+    transform: translateY(-1px);
+}
+
+.custom-select-trigger.is-placeholder {
+    color: #9aa1ad;
+    font-style: italic;
+}
+
+.custom-select-trigger .select-value {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.custom-select-trigger .select-chevron {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #5f6673;
+    font-size: 18px;
+    transition: transform 0.2s ease;
+    pointer-events: none;
+}
+
+.custom-select.is-open .select-chevron {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.custom-select-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 100%;
+    padding: 10px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.96);
+    border: 1px solid rgba(171,171,171,0.18);
+    box-shadow: 0 18px 40px rgba(17, 24, 39, 0.12);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 50;
+    display: none;
+}
+
+.custom-select.is-open .custom-select-menu {
+    display: block;
+}
+
+.custom-select-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 280px;
+    overflow: auto;
+}
+
+.custom-select-option {
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 14px 16px;
+    border-radius: 14px;
+    text-align: left;
+    color: #6b7280;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.custom-select-option:hover,
+.custom-select-option.is-active {
+    background: rgba(0, 68, 140, 0.08);
+    color: #00448C;
+}
+
+.custom-select-option.is-placeholder-option {
+    color: #9aa1ad;
+    font-style: italic;
+}
+
+/* ===== CUSTOM DATE FIELD ===== */
+.custom-date {
+    position: relative;
+}
+
+.custom-date-button {
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid rgba(171,171,171,0.25);
+    background: rgba(255,255,255,0.96);
+    border-radius: 14px;
+    padding: 12px 44px 12px 14px;
+    color: #1D1E18;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    position: relative;
+}
+
+.custom-date-button:hover {
+    border-color: rgba(22,153,209,0.35);
+}
+
+.custom-date-button:focus {
+    outline: none;
+    border-color: rgba(22,153,209,0.7);
+    box-shadow: 0 0 0 4px rgba(22,153,209,0.12);
+    transform: translateY(-1px);
+}
+
+.custom-date-button .date-value {
+    display: block;
+}
+
+.custom-date-button .date-icon {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #5f6673;
+    font-size: 18px;
+    pointer-events: none;
+}
+
+.custom-date-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
     appearance: none;
     -webkit-appearance: none;
-    position: relative;
-    min-height: 48px;
 }
 
-.field input[type="date"]::-webkit-calendar-picker-indicator {
-    opacity: 1;
+.custom-date-input::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
     cursor: pointer;
-    width: 18px;
-    height: 18px;
-    margin: 0 12px 0 0;
-    filter: grayscale(1) brightness(0.42);
-}
-
-.field input[type="date"]::-webkit-inner-spin-button,
-.field input[type="date"]::-webkit-clear-button {
-    display: none;
 }
 
 /* ===== SUMMARY / EXPORT ===== */
@@ -925,7 +1063,6 @@ textarea {
     pointer-events: none;
 }
 
-/* BLUE preview button */
 .icon-btn-inline.preview {
     background: #00448C;
     color: white;
@@ -938,7 +1075,6 @@ textarea {
     box-shadow: 0 10px 22px rgba(22, 153, 209, 0.20);
 }
 
-/* RED delete button */
 .icon-btn-inline.delete {
     background: rgba(206, 35, 42, 0.10);
     color: #CE232A;
@@ -950,7 +1086,6 @@ textarea {
     transform: translateY(-1px);
 }
 
-/* loading state */
 .icon-btn-inline.is-loading {
     pointer-events: none;
 }
@@ -975,6 +1110,12 @@ textarea {
 }
 
 /* ===== RESPONSIVE ===== */
+@media (max-width: 1200px) {
+    .infos-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 1100px) {
     .app-shell {
         grid-template-columns: 1fr;
@@ -1028,6 +1169,10 @@ textarea {
 
     .field {
         grid-column: span 12 !important;
+    }
+
+    .infos-right-dates {
+        grid-template-columns: 1fr;
     }
 
     .main-panel-footer {
