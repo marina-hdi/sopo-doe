@@ -176,6 +176,19 @@ function renderChantierBanner() {
 /* ========================
    STEP 1 — INFOS
 ======================== */
+
+function handleInputChange(section, field, value) {
+    if (!state.data[section]) return;
+
+    if (field !== "notes") {
+        value = value.toUpperCase();
+    }
+
+    state.data[section][field] = value;
+
+    saveAutosave();
+}
+
 function renderInfos() {
     const infos = state.data.infos;
 
@@ -199,26 +212,36 @@ function renderInfos() {
 
                     <div class="field span-5">
                         <label>Nature des travaux</label>
-                        <input
-                            value="${escapeHtml(infos.natureTravaux || "")}"
-                            onchange="updateInfo('natureTravaux', this.value)"
-                        />
+                           <select 
+                               name="nature_travaux"
+                               onchange="handleInputChange('infos','nature_travaux', this.value)"
+                           >
+                               <option value="">Sélectionner</option>
+                               ${referenceData.workTypes.map(t => `
+                                   <option value="${t}" ${state.data.infos.nature_travaux === t ? 'selected' : ''}>
+                                       ${t}
+                                   </option>
+                               `).join("")}
+                           </select>
                     </div>
 
                     <div class="field span-2">
                         <label>CP</label>
-                        <input
-                            value="${escapeHtml(infos.cp || "")}"
-                            onchange="updateInfo('cp', this.value)"
-                        />
+                           <input 
+                               name="code_postal"
+                               value="${state.data.infos.code_postal || ''}"
+                               oninput="handleInputChange('infos','code_postal', this.value.toUpperCase()); handlePostalCodeChange(this.value)"
+                           />
                     </div>
 
                     <div class="field span-5">
                         <label>Ville</label>
-                        <input
-                            value="${escapeHtml(infos.ville || "")}"
-                            onchange="updateInfo('ville', this.value)"
-                        />
+                           <select 
+                               name="ville"
+                               onchange="handleInputChange('infos','ville', this.value)"
+                           >
+                               <option value="">Sélectionner une ville</option>
+                           </select>
                     </div>
 
                     <div class="field span-2">
