@@ -1,4 +1,4 @@
-console.log("DOE v2 dynamic system + autosave + drafts + files + infos dropdowns 🚀");
+console.log("DOE v2 dynamic system + custom infos controls 🚀");
 
 const AUTOSAVE_KEY = "doe_v2_autosave";
 const DRAFTS_KEY = "doe_v2_saved_drafts";
@@ -84,6 +84,7 @@ function renderStep() {
     nextStepBtn.style.visibility = state.currentStep === stepsConfig.length - 1 ? "hidden" : "visible";
 
     initDropzones();
+    initCustomSelects();
 }
 
 /* ========================
@@ -114,6 +115,13 @@ function getEmptyState() {
 ======================== */
 function getTodayDate() {
     return new Date().toISOString().split("T")[0];
+}
+
+function formatDateDisplay(value) {
+    if (!value) return "";
+    const [year, month, day] = value.split("-");
+    if (!year || !month || !day) return value;
+    return `${day}/${month}/${year}`;
 }
 
 /* ========================
@@ -173,33 +181,158 @@ function handleInputChange(section, field, value, inputEl = null) {
 function handlePostalCodeChange(value) {
     const code = value.toUpperCase();
     const villes = referenceData.postalCodes[code] || [];
-    const villeSelect = document.querySelector('[name="ville"]');
 
-    if (!villeSelect) return;
-
-    villeSelect.innerHTML = `<option value="" disabled hidden ${!state.data.infos.ville ? "selected" : ""}>Sélectionner</option>`;
+    state.data.infos.code_postal = code;
 
     if (villes.length === 1) {
         state.data.infos.ville = villes[0];
-        villeSelect.innerHTML = `
-            <option value="" disabled hidden>Sélectionner</option>
-            <option value="${villes[0]}" selected>${villes[0]}</option>
-        `;
-        villeSelect.classList.remove("is-placeholder");
-    } else {
+    } else if (!villes.includes(state.data.infos.ville)) {
         state.data.infos.ville = "";
-        villeSelect.classList.add("is-placeholder");
-
-        villes.forEach(v => {
-            const opt = document.createElement("option");
-            opt.value = v;
-            opt.textContent = v;
-            villeSelect.appendChild(opt);
-        });
     }
 
     saveAutosave();
     renderChantierBanner();
+    renderStep();
+}
+
+/* ========================
+   CUSTOM SELECT
+======================== */
+function renderCustomSelect({
+    id,
+    label,
+    value,
+    placeholder,
+    options,
+    onSelect
+}) {
+    const displayValue = value || placeholder;
+    const isPlaceholder = !value;
+
+    return `
+        <div class="field">
+            <label>${label}</label>
+            <div class="custom-select" data-select-id="${id}">
+                <button
+                    type="button"
+                    class="custom-select-trigger ${isPlaceholder ? "is-placeholder" : ""}"
+                    onclick="toggleCustomSelect('${id}')"
+                >
+                    <span class="select-value">${escapeHtml(displayValue)}</span>
+                    <span class="material-symbols-outlined select-chevron">expand_more</span>
+                </button>
+
+                <div class="custom-select-menu">
+                    <div class="custom-select-list">
+                        ${options.map(option => `
+                            <button
+                                type="button"
+                                class="custom-select-option ${value === option ? "is-active" : ""}"
+                                onclick="${onSelect}('${escapeJs(option)}')"
+                            >
+                                ${escapeHtml(option)}
+                            </button>
+                        `).join("")}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function toggleCustomSelect(id) {
+    const all = document.querySelectorAll(".custom-select");
+    all.forEach(el => {
+        if (el.dataset.selectId !== id) {
+            el.classList.remove("is-open");
+        }
+    });
+
+    const target = document.querySelector(`.custom-select[data-select-id="${id}"]`);
+    if (!target) return;
+    target.classList.toggle("is-open");
+}
+
+function closeAllCustomSelects() {
+    document.querySelectorAll(".custom-select").forEach(el => {
+        el.classList.remove("is-open");
+    });
+}
+
+function initCustomSelects() {
+    document.addEventListener("click", handleDocumentClickForSelects, { once: true });
+}
+
+function handleDocumentClickForSelects(event) {
+    const insideSelect = event.target.closest(".custom-select");
+    if (!insideSelect) {
+        closeAllCustomSelects();
+    } else {
+        initCustomSelects();
+    }
+}
+
+function setNatureTravaux(value) {
+    state.data.infos.nature_travaux = value;
+    saveAutosave();
+    renderStep();
+}
+
+function setVille(value) {
+    state.data.infos.ville = value;
+    saveAutosave();
+    renderChantierBanner();
+    renderStep();
+}
+
+/* ========================
+   CUSTOM DATE
+======================== */
+function renderCustomDateField({ label, field, value }) {
+    const realValue = value || "";
+    const displayValue = realValue ? formatDateDisplay(realValue) : "";
+
+    return `
+        <div class="field">
+            <label>${label}</label>
+            <div class="custom-date">
+                <button
+                    type="button"
+                    class="custom-date-button"
+                    onclick="openDatePicker('${field}')"
+                >
+                    <span class="date-value">${displayValue || "JJ/MM/AAAA"}</span>
+                    <span class="material-symbols-outlined date-icon">calendar_today</span>
+                </button>
+
+                <input
+                    id="date-input-${field}"
+                    class="custom-date-input"
+                    type="date"
+                    value="${realValue}"
+                    onchange="setDateValue('${field}', this.value)"
+                />
+            </div>
+        </div>
+    `;
+}
+
+function openDatePicker(field) {
+    const input = document.getElementById(`date-input-${field}`);
+    if (!input) return;
+
+    if (typeof input.showPicker === "function") {
+        input.showPicker();
+    } else {
+        input.focus();
+        input.click();
+    }
+}
+
+function setDateValue(field, value) {
+    state.data.infos[field] = value;
+    saveAutosave();
+    renderStep();
 }
 
 /* ========================
@@ -207,6 +340,7 @@ function handlePostalCodeChange(value) {
 ======================== */
 function renderInfos() {
     const infos = state.data.infos;
+    const cityOptions = referenceData.postalCodes[infos.code_postal] || [];
 
     content.innerHTML = `
         <div class="single-panel-layout">
@@ -217,77 +351,68 @@ function renderInfos() {
                     </div>
                 </div>
 
-                <div class="field-grid">
-                    <div class="field span-7">
-                        <label>Adresse</label>
-                        <input
-                            value="${escapeHtml(infos.adresse || "")}"
-                            oninput="handleInputChange('infos','adresse', this.value, this); renderChantierBanner();"
-                        />
+                <div class="infos-grid">
+                    <div class="infos-left">
+                        <div class="field">
+                            <label>Adresse</label>
+                            <input
+                                value="${escapeHtml(infos.adresse || "")}"
+                                oninput="handleInputChange('infos','adresse', this.value, this); renderChantierBanner();"
+                            />
+                        </div>
+
+                        <div class="field-grid">
+                            <div class="field span-3">
+                                <label>CP</label>
+                                <input
+                                    value="${escapeHtml(infos.code_postal || "")}"
+                                    oninput="handlePostalCodeChange(this.value)"
+                                />
+                            </div>
+
+                            <div class="field span-9">
+                                ${renderCustomSelect({
+                                    id: "ville-select",
+                                    label: "Ville",
+                                    value: infos.ville,
+                                    placeholder: "Sélectionner",
+                                    options: cityOptions,
+                                    onSelect: "setVille"
+                                })}
+                            </div>
+                        </div>
+
+                        <div class="field notes-field">
+                            <label>Notes</label>
+                            <textarea
+                                oninput="handleInputChange('infos','notes', this.value, this)"
+                            >${escapeHtml(infos.notes || "")}</textarea>
+                        </div>
                     </div>
 
-                    <div class="field span-5">
-                        <label>Nature des travaux</label>
-                        <select
-                            name="nature_travaux"
-                            class="${infos.nature_travaux ? "" : "is-placeholder"}"
-                            onchange="handleInputChange('infos','nature_travaux', this.value, this); this.classList.remove('is-placeholder')"
-                        >
-                            <option value="" disabled hidden ${!infos.nature_travaux ? "selected" : ""}>Rénovation chaufferie</option>
-                            ${referenceData.workTypes.map(t => `
-                                <option value="${t}" ${infos.nature_travaux === t ? "selected" : ""}>
-                                    ${t}
-                                </option>
-                            `).join("")}
-                        </select>
-                    </div>
+                    <div class="infos-right">
+                        ${renderCustomSelect({
+                            id: "nature-travaux-select",
+                            label: "Nature des travaux",
+                            value: infos.nature_travaux,
+                            placeholder: "Rénovation chaufferie",
+                            options: referenceData.workTypes,
+                            onSelect: "setNatureTravaux"
+                        })}
 
-                    <div class="field span-2">
-                        <label>CP</label>
-                        <input
-                            name="code_postal"
-                            value="${escapeHtml(infos.code_postal || "")}"
-                            oninput="handleInputChange('infos','code_postal', this.value, this); handlePostalCodeChange(this.value)"
-                        />
-                    </div>
+                        <div class="infos-right-dates">
+                            ${renderCustomDateField({
+                                label: "Date de réception",
+                                field: "date_reception",
+                                value: infos.date_reception
+                            })}
 
-                    <div class="field span-5">
-                        <label>Ville</label>
-                        <select
-                            name="ville"
-                            class="${infos.ville ? "" : "is-placeholder"}"
-                            onchange="handleInputChange('infos','ville', this.value, this); this.classList.remove('is-placeholder'); renderChantierBanner();"
-                        >
-                            <option value="" disabled hidden ${!infos.ville ? "selected" : ""}>Sélectionner</option>
-                            ${(referenceData.postalCodes[infos.code_postal] || []).map(v => `
-                                <option value="${v}" ${infos.ville === v ? "selected" : ""}>${v}</option>
-                            `).join("")}
-                        </select>
-                    </div>
-
-                    <div class="field span-2">
-                        <label>Date de réception</label>
-                        <input
-                            type="date"
-                            value="${infos.date_reception || ""}"
-                            onchange="handleInputChange('infos','date_reception', this.value)"
-                        />
-                    </div>
-
-                    <div class="field span-2">
-                        <label>Date DOE</label>
-                        <input
-                            type="date"
-                            value="${infos.date_doe || getTodayDate()}"
-                            onchange="handleInputChange('infos','date_doe', this.value)"
-                        />
-                    </div>
-
-                    <div class="field full">
-                        <label>Notes</label>
-                        <textarea
-                            oninput="handleInputChange('infos','notes', this.value, this)"
-                        >${escapeHtml(infos.notes || "")}</textarea>
+                            ${renderCustomDateField({
+                                label: "Date DOE",
+                                field: "date_doe",
+                                value: infos.date_doe || getTodayDate()
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -889,6 +1014,12 @@ function escapeHtml(value) {
         .replaceAll("'", "&#039;");
 }
 
+function escapeJs(value) {
+    return String(value)
+        .replaceAll("\\", "\\\\")
+        .replaceAll("'", "\\'");
+}
+
 /* ========================
    NAV BUTTONS
 ======================== */
@@ -928,6 +1059,11 @@ goToStep(state.currentStep || 0);
 window.renderChantierBanner = renderChantierBanner;
 window.handleInputChange = handleInputChange;
 window.handlePostalCodeChange = handlePostalCodeChange;
+window.toggleCustomSelect = toggleCustomSelect;
+window.setNatureTravaux = setNatureTravaux;
+window.setVille = setVille;
+window.openDatePicker = openDatePicker;
+window.setDateValue = setDateValue;
 window.addRow = addRow;
 window.removeRow = removeRow;
 window.updateRow = updateRow;
