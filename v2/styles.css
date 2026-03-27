@@ -179,6 +179,7 @@ textarea {
     color: #1D1E18;
     line-height: 1.1;
     word-break: break-word;
+    letter-spacing: -0.01em;
 }
 
 .banner-actions {
@@ -385,8 +386,6 @@ textarea {
     grid-column: span 6;
 }
 
-}
-
 .field.full {
     grid-column: 1 / -1;
 }
@@ -453,7 +452,6 @@ textarea {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%235f6673' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
     background-repeat: no-repeat;
     background-position: right 16px center;
@@ -474,14 +472,58 @@ textarea {
     font-style: italic;
 }
 
+/* Native dropdown open list styling is very limited cross-browser. */
+/* These help slightly on some browsers, but not reliably everywhere. */
+.field select option[disabled] {
+    color: #9aa1ad;
+    font-style: italic;
+}
+
+.field select option {
+    color: #1D1E18;
+    background: #ffffff;
+}
+
 .field textarea {
-    min-height: 120px;
+    min-height: 180px;
+    height: 180px;
     resize: vertical;
 }
 
 .field input::placeholder,
 .field textarea::placeholder {
     color: #7b8190;
+}
+
+/* ===== DATE INPUT ===== */
+.field input[type="date"] {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    border: 1px solid rgba(171,171,171,0.25);
+    background: rgba(255,255,255,0.96);
+    border-radius: 14px;
+    padding: 12px 50px 12px 14px;
+    color: #1D1E18;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    min-height: 48px;
+}
+
+.field input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 1;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    margin: 0 12px 0 0;
+    filter: grayscale(1) brightness(0.42);
+}
+
+.field input[type="date"]::-webkit-inner-spin-button,
+.field input[type="date"]::-webkit-clear-button {
+    display: none;
 }
 
 /* ===== SUMMARY / EXPORT ===== */
@@ -995,42 +1037,4 @@ textarea {
     .draft-item {
         grid-template-columns: 1fr;
     }
-}
-
-.field input[type="date"] {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    border: 1px solid rgba(171,171,171,0.25);
-    background: rgba(255,255,255,0.96);
-    border-radius: 14px;
-    padding: 12px 50px 12px 14px;
-    color: #1D1E18;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-    appearance: none;
-    -webkit-appearance: none;
-    position: relative;
-}
-
-.field input[type="date"]::-webkit-calendar-picker-indicator {
-    opacity: 0.9;
-    cursor: pointer;
-    width: 18px;
-    height: 18px;
-    margin-right: 14px;
-    filter: grayscale(1) brightness(0.32);
-}
-
-.field input[type="date"]::-webkit-inner-spin-button,
-.field input[type="date"]::-webkit-clear-button {
-    display: none;
-}
-
-.chantier-value {
-    font-size: 24px;
-    font-weight: 700;
-    color: #1D1E18;
-    line-height: 1.1;
-    word-break: break-word;
-    letter-spacing: -0.01em;
 }
