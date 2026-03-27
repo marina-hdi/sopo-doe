@@ -785,11 +785,29 @@ textarea {
     }
 
     .dropzone-inline,
-    .preview-inline-btn {
+    .preview-inline-btn
+    .delete-file-inline-btn {
         flex: 1 1 auto;
     }
 
     .file-name-inline {
         flex: 1 1 100%;
     }
+}
+
+.delete-file-inline-btn {
+    flex: 0 0 110px;
+    min-height: 48px;
+    border: none;
+    border-radius: 14px;
+    background: rgba(206, 35, 42, 0.10);
+    color: #CE232A;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.delete-file-inline-btn:hover {
+    background: rgba(206, 35, 42, 0.18);
+    transform: translateY(-1px);
 }
