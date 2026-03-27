@@ -378,6 +378,7 @@ function deleteFile(section, index) {
 
     saveAutosave();
     renderStep();
+    showToast("Fichier supprimé.", "info");
 }
 
 function openFile(section, index, buttonEl) {
@@ -399,7 +400,7 @@ function openFile(section, index, buttonEl) {
         }, 10000);
     } catch (error) {
         console.error("Erreur ouverture fichier :", error);
-        alert("Impossible d’ouvrir ce fichier.");
+        showToast("Impossible d’ouvrir ce fichier.", "error");
     } finally {
         setTimeout(() => {
             if (buttonEl) {
@@ -536,9 +537,10 @@ function clearAutosave() {
     const confirmed = confirm("Effacer le brouillon local en cours ?");
     if (!confirmed) return;
 
-    localStorage.removeItem(AUTOSAVE_KEY);
-    state = getEmptyState();
-    goToStep(0);
+   localStorage.removeItem(AUTOSAVE_KEY);
+   state = getEmptyState();
+   goToStep(0);
+   showToast("Brouillon local effacé.", "info");
 }
 
 /* ========================
@@ -574,7 +576,7 @@ function saveDraft() {
     drafts.unshift(payload);
     setAllDrafts(drafts);
     saveAutosave();
-    alert("Brouillon enregistré.");
+    showToast("Brouillon enregistré.", "success");
 }
 
 function openDraftsModal() {
@@ -621,18 +623,20 @@ function loadDraft(draftId) {
     if (!draft) return;
 
     state = draft.state;
-    saveAutosave();
-    closeDraftsModal();
-    goToStep(state.currentStep || 0);
+   saveAutosave();
+   closeDraftsModal();
+   goToStep(state.currentStep || 0);
+   showToast("Brouillon chargé.", "success");
 }
 
 function deleteDraft(draftId) {
     const confirmed = confirm("Supprimer ce brouillon ?");
     if (!confirmed) return;
 
-    const drafts = getAllDrafts().filter(item => item.id !== draftId);
-    setAllDrafts(drafts);
-    renderDraftsList();
+   const drafts = getAllDrafts().filter(item => item.id !== draftId);
+   setAllDrafts(drafts);
+   renderDraftsList();
+   showToast("Brouillon supprimé.", "info");
 }
 
 function formatDraftDate(value) {
