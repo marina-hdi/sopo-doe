@@ -722,26 +722,16 @@ textarea {
 
 .icon-btn-inline {
     position: relative;
-    flex: 0 0 46px;
-    width: 46px;
-    height: 46px;
-    border: 1px solid rgba(255,255,255,0.75);
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    border: none;
     border-radius: 14px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition:
-        transform 0.18s ease,
-        box-shadow 0.18s ease,
-        background 0.18s ease,
-        border-color 0.18s ease,
-        color 0.18s ease;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow:
-        0 6px 18px rgba(17, 24, 39, 0.06),
-        inset 0 1px 0 rgba(255,255,255,0.75);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
 .icon-btn-inline .icon-default,
@@ -757,91 +747,34 @@ textarea {
     pointer-events: none;
 }
 
-.icon-btn-inline .icon-tooltip {
-    position: absolute;
-    bottom: calc(100% + 10px);
-    left: 50%;
-    transform: translateX(-50%) translateY(4px);
-    padding: 7px 10px;
-    border-radius: 10px;
-    background: rgba(29, 30, 24, 0.92);
-    color: white;
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.18s ease, transform 0.18s ease;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.16);
-}
-
-.icon-btn-inline .icon-tooltip::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border-width: 5px;
-    border-style: solid;
-    border-color: rgba(29, 30, 24, 0.92) transparent transparent transparent;
-}
-
-/* preview */
+/* BLUE preview button */
 .icon-btn-inline.preview {
-    background: linear-gradient(
-        135deg,
-        rgba(0, 68, 140, 0.14),
-        rgba(22, 153, 209, 0.10)
-    );
-    color: #00448C;
-    border-color: rgba(22, 153, 209, 0.22);
+    background: #00448C;
+    color: white;
+    box-shadow: 0 8px 18px rgba(0, 68, 140, 0.16);
 }
 
 .icon-btn-inline.preview:hover {
-    background: linear-gradient(
-        135deg,
-        rgba(0, 68, 140, 0.22),
-        rgba(22, 153, 209, 0.18)
-    );
-    color: #1699D1;
-    border-color: rgba(22, 153, 209, 0.38);
-    transform: translateY(-2px) scale(1.03);
-    box-shadow:
-        0 10px 24px rgba(0, 68, 140, 0.16),
-        0 0 0 4px rgba(22, 153, 209, 0.10),
-        inset 0 1px 0 rgba(255,255,255,0.8);
+    background: #1699D1;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(22, 153, 209, 0.20);
 }
 
-/* delete */
+/* RED delete button */
 .icon-btn-inline.delete {
-    background: linear-gradient(
-        135deg,
-        rgba(206, 35, 42, 0.10),
-        rgba(206, 35, 42, 0.06)
-    );
+    background: rgba(206, 35, 42, 0.10);
     color: #CE232A;
-    border-color: rgba(206, 35, 42, 0.14);
+    box-shadow: none;
 }
 
 .icon-btn-inline.delete:hover {
-    background: linear-gradient(
-        135deg,
-        rgba(206, 35, 42, 0.16),
-        rgba(206, 35, 42, 0.10)
-    );
-    color: #CE232A;
-    border-color: rgba(206, 35, 42, 0.26);
-    transform: translateY(-2px) scale(1.03);
-    box-shadow:
-        0 10px 24px rgba(206, 35, 42, 0.10),
-        0 0 0 4px rgba(206, 35, 42, 0.08),
-        inset 0 1px 0 rgba(255,255,255,0.8);
+    background: rgba(206, 35, 42, 0.18);
+    transform: translateY(-1px);
 }
 
-/* tooltip */
-.icon-btn-inline:hover .icon-tooltip {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
+/* remove tooltip completely */
+.icon-btn-inline .icon-tooltip {
+    display: none;
 }
 
 /* loading state */
