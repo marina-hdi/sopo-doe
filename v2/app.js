@@ -1,7 +1,22 @@
-console.log("DOE v2 dynamic system + autosave + drafts + files 🚀");
+console.log("DOE v2 dynamic system + autosave + drafts + files + infos dropdowns 🚀");
 
 const AUTOSAVE_KEY = "doe_v2_autosave";
 const DRAFTS_KEY = "doe_v2_saved_drafts";
+
+const referenceData = {
+    workTypes: [
+        "RENOVATION CHAUFFERIE",
+        "RENOVATION SOUS-STATION"
+    ],
+
+    postalCodes: {
+        "75001": ["PARIS"],
+        "75002": ["PARIS"],
+        "94100": ["SAINT-MAUR-DES-FOSSES"],
+        "94300": ["VINCENNES"],
+        "92100": ["BOULOGNE-BILLANCOURT"]
+    }
+};
 
 /* ========================
    GLOBAL STATE
@@ -72,48 +87,6 @@ function renderStep() {
 }
 
 /* ========================
-   CONFIG / DATA
-======================== */
-
-const referenceData = {
-    workTypes: [
-        "RENOVATION CHAUFFERIE",
-        "RENOVATION SOUS-STATION"
-    ],
-
-    postalCodes: {
-        "75001": ["PARIS"],
-        "75002": ["PARIS"],
-        "94100": ["SAINT-MAUR-DES-FOSSES"],
-        "94300": ["VINCENNES"],
-        "92100": ["BOULOGNE-BILLANCOURT"]
-    }
-};
-
-function handlePostalCodeChange(value) {
-    const villes = referenceData.postalCodes[value] || [];
-
-    const villeSelect = document.querySelector('[name="ville"]');
-
-    if (!villeSelect) return;
-
-    // reset
-    villeSelect.innerHTML = '<option value="">Sélectionner une ville</option>';
-
-    if (villes.length === 1) {
-        villeSelect.innerHTML = `<option value="${villes[0]}">${villes[0]}</option>`;
-        state.data.infos.ville = villes[0];
-    } else {
-        villes.forEach(v => {
-            const opt = document.createElement("option");
-            opt.value = v;
-            opt.textContent = v;
-            villeSelect.appendChild(opt);
-        });
-    }
-}
-
-/* ========================
    EMPTY STATE
 ======================== */
 function getEmptyState() {
@@ -122,11 +95,11 @@ function getEmptyState() {
         data: {
             infos: {
                 adresse: "",
-                natureTravaux: "",
-                cp: "",
+                nature_travaux: "",
+                code_postal: "",
                 ville: "",
-                dateReception: "",
-                dateDoe: "",
+                date_reception: "",
+                date_doe: "",
                 notes: ""
             },
             fiches: [],
@@ -137,18 +110,25 @@ function getEmptyState() {
 }
 
 /* ========================
+   DATE HELPERS
+======================== */
+function getTodayDate() {
+    return new Date().toISOString().split("T")[0];
+}
+
+/* ========================
    CHANTIER BANNER
 ======================== */
 function getCurrentAddressLine() {
-    const { adresse, cp, ville } = state.data.infos;
-    const parts = [adresse, cp, ville].filter(Boolean);
+    const { adresse, code_postal, ville } = state.data.infos;
+    const parts = [adresse, code_postal, ville].filter(Boolean);
     return parts.join(", ");
 }
 
 function getDraftDisplayTitle() {
-    const { adresse, ville, cp } = state.data.infos;
-    if (adresse || ville || cp) {
-        return [adresse, cp, ville].filter(Boolean).join(", ");
+    const { adresse, ville, code_postal } = state.data.infos;
+    if (adresse || ville || code_postal) {
+        return [adresse, code_postal, ville].filter(Boolean).join(", ");
     }
     return "Brouillon sans adresse";
 }
@@ -174,21 +154,58 @@ function renderChantierBanner() {
 }
 
 /* ========================
-   STEP 1 — INFOS
+   INFOS HELPERS
 ======================== */
-
-function handleInputChange(section, field, value) {
+function handleInputChange(section, field, value, inputEl = null) {
     if (!state.data[section]) return;
 
-    if (field !== "notes") {
-        value = value.toUpperCase();
-    }
+    const shouldUppercase = !["notes", "date_reception", "date_doe"].includes(field);
+    const finalValue = shouldUppercase ? value.toUpperCase() : value;
 
-    state.data[section][field] = value;
+    state.data[section][field] = finalValue;
+
+    if (inputEl && shouldUppercase) {
+        inputEl.value = finalValue;
+    }
 
     saveAutosave();
 }
 
+function handlePostalCodeChange(value) {
+    const code = value.toUpperCase();
+    const villes = referenceData.postalCodes[code] || [];
+    const villeSelect = document.querySelector('[name="ville"]');
+
+    if (!villeSelect) return;
+
+    villeSelect.innerHTML = `<option value="" disabled hidden ${!state.data.infos.ville ? "selected" : ""}>Sélectionner</option>`;
+
+    if (villes.length === 1) {
+        state.data.infos.ville = villes[0];
+        villeSelect.innerHTML = `
+            <option value="" disabled hidden>Sélectionner</option>
+            <option value="${villes[0]}" selected>${villes[0]}</option>
+        `;
+        villeSelect.classList.remove("is-placeholder");
+    } else {
+        state.data.infos.ville = "";
+        villeSelect.classList.add("is-placeholder");
+
+        villes.forEach(v => {
+            const opt = document.createElement("option");
+            opt.value = v;
+            opt.textContent = v;
+            villeSelect.appendChild(opt);
+        });
+    }
+
+    saveAutosave();
+    renderChantierBanner();
+}
+
+/* ========================
+   STEP 1 — INFOS
+======================== */
 function renderInfos() {
     const infos = state.data.infos;
 
@@ -206,76 +223,77 @@ function renderInfos() {
                         <label>Adresse</label>
                         <input
                             value="${escapeHtml(infos.adresse || "")}"
-                            onchange="updateInfo('adresse', this.value)"
+                            oninput="handleInputChange('infos','adresse', this.value, this); renderChantierBanner();"
                         />
                     </div>
 
                     <div class="field span-5">
                         <label>Nature des travaux</label>
-                           <select 
-                               name="nature_travaux"
-                               onchange="handleInputChange('infos','nature_travaux', this.value)"
-                           >
-                               <option value="">Sélectionner</option>
-                               ${referenceData.workTypes.map(t => `
-                                   <option value="${t}" ${state.data.infos.nature_travaux === t ? 'selected' : ''}>
-                                       ${t}
-                                   </option>
-                               `).join("")}
-                           </select>
+                        <select
+                            name="nature_travaux"
+                            class="${infos.nature_travaux ? "" : "is-placeholder"}"
+                            onchange="handleInputChange('infos','nature_travaux', this.value, this); this.classList.remove('is-placeholder')"
+                        >
+                            <option value="" disabled hidden ${!infos.nature_travaux ? "selected" : ""}>Rénovation chaufferie</option>
+                            ${referenceData.workTypes.map(t => `
+                                <option value="${t}" ${infos.nature_travaux === t ? "selected" : ""}>
+                                    ${t}
+                                </option>
+                            `).join("")}
+                        </select>
                     </div>
 
                     <div class="field span-2">
                         <label>CP</label>
-                           <input 
-                               name="code_postal"
-                               value="${state.data.infos.code_postal || ''}"
-                               oninput="handleInputChange('infos','code_postal', this.value.toUpperCase()); handlePostalCodeChange(this.value)"
-                           />
+                        <input
+                            name="code_postal"
+                            value="${escapeHtml(infos.code_postal || "")}"
+                            oninput="handleInputChange('infos','code_postal', this.value, this); handlePostalCodeChange(this.value)"
+                        />
                     </div>
 
                     <div class="field span-5">
                         <label>Ville</label>
-                           <select 
-                               name="ville"
-                               onchange="handleInputChange('infos','ville', this.value)"
-                           >
-                               <option value="">Sélectionner une ville</option>
-                           </select>
+                        <select
+                            name="ville"
+                            class="${infos.ville ? "" : "is-placeholder"}"
+                            onchange="handleInputChange('infos','ville', this.value, this); this.classList.remove('is-placeholder'); renderChantierBanner();"
+                        >
+                            <option value="" disabled hidden ${!infos.ville ? "selected" : ""}>Sélectionner</option>
+                            ${(referenceData.postalCodes[infos.code_postal] || []).map(v => `
+                                <option value="${v}" ${infos.ville === v ? "selected" : ""}>${v}</option>
+                            `).join("")}
+                        </select>
                     </div>
 
                     <div class="field span-2">
                         <label>Date de réception</label>
                         <input
-                            value="${escapeHtml(infos.dateReception || "")}"
-                            onchange="updateInfo('dateReception', this.value)"
+                            type="date"
+                            value="${infos.date_reception || ""}"
+                            onchange="handleInputChange('infos','date_reception', this.value)"
                         />
                     </div>
 
                     <div class="field span-3">
                         <label>Date DOE</label>
                         <input
-                            value="${escapeHtml(infos.dateDoe || "")}"
-                            onchange="updateInfo('dateDoe', this.value)"
+                            type="date"
+                            value="${infos.date_doe || getTodayDate()}"
+                            onchange="handleInputChange('infos','date_doe', this.value)"
                         />
                     </div>
 
                     <div class="field full">
                         <label>Notes</label>
                         <textarea
-                            onchange="updateInfo('notes', this.value)"
+                            oninput="handleInputChange('infos','notes', this.value, this)"
                         >${escapeHtml(infos.notes || "")}</textarea>
                     </div>
                 </div>
             </div>
         </div>
     `;
-}
-
-function updateInfo(key, value) {
-    state.data.infos[key] = value;
-    saveAutosave();
-    renderChantierBanner();
 }
 
 /* ========================
@@ -331,7 +349,7 @@ function renderRow(key, item, index, fields) {
                         <input
                             value="${escapeHtml(item[field] || "")}"
                             placeholder="${prettyPlaceholder(field)}"
-                            onchange="updateRow('${key}', ${index}, '${field}', this.value)"
+                            oninput="updateRow('${key}', ${index}, '${field}', this.value, this)"
                         />
                     </div>
                 `).join("")}
@@ -364,29 +382,29 @@ function renderRow(key, item, index, fields) {
                                 </div>
 
                                 ${
-                                     item.file
-                                         ? `
-                                          <button
-                                              class="icon-btn-inline preview"
-                                              type="button"
-                                              aria-label="Voir le fichier"
-                                              onclick="openFile('${key}', ${index}, this)"
-                                          >
-                                              <span class="material-symbols-outlined icon-default">visibility</span>
-                                              <span class="material-symbols-outlined icon-spinner">progress_activity</span>
-                                          </button>
-                                          
-                                          <button
-                                              class="icon-btn-inline delete"
-                                              type="button"
-                                              aria-label="Supprimer le fichier"
-                                              onclick="deleteFile('${key}', ${index})"
-                                          >
-                                              <span class="material-symbols-outlined icon-default">delete</span>
-                                          </button>
-                                           `
-                                         : ""
-                                 }
+                                    item.file
+                                        ? `
+                                            <button
+                                                class="icon-btn-inline preview"
+                                                type="button"
+                                                aria-label="Voir le fichier"
+                                                onclick="openFile('${key}', ${index}, this)"
+                                            >
+                                                <span class="material-symbols-outlined icon-default">visibility</span>
+                                                <span class="material-symbols-outlined icon-spinner">progress_activity</span>
+                                            </button>
+
+                                            <button
+                                                class="icon-btn-inline delete"
+                                                type="button"
+                                                aria-label="Supprimer le fichier"
+                                                onclick="deleteFile('${key}', ${index})"
+                                            >
+                                                <span class="material-symbols-outlined icon-default">delete</span>
+                                            </button>
+                                          `
+                                        : ""
+                                }
                             </div>
                         </div>
                         `
@@ -415,8 +433,14 @@ function removeRow(key, index) {
     renderStep();
 }
 
-function updateRow(key, index, field, value) {
-    state.data[key][index][field] = value;
+function updateRow(key, index, field, value, inputEl = null) {
+    const finalValue = value.toUpperCase();
+    state.data[key][index][field] = finalValue;
+
+    if (inputEl) {
+        inputEl.value = finalValue;
+    }
+
     saveAutosave();
 }
 
@@ -435,6 +459,7 @@ function handleFileUpload(section, index, input) {
 
         saveAutosave();
         renderStep();
+        showToast("Fichier ajouté.", "success");
     };
 
     reader.readAsDataURL(file);
@@ -571,7 +596,11 @@ function renderSummary() {
                     </div>
                     <div class="summary-item">
                         <span>Code postal</span>
-                        <strong>${infos.cp ? escapeHtml(infos.cp) : "—"}</strong>
+                        <strong>${infos.code_postal ? escapeHtml(infos.code_postal) : "—"}</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Nature des travaux</span>
+                        <strong>${infos.nature_travaux ? escapeHtml(infos.nature_travaux) : "—"}</strong>
                     </div>
                     <div class="summary-item">
                         <span>Fiches techniques</span>
@@ -599,6 +628,7 @@ function saveAutosave() {
         localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
     } catch (error) {
         console.error("Erreur autosave :", error);
+        showToast("Impossible de sauvegarder localement.", "error");
     }
 }
 
@@ -706,10 +736,10 @@ function loadDraft(draftId) {
     if (!draft) return;
 
     state = draft.state;
-   saveAutosave();
-   closeDraftsModal();
-   goToStep(state.currentStep || 0);
-   showToast("Brouillon chargé.", "success");
+    saveAutosave();
+    closeDraftsModal();
+    goToStep(state.currentStep || 0);
+    showToast("Brouillon chargé.", "success");
 }
 
 function deleteDraft(draftId) {
@@ -732,36 +762,6 @@ function formatDraftDate(value) {
     } catch {
         return value || "Date inconnue";
     }
-}
-
-/* ========================
-   TOASTS
-======================== */
-function showToast(message, type = "info") {
-    if (!toastContainer) return;
-
-    const toast = document.createElement("div");
-    toast.className = `toast ${type}`;
-
-    const iconMap = {
-        success: "check_circle",
-        error: "error",
-        info: "info"
-    };
-
-    toast.innerHTML = `
-        <span class="material-symbols-outlined toast-icon">${iconMap[type] || "info"}</span>
-        <div class="toast-message">${escapeHtml(message)}</div>
-    `;
-
-    toastContainer.appendChild(toast);
-
-    setTimeout(() => {
-        toast.classList.add("is-hiding");
-        toast.addEventListener("animationend", () => {
-            toast.remove();
-        }, { once: true });
-    }, 2600);
 }
 
 /* ========================
@@ -811,6 +811,36 @@ function askConfirm({
 }
 
 /* ========================
+   TOASTS
+======================== */
+function showToast(message, type = "info") {
+    if (!toastContainer) return;
+
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+
+    const iconMap = {
+        success: "check_circle",
+        error: "error",
+        info: "info"
+    };
+
+    toast.innerHTML = `
+        <span class="material-symbols-outlined toast-icon">${iconMap[type] || "info"}</span>
+        <div class="toast-message">${escapeHtml(message)}</div>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add("is-hiding");
+        toast.addEventListener("animationend", () => {
+            toast.remove();
+        }, { once: true });
+    }, 2600);
+}
+
+/* ========================
    HELPERS
 ======================== */
 function getSectionTitle(key) {
@@ -843,9 +873,9 @@ function prettyLabel(field) {
 
 function prettyPlaceholder(field) {
     const map = {
-        type: "Ex. Chaudière",
-        marque: "Ex. Viessmann",
-        modele: "Ex. Vitocrossal 200",
+        type: "Ex. CHAUDIERE",
+        marque: "Ex. VIESSMANN",
+        modele: "Ex. VITOCROSSAL 200",
         fichier: "Nom du document"
     };
     return map[field] || "";
@@ -877,6 +907,7 @@ prevStepBtn.onclick = () => {
 
 if (openDraftsBtn) openDraftsBtn.onclick = openDraftsModal;
 if (closeDraftsBtn) closeDraftsBtn.onclick = closeDraftsModal;
+
 if (draftsModal) {
     draftsModal.addEventListener("click", (event) => {
         if (event.target === draftsModal) closeDraftsModal();
@@ -886,12 +917,18 @@ if (draftsModal) {
 /* ========================
    INIT
 ======================== */
+if (!state.data.infos.date_doe) {
+    state.data.infos.date_doe = getTodayDate();
+}
+
 goToStep(state.currentStep || 0);
 
 /* ========================
    EXPOSE FUNCTIONS
 ======================== */
-window.updateInfo = updateInfo;
+window.renderChantierBanner = renderChantierBanner;
+window.handleInputChange = handleInputChange;
+window.handlePostalCodeChange = handlePostalCodeChange;
 window.addRow = addRow;
 window.removeRow = removeRow;
 window.updateRow = updateRow;
@@ -902,3 +939,4 @@ window.deleteDraft = deleteDraft;
 window.openFile = openFile;
 window.handleFileUpload = handleFileUpload;
 window.deleteFile = deleteFile;
+window.getTodayDate = getTodayDate;
