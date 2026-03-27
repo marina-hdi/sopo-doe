@@ -811,3 +811,13 @@ textarea {
     background: rgba(206, 35, 42, 0.18);
     transform: translateY(-1px);
 }
+
+.material-symbols-outlined {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.icon-btn-inline {
+    backdrop-filter: blur(6px);
+}
+
