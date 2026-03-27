@@ -32,6 +32,7 @@ const draftsModal = document.getElementById("drafts-modal");
 const draftsList = document.getElementById("drafts-list");
 const openDraftsBtn = document.getElementById("open-drafts-btn");
 const closeDraftsBtn = document.getElementById("close-drafts-btn");
+const toastContainer = document.getElementById("toast-container");
 
 /* ========================
    STEP SWITCHING
@@ -640,6 +641,36 @@ function formatDraftDate(value) {
     } catch {
         return value || "Date inconnue";
     }
+}
+
+/* ========================
+   TOASTS
+======================== */
+function showToast(message, type = "info") {
+    if (!toastContainer) return;
+
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+
+    const iconMap = {
+        success: "check_circle",
+        error: "error",
+        info: "info"
+    };
+
+    toast.innerHTML = `
+        <span class="material-symbols-outlined toast-icon">${iconMap[type] || "info"}</span>
+        <div class="toast-message">${escapeHtml(message)}</div>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add("is-hiding");
+        toast.addEventListener("animationend", () => {
+            toast.remove();
+        }, { once: true });
+    }, 2600);
 }
 
 /* ========================
