@@ -291,18 +291,26 @@ function renderRow(key, item, index, fields) {
                                 </div>
 
                                 ${
-                                    item.file
-                                        ? `
-                                            <button
-                                                class="preview-inline-btn"
-                                                type="button"
-                                                onclick="openFile('${key}', ${index})"
-                                            >
-                                                Voir
-                                            </button>
-                                          `
-                                        : ""
-                                }
+                                     item.file
+                                         ? `
+                                             <button
+                                                 class="preview-inline-btn"
+                                                 type="button"
+                                                 onclick="openFile('${key}', ${index})"
+                                             >
+                                                 Voir
+                                             </button>
+                                 
+                                             <button
+                                                 class="delete-file-inline-btn"
+                                                 type="button"
+                                                 onclick="deleteFile('${key}', ${index})"
+                                             >
+                                                 Supprimer
+                                             </button>
+                                           `
+                                         : ""
+                                 }
                             </div>
                         </div>
                         `
@@ -356,11 +364,49 @@ function handleFileUpload(section, index, input) {
     reader.readAsDataURL(file);
 }
 
-function openFile(section, index) {
-    const file = state.data[section]?.[index]?.file;
-    if (!file) return;
+function deleteFile(section, index) {
+    const item = state.data[section]?.[index];
+    if (!item) return;
 
-    window.open(file, "_blank");
+    delete item.file;
+    delete item.fileName;
+    delete item.fileType;
+
+    saveAutosave();
+    renderStep();
+}
+
+function openFile(section, index) {
+    const item = state.data[section]?.[index];
+    if (!item?.file) return;
+
+    try {
+        const blob = dataURLToBlob(item.file);
+        const objectUrl = URL.createObjectURL(blob);
+        window.open(objectUrl, "_blank");
+
+        setTimeout(() => {
+            URL.revokeObjectURL(objectUrl);
+        }, 10000);
+    } catch (error) {
+        console.error("Erreur ouverture fichier :", error);
+        alert("Impossible d’ouvrir ce fichier.");
+    }
+}
+
+function dataURLToBlob(dataURL) {
+    const parts = dataURL.split(",");
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+    const byteString = atob(parts[1]);
+    const arrayBuffer = new ArrayBuffer(byteString.length);
+    const uintArray = new Uint8Array(arrayBuffer);
+
+    for (let i = 0; i < byteString.length; i++) {
+        uintArray[i] = byteString.charCodeAt(i);
+    }
+
+    return new Blob([arrayBuffer], { type: mime });
 }
 
 function initDropzones() {
@@ -672,3 +718,4 @@ window.loadDraft = loadDraft;
 window.deleteDraft = deleteDraft;
 window.openFile = openFile;
 window.handleFileUpload = handleFileUpload;
+window.deleteFile = deleteFile;
