@@ -57,8 +57,27 @@
       <div id="drafts-list" class="drafts-list"></div>
     </div>
   </div>
+
+  <div id="confirm-modal" class="modal-backdrop hidden">
+  <div class="modal-card confirm-card">
+    <div class="modal-header">
+      <h3 id="confirm-title">Confirmation</h3>
+      <button class="icon-btn" id="close-confirm-btn">✕</button>
+    </div>
+
+    <p id="confirm-message" class="confirm-message">
+      Es-tu sûr de vouloir continuer ?
+    </p>
+
+    <div class="confirm-actions">
+      <button type="button" id="confirm-cancel-btn" class="footer-btn secondary-action">Annuler</button>
+      <button type="button" id="confirm-ok-btn" class="footer-btn danger-action">Confirmer</button>
+    </div>
+  </div>
+</div>
   
   <div id="toast-container" class="toast-container"></div>
+  
   <script src="app.js"></script>
 </body>
 </html>
