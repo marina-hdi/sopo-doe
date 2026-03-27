@@ -34,6 +34,13 @@ const openDraftsBtn = document.getElementById("open-drafts-btn");
 const closeDraftsBtn = document.getElementById("close-drafts-btn");
 const toastContainer = document.getElementById("toast-container");
 
+const confirmModal = document.getElementById("confirm-modal");
+const confirmTitle = document.getElementById("confirm-title");
+const confirmMessage = document.getElementById("confirm-message");
+const confirmOkBtn = document.getElementById("confirm-ok-btn");
+const confirmCancelBtn = document.getElementById("confirm-cancel-btn");
+const closeConfirmBtn = document.getElementById("close-confirm-btn");
+
 /* ========================
    STEP SWITCHING
 ======================== */
@@ -369,16 +376,23 @@ function handleFileUpload(section, index, input) {
 }
 
 function deleteFile(section, index) {
-    const item = state.data[section]?.[index];
-    if (!item) return;
+    askConfirm({
+        title: "Supprimer le fichier",
+        message: "Le fichier joint à cette ligne sera supprimé.",
+        confirmLabel: "Supprimer",
+        onConfirm: () => {
+            const item = state.data[section]?.[index];
+            if (!item) return;
 
-    delete item.file;
-    delete item.fileName;
-    delete item.fileType;
+            delete item.file;
+            delete item.fileName;
+            delete item.fileType;
 
-    saveAutosave();
-    renderStep();
-    showToast("Fichier supprimé.", "info");
+            saveAutosave();
+            renderStep();
+            showToast("Fichier supprimé.", "info");
+        }
+    });
 }
 
 function openFile(section, index, buttonEl) {
@@ -534,13 +548,17 @@ function loadAutosave() {
 }
 
 function clearAutosave() {
-    const confirmed = confirm("Effacer le brouillon local en cours ?");
-    if (!confirmed) return;
-
-   localStorage.removeItem(AUTOSAVE_KEY);
-   state = getEmptyState();
-   goToStep(0);
-   showToast("Brouillon local effacé.", "info");
+    askConfirm({
+        title: "Effacer le brouillon local",
+        message: "Le brouillon en cours sera supprimé de cet appareil. Cette action est irréversible.",
+        confirmLabel: "Effacer",
+        onConfirm: () => {
+            localStorage.removeItem(AUTOSAVE_KEY);
+            state = getEmptyState();
+            goToStep(0);
+            showToast("Brouillon local effacé.", "info");
+        }
+    });
 }
 
 /* ========================
@@ -630,13 +648,17 @@ function loadDraft(draftId) {
 }
 
 function deleteDraft(draftId) {
-    const confirmed = confirm("Supprimer ce brouillon ?");
-    if (!confirmed) return;
-
-   const drafts = getAllDrafts().filter(item => item.id !== draftId);
-   setAllDrafts(drafts);
-   renderDraftsList();
-   showToast("Brouillon supprimé.", "info");
+    askConfirm({
+        title: "Supprimer le brouillon",
+        message: "Ce brouillon enregistré sera supprimé définitivement.",
+        confirmLabel: "Supprimer",
+        onConfirm: () => {
+            const drafts = getAllDrafts().filter(item => item.id !== draftId);
+            setAllDrafts(drafts);
+            renderDraftsList();
+            showToast("Brouillon supprimé.", "info");
+        }
+    });
 }
 
 function formatDraftDate(value) {
@@ -675,6 +697,52 @@ function showToast(message, type = "info") {
             toast.remove();
         }, { once: true });
     }, 2600);
+}
+
+/* ========================
+   CONFIRM MODAL
+======================== */
+function askConfirm({
+    title = "Confirmation",
+    message = "Es-tu sûr de vouloir continuer ?",
+    confirmLabel = "Confirmer",
+    onConfirm = () => {}
+}) {
+    if (!confirmModal) return;
+
+    confirmTitle.textContent = title;
+    confirmMessage.textContent = message;
+    confirmOkBtn.textContent = confirmLabel;
+
+    confirmModal.classList.remove("hidden");
+
+    const handleConfirm = () => {
+        cleanup();
+        onConfirm();
+    };
+
+    const handleClose = () => {
+        cleanup();
+    };
+
+    const handleBackdrop = (event) => {
+        if (event.target === confirmModal) {
+            cleanup();
+        }
+    };
+
+    function cleanup() {
+        confirmModal.classList.add("hidden");
+        confirmOkBtn.removeEventListener("click", handleConfirm);
+        confirmCancelBtn.removeEventListener("click", handleClose);
+        closeConfirmBtn.removeEventListener("click", handleClose);
+        confirmModal.removeEventListener("click", handleBackdrop);
+    }
+
+    confirmOkBtn.addEventListener("click", handleConfirm);
+    confirmCancelBtn.addEventListener("click", handleClose);
+    closeConfirmBtn.addEventListener("click", handleClose);
+    confirmModal.addEventListener("click", handleBackdrop);
 }
 
 /* ========================
