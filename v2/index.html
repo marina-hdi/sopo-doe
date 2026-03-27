@@ -26,6 +26,8 @@
 
     <main class="workspace">
       <div class="workspace-inner glass">
+        <section id="chantier-banner-zone"></section>
+
         <section class="top-steps" id="step-tabs">
           <button class="step active" data-step="0">1. Infos</button>
           <button class="step" data-step="1">2. Fiches</button>
@@ -33,8 +35,6 @@
           <button class="step" data-step="3">4. Schémas</button>
           <button class="step" data-step="4">5. Export</button>
         </section>
-
-        <section id="chantier-banner-zone"></section>
 
         <section class="main-panel glass-soft">
           <div id="step-content"></div>
@@ -59,25 +59,25 @@
   </div>
 
   <div id="confirm-modal" class="modal-backdrop hidden">
-  <div class="modal-card confirm-card">
-    <div class="modal-header">
-      <h3 id="confirm-title">Confirmation</h3>
-      <button class="icon-btn" id="close-confirm-btn">✕</button>
-    </div>
+    <div class="modal-card confirm-card">
+      <div class="modal-header">
+        <h3 id="confirm-title">Confirmation</h3>
+        <button class="icon-btn" id="close-confirm-btn">✕</button>
+      </div>
 
-    <p id="confirm-message" class="confirm-message">
-      Es-tu sûr de vouloir continuer ?
-    </p>
+      <p id="confirm-message" class="confirm-message">
+        Es-tu sûr de vouloir continuer ?
+      </p>
 
-    <div class="confirm-actions">
-      <button type="button" id="confirm-cancel-btn" class="footer-btn secondary-action">Annuler</button>
-      <button type="button" id="confirm-ok-btn" class="footer-btn danger-action">Confirmer</button>
+      <div class="confirm-actions">
+        <button type="button" id="confirm-cancel-btn" class="footer-btn secondary-action">Annuler</button>
+        <button type="button" id="confirm-ok-btn" class="footer-btn danger-action">Confirmer</button>
+      </div>
     </div>
   </div>
-</div>
-  
+
   <div id="toast-container" class="toast-container"></div>
-  
+
   <script src="app.js"></script>
 </body>
 </html>
