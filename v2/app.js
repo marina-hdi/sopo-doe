@@ -381,9 +381,14 @@ function deleteFile(section, index) {
     renderStep();
 }
 
-function openFile(section, index) {
+function openFile(section, index, buttonEl) {
     const item = state.data[section]?.[index];
     if (!item?.file) return;
+
+    if (buttonEl) {
+        buttonEl.classList.add("is-loading");
+        buttonEl.disabled = true;
+    }
 
     try {
         const blob = dataURLToBlob(item.file);
@@ -396,6 +401,13 @@ function openFile(section, index) {
     } catch (error) {
         console.error("Erreur ouverture fichier :", error);
         alert("Impossible d’ouvrir ce fichier.");
+    } finally {
+        setTimeout(() => {
+            if (buttonEl) {
+                buttonEl.classList.remove("is-loading");
+                buttonEl.disabled = false;
+            }
+        }, 700);
     }
 }
 
