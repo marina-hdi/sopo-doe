@@ -301,7 +301,6 @@ function renderRow(key, item, index, fields) {
                                           >
                                               <span class="material-symbols-outlined icon-default">visibility</span>
                                               <span class="material-symbols-outlined icon-spinner">progress_activity</span>
-                                              <span class="icon-tooltip">Voir</span>
                                           </button>
                                           
                                           <button
@@ -311,7 +310,6 @@ function renderRow(key, item, index, fields) {
                                               onclick="deleteFile('${key}', ${index})"
                                           >
                                               <span class="material-symbols-outlined icon-default">delete</span>
-                                              <span class="icon-tooltip">Supprimer</span>
                                           </button>
                                            `
                                          : ""
