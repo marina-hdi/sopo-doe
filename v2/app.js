@@ -72,6 +72,48 @@ function renderStep() {
 }
 
 /* ========================
+   CONFIG / DATA
+======================== */
+
+const referenceData = {
+    workTypes: [
+        "RENOVATION CHAUFFERIE",
+        "RENOVATION SOUS-STATION"
+    ],
+
+    postalCodes: {
+        "75001": ["PARIS"],
+        "75002": ["PARIS"],
+        "94100": ["SAINT-MAUR-DES-FOSSES"],
+        "94300": ["VINCENNES"],
+        "92100": ["BOULOGNE-BILLANCOURT"]
+    }
+};
+
+function handlePostalCodeChange(value) {
+    const villes = referenceData.postalCodes[value] || [];
+
+    const villeSelect = document.querySelector('[name="ville"]');
+
+    if (!villeSelect) return;
+
+    // reset
+    villeSelect.innerHTML = '<option value="">Sélectionner une ville</option>';
+
+    if (villes.length === 1) {
+        villeSelect.innerHTML = `<option value="${villes[0]}">${villes[0]}</option>`;
+        state.data.infos.ville = villes[0];
+    } else {
+        villes.forEach(v => {
+            const opt = document.createElement("option");
+            opt.value = v;
+            opt.textContent = v;
+            villeSelect.appendChild(opt);
+        });
+    }
+}
+
+/* ========================
    EMPTY STATE
 ======================== */
 function getEmptyState() {
