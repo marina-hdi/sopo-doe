@@ -127,7 +127,7 @@ function getCurrentAddressLine() {
 function getDraftDisplayTitle() {
     const { adresse, ville, code_postal } = state.data.infos;
     if (adresse || ville || code_postal) {
-        return [adresse, code_postal, ville].filter(Boolean).join(", ");
+        return [adresse, code_postal, ville].filter(Boolean).join(" ");
     }
     return "Brouillon sans adresse";
 }
@@ -274,7 +274,7 @@ function renderInfos() {
                         />
                     </div>
 
-                    <div class="field span-3">
+                    <div class="field span-2">
                         <label>Date DOE</label>
                         <input
                             type="date"
