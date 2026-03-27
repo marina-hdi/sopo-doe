@@ -294,20 +294,22 @@ function renderRow(key, item, index, fields) {
                                      item.file
                                          ? `
                                              <button
-                                                 class="preview-inline-btn"
-                                                 type="button"
-                                                 onclick="openFile('${key}', ${index})"
-                                             >
-                                                 Voir
-                                             </button>
-                                 
-                                             <button
-                                                 class="delete-file-inline-btn"
-                                                 type="button"
-                                                 onclick="deleteFile('${key}', ${index})"
-                                             >
-                                                 Supprimer
-                                             </button>
+                                              class="icon-btn-inline preview"
+                                              type="button"
+                                              title="Voir le fichier"
+                                              onclick="openFile('${key}', ${index})"
+                                          >
+                                              <span class="material-symbols-outlined">visibility</span>
+                                          </button>
+                                          
+                                          <button
+                                              class="icon-btn-inline delete"
+                                              type="button"
+                                              title="Supprimer le fichier"
+                                              onclick="deleteFile('${key}', ${index})"
+                                          >
+                                              <span class="material-symbols-outlined">delete</span>
+                                          </button>
                                            `
                                          : ""
                                  }
