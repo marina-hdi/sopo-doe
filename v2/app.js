@@ -121,8 +121,7 @@ function getTodayDate() {
 ======================== */
 function getCurrentAddressLine() {
     const { adresse, code_postal, ville } = state.data.infos;
-    const parts = [adresse, code_postal, ville].filter(Boolean);
-    return parts.join(", ");
+    return [adresse, code_postal, ville].filter(Boolean).join(" ");
 }
 
 function getDraftDisplayTitle() {
