@@ -955,3 +955,34 @@ textarea {
         transform: translateY(-6px) scale(0.98);
     }
 }
+
+/* ===== CONFIRM MODAL ===== */
+.confirm-card {
+    max-width: 520px;
+}
+
+.confirm-message {
+    margin: 0 0 22px;
+    color: #3d4451;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.danger-action {
+    background: #CE232A !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 8px 18px rgba(206, 35, 42, 0.18);
+}
+
+.danger-action:hover {
+    background: #b41f25 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(206, 35, 42, 0.22);
+}
