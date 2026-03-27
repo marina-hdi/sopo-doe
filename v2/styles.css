@@ -383,7 +383,6 @@ textarea {
     gap: 6px;
     min-width: 0;
     grid-column: span 6;
-    position: relative;
 }
 
 }
@@ -448,7 +447,7 @@ textarea {
     border: 1px solid rgba(171,171,171,0.25);
     background-color: rgba(255,255,255,0.96);
     border-radius: 14px;
-    padding: 12px 54px 12px 14px;
+    padding: 12px 50px 12px 14px;
     color: #1D1E18;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     appearance: none;
@@ -457,21 +456,8 @@ textarea {
 
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%235f6673' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
     background-repeat: no-repeat;
-    background-position: right 18px center;
+    background-position: right 16px center;
     background-size: 16px 16px;
-}
-
-.field:has(select)::after,
-.field:has(input[type="date"])::after {
-    content: "";
-    position: absolute;
-    right: 12px;
-    top: calc(50% + 11px);
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    background: rgba(29,30,24,0.08);
-    pointer-events: none;
 }
 
 .field input:focus,
@@ -1018,7 +1004,7 @@ textarea {
     border: 1px solid rgba(171,171,171,0.25);
     background: rgba(255,255,255,0.96);
     border-radius: 14px;
-    padding: 12px 54px 12px 14px;
+    padding: 12px 50px 12px 14px;
     color: #1D1E18;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     appearance: none;
@@ -1031,10 +1017,8 @@ textarea {
     cursor: pointer;
     width: 18px;
     height: 18px;
-    margin-right: 16px;
+    margin-right: 14px;
     filter: grayscale(1) brightness(0.32);
-    position: relative;
-    z-index: 2;
 }
 
 .field input[type="date"]::-webkit-inner-spin-button,
