@@ -299,48 +299,226 @@ function setVille(value) {
 ======================== */
 function renderCustomDateField({ label, field, value }) {
     const realValue = value || "";
+    const displayValue = formatDateDisplay(realValue);
 
     return `
         <div class="field">
             <label>${label}</label>
-            <div class="custom-date">
+            <div class="custom-date" data-date-id="${field}">
                 <button
                     type="button"
                     class="custom-date-button"
-                    onclick="openDatePicker('${field}')"
+                    onclick="toggleDatePicker('${field}')"
                 >
-                    <span class="date-value">${formatDateDisplay(realValue)}</span>
+                    <span class="date-value">${displayValue}</span>
                     <span class="material-symbols-outlined date-icon">calendar_today</span>
                 </button>
 
-                <input
-                    id="date-input-${field}"
-                    class="custom-date-input"
-                    type="date"
-                    value="${realValue}"
-                    onchange="setDateValue('${field}', this.value)"
-                />
+                <div class="custom-date-panel" id="date-panel-${field}"></div>
             </div>
         </div>
     `;
 }
 
-function openDatePicker(field) {
-    const input = document.getElementById(`date-input-${field}`);
-    if (!input) return;
+function parseISODate(value) {
+    if (!value) return null;
+    const [year, month, day] = value.split("-").map(Number);
+    if (!year || !month || !day) return null;
+    return new Date(year, month - 1, day);
+}
 
-    if (typeof input.showPicker === "function") {
-        input.showPicker();
+function formatISODate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function getCalendarState(field) {
+    const selectedValue = state.data.infos[field];
+    const selectedDate = parseISODate(selectedValue) || new Date();
+
+    return {
+        field,
+        selectedValue: selectedValue || "",
+        selectedDate,
+        viewYear: selectedDate.getFullYear(),
+        viewMonth: selectedDate.getMonth()
+    };
+}
+
+let openDatePickerId = null;
+const datePickerViews = {};
+
+function toggleDatePicker(field) {
+    const alreadyOpen = openDatePickerId === field;
+    closeAllDatePickers();
+
+    if (alreadyOpen) return;
+
+    const selected = parseISODate(state.data.infos[field]) || new Date();
+    datePickerViews[field] = {
+        year: selected.getFullYear(),
+        month: selected.getMonth()
+    };
+
+    openDatePickerId = field;
+    renderDatePicker(field);
+    bindOutsideDatePickerClose();
+}
+
+function closeAllDatePickers() {
+    document.querySelectorAll(".custom-date").forEach(el => {
+        el.classList.remove("is-open");
+    });
+
+    document.querySelectorAll(".custom-date-panel").forEach(panel => {
+        panel.innerHTML = "";
+    });
+
+    openDatePickerId = null;
+}
+
+function bindOutsideDatePickerClose() {
+    document.addEventListener("click", handleOutsideDatePickerClose, { once: true });
+}
+
+function handleOutsideDatePickerClose(event) {
+    const inside = event.target.closest(".custom-date");
+    if (!inside) {
+        closeAllDatePickers();
     } else {
-        input.focus();
-        input.click();
+        bindOutsideDatePickerClose();
     }
 }
 
-function setDateValue(field, value) {
-    state.data.infos[field] = value;
+function renderDatePicker(field) {
+    const wrapper = document.querySelector(`.custom-date[data-date-id="${field}"]`);
+    const panel = document.getElementById(`date-panel-${field}`);
+    if (!wrapper || !panel) return;
+
+    wrapper.classList.add("is-open");
+
+    const selectedValue = state.data.infos[field] || "";
+    const selectedDate = parseISODate(selectedValue);
+    const today = new Date();
+
+    const view = datePickerViews[field] || {
+        year: today.getFullYear(),
+        month: today.getMonth()
+    };
+
+    const year = view.year;
+    const month = view.month;
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startWeekday = (firstDay.getDay() + 6) % 7; // Monday first
+    const daysInMonth = lastDay.getDate();
+
+    const monthLabel = firstDay.toLocaleDateString("fr-FR", {
+        month: "long",
+        year: "numeric"
+    });
+
+    const weekdays = ["L", "M", "M", "J", "V", "S", "D"];
+
+    const cells = [];
+
+    for (let i = 0; i < startWeekday; i++) {
+        cells.push(`<div class="calendar-empty"></div>`);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const current = new Date(year, month, day);
+        const iso = formatISODate(current);
+
+        const isSelected = selectedValue === iso;
+        const isToday = formatISODate(today) === iso;
+
+        cells.push(`
+            <button
+                type="button"
+                class="calendar-day ${isSelected ? "is-selected" : ""} ${isToday ? "is-today" : ""}"
+                onclick="selectDateValue('${field}', '${iso}')"
+            >
+                ${day}
+            </button>
+        `);
+    }
+
+    panel.innerHTML = `
+        <div class="calendar-shell">
+            <div class="calendar-header">
+                <button type="button" class="calendar-nav" onclick="changeDateView('${field}', -1)">
+                    <span class="material-symbols-outlined">chevron_left</span>
+                </button>
+
+                <div class="calendar-title">${capitalize(monthLabel)}</div>
+
+                <button type="button" class="calendar-nav" onclick="changeDateView('${field}', 1)">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                </button>
+            </div>
+
+            <div class="calendar-weekdays">
+                ${weekdays.map(d => `<div class="calendar-weekday">${d}</div>`).join("")}
+            </div>
+
+            <div class="calendar-grid">
+                ${cells.join("")}
+            </div>
+
+            <div class="calendar-footer">
+                <button type="button" class="calendar-footer-btn" onclick="selectDateValue('${field}', '${formatISODate(today)}')">
+                    Aujourd’hui
+                </button>
+                <button type="button" class="calendar-footer-btn ghost" onclick="clearDateValue('${field}')">
+                    Effacer
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function changeDateView(field, direction) {
+    const current = datePickerViews[field];
+    if (!current) return;
+
+    let month = current.month + direction;
+    let year = current.year;
+
+    if (month < 0) {
+        month = 11;
+        year -= 1;
+    }
+
+    if (month > 11) {
+        month = 0;
+        year += 1;
+    }
+
+    datePickerViews[field] = { year, month };
+    renderDatePicker(field);
+}
+
+function selectDateValue(field, isoValue) {
+    state.data.infos[field] = isoValue;
     saveAutosave();
+    closeAllDatePickers();
     renderStep();
+}
+
+function clearDateValue(field) {
+    state.data.infos[field] = "";
+    saveAutosave();
+    closeAllDatePickers();
+    renderStep();
+}
+
+function capitalize(value) {
+    if (!value) return value;
+    return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 /* ========================
