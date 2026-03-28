@@ -1,4 +1,4 @@
-console.log("DOE v2 dynamic system + custom infos controls 🚀");
+console.log("DOE v2 dynamic system + clean infos layout 🚀");
 
 const AUTOSAVE_KEY = "doe_v2_autosave";
 const DRAFTS_KEY = "doe_v2_saved_drafts";
@@ -118,7 +118,7 @@ function getTodayDate() {
 }
 
 function formatDateDisplay(value) {
-    if (!value) return "";
+    if (!value) return "JJ/MM/AAAA";
     const [year, month, day] = value.split("-");
     if (!year || !month || !day) return value;
     return `${day}/${month}/${year}`;
@@ -290,7 +290,6 @@ function setVille(value) {
 ======================== */
 function renderCustomDateField({ label, field, value }) {
     const realValue = value || "";
-    const displayValue = realValue ? formatDateDisplay(realValue) : "";
 
     return `
         <div class="field">
@@ -301,7 +300,7 @@ function renderCustomDateField({ label, field, value }) {
                     class="custom-date-button"
                     onclick="openDatePicker('${field}')"
                 >
-                    <span class="date-value">${displayValue || "JJ/MM/AAAA"}</span>
+                    <span class="date-value">${formatDateDisplay(realValue)}</span>
                     <span class="material-symbols-outlined date-icon">calendar_today</span>
                 </button>
 
@@ -351,8 +350,8 @@ function renderInfos() {
                     </div>
                 </div>
 
-                <div class="infos-grid">
-                    <div class="infos-left">
+                <div class="infos-form-grid">
+                    <div class="infos-adresse">
                         <div class="field">
                             <label>Adresse</label>
                             <input
@@ -360,37 +359,9 @@ function renderInfos() {
                                 oninput="handleInputChange('infos','adresse', this.value, this); renderChantierBanner();"
                             />
                         </div>
-
-                        <div class="field-grid">
-                            <div class="field span-3">
-                                <label>CP</label>
-                                <input
-                                    value="${escapeHtml(infos.code_postal || "")}"
-                                    oninput="handlePostalCodeChange(this.value)"
-                                />
-                            </div>
-
-                            <div class="field span-9">
-                                ${renderCustomSelect({
-                                    id: "ville-select",
-                                    label: "Ville",
-                                    value: infos.ville,
-                                    placeholder: "Sélectionner",
-                                    options: cityOptions,
-                                    onSelect: "setVille"
-                                })}
-                            </div>
-                        </div>
-
-                        <div class="field notes-field">
-                            <label>Notes</label>
-                            <textarea
-                                oninput="handleInputChange('infos','notes', this.value, this)"
-                            >${escapeHtml(infos.notes || "")}</textarea>
-                        </div>
                     </div>
 
-                    <div class="infos-right">
+                    <div class="infos-nature">
                         ${renderCustomSelect({
                             id: "nature-travaux-select",
                             label: "Nature des travaux",
@@ -399,19 +370,49 @@ function renderInfos() {
                             options: referenceData.workTypes,
                             onSelect: "setNatureTravaux"
                         })}
+                    </div>
 
-                        <div class="infos-right-dates">
-                            ${renderCustomDateField({
-                                label: "Date de réception",
-                                field: "date_reception",
-                                value: infos.date_reception
-                            })}
+                    <div class="infos-left-row">
+                        <div class="field">
+                            <label>CP</label>
+                            <input
+                                value="${escapeHtml(infos.code_postal || "")}"
+                                oninput="handlePostalCodeChange(this.value)"
+                            />
+                        </div>
 
-                            ${renderCustomDateField({
-                                label: "Date DOE",
-                                field: "date_doe",
-                                value: infos.date_doe || getTodayDate()
+                        <div>
+                            ${renderCustomSelect({
+                                id: "ville-select",
+                                label: "Ville",
+                                value: infos.ville,
+                                placeholder: "Sélectionner",
+                                options: cityOptions,
+                                onSelect: "setVille"
                             })}
+                        </div>
+                    </div>
+
+                    <div class="infos-right-row">
+                        ${renderCustomDateField({
+                            label: "Date de réception",
+                            field: "date_reception",
+                            value: infos.date_reception
+                        })}
+
+                        ${renderCustomDateField({
+                            label: "Date DOE",
+                            field: "date_doe",
+                            value: infos.date_doe || getTodayDate()
+                        })}
+                    </div>
+
+                    <div class="infos-notes">
+                        <div class="field">
+                            <label>Notes</label>
+                            <textarea
+                                oninput="handleInputChange('infos','notes', this.value, this)"
+                            >${escapeHtml(infos.notes || "")}</textarea>
                         </div>
                     </div>
                 </div>
