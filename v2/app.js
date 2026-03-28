@@ -1092,6 +1092,7 @@ function deleteFile(section, index) {
             delete item.file;
             delete item.fileName;
             delete item.fileType;
+            delete item.autoMatched;
 
             saveAutosave();
             renderStep();
