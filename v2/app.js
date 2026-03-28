@@ -58,61 +58,6 @@ const referenceData = {
     ]
 };
 
-const referenceData = {
-    workTypes: [
-        "RENOVATION CHAUFFERIE",
-        "RENOVATION SOUS-STATION"
-    ],
-
-    postalCodes: {
-        "75001": ["PARIS"],
-        "75002": ["PARIS"],
-        "94100": ["SAINT-MAUR-DES-FOSSES"],
-        "94300": ["VINCENNES"],
-        "92100": ["BOULOGNE-BILLANCOURT"]
-    },
-
-    equipment: {
-        "CHAUDIERE": {
-            brands: {
-                "VIESSMANN": ["VITOCROSSAL 200", "VITODENS 100"],
-                "DE DIETRICH": ["C310-280", "GT 512"],
-                "ELCO": ["TRIGON XL 200", "TRIGON XL 350"]
-            }
-        },
-        "POMPE": {
-            brands: {
-                "GRUNDFOS": ["MAGNA 3D 32-80"]
-            }
-        },
-        "BRULEUR": {
-            brands: {
-                "CUENOD": ["NC4", "NC9"],
-                "ELCO": ["VL2", "VG2"]
-            }
-        }
-    },
-
-    technicalSheetsLibrary: [
-        {
-            type: "CHAUDIERE",
-            marque: "VIESSMANN",
-            modele: "VITOCROSSAL 200",
-            fileName: "FICHE_VIESSMANN_VITOCROSSAL_200.pdf",
-            fileType: "application/pdf",
-            file: null
-        },
-        {
-            type: "POMPE",
-            marque: "GRUNDFOS",
-            modele: "MAGNA 3D 32-80",
-            fileName: "FICHE_GRUNDFOS_MAGNA_3D_32_80.pdf",
-            fileType: "application/pdf",
-            file: null
-        }
-    ]
-};
-
 /* ========================
    GLOBAL STATE
 ======================== */
@@ -448,57 +393,6 @@ function handlePostalCodeChange(value) {
 /* ========================
    CUSTOM SELECT
 ======================== */
-function renderCustomSelect({
-    id,
-    label,
-    value,
-    placeholder,
-    options,
-    onSelect,
-    disabled = false
-}) {
-    const displayValue = value || placeholder;
-    const isPlaceholder = !value;
-    const safeOptions = Array.isArray(options) ? options : [];
-
-    return `
-        <div class="field">
-            <label>${label}</label>
-            <div class="custom-select ${disabled ? "is-disabled" : ""}" data-select-id="${id}">
-                <button
-                    type="button"
-                    class="custom-select-trigger ${isPlaceholder ? "is-placeholder" : ""}"
-                    onclick="${disabled ? "" : `toggleCustomSelect('${id}')`}"
-                    ${disabled ? "disabled" : ""}
-                >
-                    <span class="select-value">${escapeHtml(displayValue)}</span>
-                    <span class="material-symbols-outlined select-chevron">expand_more</span>
-                </button>
-
-                ${
-                    !disabled && safeOptions.length > 0
-                        ? `
-                        <div class="custom-select-menu">
-                            <div class="custom-select-list">
-                                ${safeOptions.map(option => `
-                                    <button
-                                        type="button"
-                                        class="custom-select-option ${value === option ? "is-active" : ""}"
-                                        onclick="handleCustomSelectOption('${id}', '${escapeJs(option)}')"
-                                    >
-                                        ${escapeHtml(option)}
-                                    </button>
-                                `).join("")}
-                            </div>
-                        </div>
-                        `
-                        : ""
-                }
-            </div>
-        </div>
-    `;
-}
-
 function renderCustomSelect({
     id,
     label,
