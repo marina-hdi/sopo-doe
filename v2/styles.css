@@ -626,6 +626,25 @@ button {
     display: block;
 }
 
+.custom-select-search-wrap {
+    margin-bottom: 8px;
+}
+
+.custom-select-search {
+    width: 100%;
+    border: 1px solid rgba(171,171,171,0.22);
+    background: rgba(255,255,255,0.98);
+    border-radius: 12px;
+    padding: 10px 12px;
+    color: #1D1E18;
+    outline: none;
+}
+
+.custom-select-search:focus {
+    border-color: rgba(22,153,209,0.7);
+    box-shadow: 0 0 0 3px rgba(22,153,209,0.10);
+}
+
 .custom-select-list {
     display: flex;
     flex-direction: column;
@@ -650,6 +669,20 @@ button {
 .custom-select-option.is-active {
     background: rgba(0, 68, 140, 0.08);
     color: #00448C;
+}
+
+.custom-select-create {
+    border-top: 1px solid rgba(171,171,171,0.18);
+    margin-top: 4px;
+    padding-top: 14px;
+    color: #00448C;
+    font-weight: 700;
+}
+
+.custom-select-empty {
+    padding: 12px 14px;
+    color: #7b8190;
+    font-size: 14px;
 }
 
 /* ========================
@@ -883,6 +916,9 @@ button {
     font-weight: 700;
 }
 
+/* ========================
+   EMPTY STATE
+======================== */
 .empty-state {
     background: rgba(255,255,255,0.58);
     border: 1px dashed rgba(171,171,171,0.5);
@@ -894,7 +930,7 @@ button {
 }
 
 /* ========================
-   MODAL / DRAFTS
+   MODAL / DRAFTS / CREATE
 ======================== */
 .hidden {
     display: none !important;
@@ -921,6 +957,10 @@ button {
     border: 1px solid rgba(255,255,255,0.7);
     box-shadow: 0 18px 50px rgba(0,0,0,0.14);
     padding: 22px;
+}
+
+.create-value-card {
+    max-width: 520px;
 }
 
 .modal-header {
@@ -1396,16 +1436,4 @@ button {
     .draft-item {
         grid-template-columns: 1fr;
     }
-}
-
-.custom-select-create {
-    border-top: 1px solid rgba(171,171,171,0.18);
-    margin-top: 4px;
-    padding-top: 14px;
-    color: #00448C;
-    font-weight: 700;
-}
-
-.create-value-card {
-    max-width: 520px;
 }
