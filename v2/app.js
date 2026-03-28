@@ -15,7 +15,102 @@ const referenceData = {
         "94100": ["SAINT-MAUR-DES-FOSSES"],
         "94300": ["VINCENNES"],
         "92100": ["BOULOGNE-BILLANCOURT"]
-    }
+    },
+
+    equipment: {
+        "CHAUDIERE": {
+            brands: {
+                "VIESSMANN": ["VITOCROSSAL 200", "VITODENS 100"],
+                "DE DIETRICH": ["C310-280", "GT 512"],
+                "ELCO": ["TRIGON XL 200", "TRIGON XL 350"]
+            }
+        },
+        "POMPE": {
+            brands: {
+                "GRUNDFOS": ["MAGNA 3D 32-80"]
+            }
+        },
+        "BRULEUR": {
+            brands: {
+                "CUENOD": ["NC4", "NC9"],
+                "ELCO": ["VL2", "VG2"]
+            }
+        }
+    },
+
+    technicalSheetsLibrary: [
+        {
+            type: "CHAUDIERE",
+            marque: "VIESSMANN",
+            modele: "VITOCROSSAL 200",
+            fileName: "FICHE_VIESSMANN_VITOCROSSAL_200.pdf",
+            fileType: "application/pdf",
+            file: null
+        },
+        {
+            type: "POMPE",
+            marque: "GRUNDFOS",
+            modele: "MAGNA 3D 32-80",
+            fileName: "FICHE_GRUNDFOS_MAGNA_3D_32_80.pdf",
+            fileType: "application/pdf",
+            file: null
+        }
+    ]
+};
+
+const referenceData = {
+    workTypes: [
+        "RENOVATION CHAUFFERIE",
+        "RENOVATION SOUS-STATION"
+    ],
+
+    postalCodes: {
+        "75001": ["PARIS"],
+        "75002": ["PARIS"],
+        "94100": ["SAINT-MAUR-DES-FOSSES"],
+        "94300": ["VINCENNES"],
+        "92100": ["BOULOGNE-BILLANCOURT"]
+    },
+
+    equipment: {
+        "CHAUDIERE": {
+            brands: {
+                "VIESSMANN": ["VITOCROSSAL 200", "VITODENS 100"],
+                "DE DIETRICH": ["C310-280", "GT 512"],
+                "ELCO": ["TRIGON XL 200", "TRIGON XL 350"]
+            }
+        },
+        "POMPE": {
+            brands: {
+                "GRUNDFOS": ["MAGNA 3D 32-80"]
+            }
+        },
+        "BRULEUR": {
+            brands: {
+                "CUENOD": ["NC4", "NC9"],
+                "ELCO": ["VL2", "VG2"]
+            }
+        }
+    },
+
+    technicalSheetsLibrary: [
+        {
+            type: "CHAUDIERE",
+            marque: "VIESSMANN",
+            modele: "VITOCROSSAL 200",
+            fileName: "FICHE_VIESSMANN_VITOCROSSAL_200.pdf",
+            fileType: "application/pdf",
+            file: null
+        },
+        {
+            type: "POMPE",
+            marque: "GRUNDFOS",
+            modele: "MAGNA 3D 32-80",
+            fileName: "FICHE_GRUNDFOS_MAGNA_3D_32_80.pdf",
+            fileType: "application/pdf",
+            file: null
+        }
+    ]
 };
 
 /* ========================
@@ -28,11 +123,152 @@ let state = loadAutosave() || getEmptyState();
 ======================== */
 const stepsConfig = [
     { title: "Infos", render: renderInfos },
-    { title: "Fiches techniques", render: () => renderDynamicSection("fiches", ["type", "marque", "modele", "fichier"]) },
+    { title: "Fiches techniques", render: renderFichesStep },
     { title: "Procès-verbaux", render: () => renderDynamicSection("pv", ["type", "fichier"]) },
     { title: "Schémas", render: () => renderDynamicSection("schemas", ["type", "fichier"]) },
     { title: "Export", render: renderSummary }
 ];
+
+function renderFichesStep() {
+    const list = state.data.fiches;
+
+    content.innerHTML = `
+        <div class="single-panel-layout">
+            <div class="panel">
+                <div class="section-toolbar">
+                    <div>
+                        <h3>Fiches techniques</h3>
+                        <p class="panel-muted">Choisissez un type, une marque et un modèle. Si la fiche existe déjà dans la base, elle sera récupérée automatiquement.</p>
+                    </div>
+                    <button class="add-row-btn" onclick="addRow('fiches')">+ Ajouter</button>
+                </div>
+
+                ${
+                    list.length === 0
+                        ? `
+                        <div class="empty-state">
+                            <p>Aucune fiche technique ajoutée pour le moment.</p>
+                        </div>
+                        `
+                        : `
+                        <div class="dynamic-list">
+                            ${list.map((item, index) => renderFicheRow(item, index)).join("")}
+                        </div>
+                        `
+                }
+            </div>
+        </div>
+    `;
+}
+
+function renderFicheRow(item, index) {
+    const typeOptions = getEquipmentTypes();
+    const brandOptions = getBrandsForType(item.type);
+    const modelOptions = getModelsForTypeAndBrand(item.type, item.marque);
+
+    return `
+        <div class="dynamic-card">
+            <div class="dynamic-card-header">
+                <span class="dynamic-card-title">Fiche technique ${index + 1}</span>
+                <button class="remove-row-btn" onclick="removeRow('fiches', ${index})">Supprimer</button>
+            </div>
+
+            <div class="fiche-grid">
+                <div>
+                    ${renderCustomSelect({
+                        id: `fiche-type-${index}`,
+                        label: "Type",
+                        value: item.type || "",
+                        placeholder: "Sélectionner",
+                        options: typeOptions,
+                        onSelect: `setFicheField.bind(null, ${index}, 'type')`
+                    })}
+                </div>
+
+                <div>
+                    ${renderCustomSelect({
+                        id: `fiche-marque-${index}`,
+                        label: "Marque",
+                        value: item.marque || "",
+                        placeholder: "Sélectionner",
+                        options: brandOptions,
+                        onSelect: `setFicheField.bind(null, ${index}, 'marque')`,
+                        disabled: !item.type
+                    })}
+                </div>
+
+                <div>
+                    ${renderCustomSelect({
+                        id: `fiche-modele-${index}`,
+                        label: "Modèle",
+                        value: item.modele || "",
+                        placeholder: "Sélectionner",
+                        options: modelOptions,
+                        onSelect: `setFicheField.bind(null, ${index}, 'modele')`,
+                        disabled: !item.marque
+                    })}
+                </div>
+
+                <div class="field fiche-file-block">
+                    <label>Fichier</label>
+                    <div class="upload-inline">
+                        <input
+                            id="file-input-fiches-${index}"
+                            class="hidden-file-input"
+                            type="file"
+                            accept=".pdf,image/*"
+                            onchange="handleFileUpload('fiches', ${index}, this)"
+                        />
+
+                        <div
+                            class="dropzone-inline"
+                            data-input-id="file-input-fiches-${index}"
+                            data-section="fiches"
+                            data-index="${index}"
+                        >
+                            Déposer ou cliquer
+                        </div>
+
+                        <div class="file-name-inline ${(item.fileName || item.autoMatched) ? "has-file" : ""}">
+                            ${
+                                item.fileName
+                                    ? escapeHtml(item.fileName)
+                                    : item.autoMatched
+                                        ? "FICHE TROUVÉE EN BASE"
+                                        : "Aucun fichier"
+                            }
+                        </div>
+
+                        ${
+                            item.fileName || item.autoMatched
+                                ? `
+                                    <button
+                                        class="icon-btn-inline preview"
+                                        type="button"
+                                        aria-label="Voir le fichier"
+                                        onclick="${item.file ? `openFile('fiches', ${index}, this)` : `openTechnicalLibraryStub(${index})`}"
+                                    >
+                                        <span class="material-symbols-outlined icon-default">visibility</span>
+                                        <span class="material-symbols-outlined icon-spinner">progress_activity</span>
+                                    </button>
+
+                                    <button
+                                        class="icon-btn-inline delete"
+                                        type="button"
+                                        aria-label="Supprimer le fichier"
+                                        onclick="deleteFile('fiches', ${index})"
+                                    >
+                                        <span class="material-symbols-outlined icon-default">delete</span>
+                                    </button>
+                                  `
+                                : ""
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
 
 /* ========================
    DOM REFERENCES
@@ -73,6 +309,19 @@ function goToStep(index) {
     renderStep();
 }
 
+function registerStepSelectHandlers() {
+    Object.keys(customSelectHandlers).forEach(key => delete customSelectHandlers[key]);
+
+    registerCustomSelectHandler("nature-travaux-select", setNatureTravaux);
+    registerCustomSelectHandler("ville-select", setVille);
+
+    state.data.fiches.forEach((item, index) => {
+        registerCustomSelectHandler(`fiche-type-${index}`, (value) => setFicheField(index, "type", value));
+        registerCustomSelectHandler(`fiche-marque-${index}`, (value) => setFicheField(index, "marque", value));
+        registerCustomSelectHandler(`fiche-modele-${index}`, (value) => setFicheField(index, "modele", value));
+    });
+}
+
 function renderStep() {
     renderChantierBanner();
 
@@ -85,6 +334,7 @@ function renderStep() {
 
     initDropzones();
     initCustomSelects();
+    registerStepSelectHandlers();
 }
 
 /* ========================
@@ -234,7 +484,58 @@ function renderCustomSelect({
                                     <button
                                         type="button"
                                         class="custom-select-option ${value === option ? "is-active" : ""}"
-                                        onclick="${onSelect}('${escapeJs(option)}')"
+                                        onclick="handleCustomSelectOption('${id}', '${escapeJs(option)}')"
+                                    >
+                                        ${escapeHtml(option)}
+                                    </button>
+                                `).join("")}
+                            </div>
+                        </div>
+                        `
+                        : ""
+                }
+            </div>
+        </div>
+    `;
+}
+
+function renderCustomSelect({
+    id,
+    label,
+    value,
+    placeholder,
+    options,
+    onSelect,
+    disabled = false
+}) {
+    const displayValue = value || placeholder;
+    const isPlaceholder = !value;
+    const safeOptions = Array.isArray(options) ? options : [];
+
+    return `
+        <div class="field">
+            <label>${label}</label>
+            <div class="custom-select ${disabled ? "is-disabled" : ""}" data-select-id="${id}">
+                <button
+                    type="button"
+                    class="custom-select-trigger ${isPlaceholder ? "is-placeholder" : ""}"
+                    onclick="${disabled ? "" : `toggleCustomSelect('${id}')`}"
+                    ${disabled ? "disabled" : ""}
+                >
+                    <span class="select-value">${escapeHtml(displayValue)}</span>
+                    <span class="material-symbols-outlined select-chevron">expand_more</span>
+                </button>
+
+                ${
+                    !disabled && safeOptions.length > 0
+                        ? `
+                        <div class="custom-select-menu">
+                            <div class="custom-select-list">
+                                ${safeOptions.map(option => `
+                                    <button
+                                        type="button"
+                                        class="custom-select-option ${value === option ? "is-active" : ""}"
+                                        onclick="handleCustomSelectOption('${id}', '${escapeJs(option)}')"
                                     >
                                         ${escapeHtml(option)}
                                     </button>
