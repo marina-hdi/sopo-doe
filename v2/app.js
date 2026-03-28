@@ -874,15 +874,68 @@ function createNewEquipmentValue(kind, rawValue, currentRow) {
     return null;
 }
 
+const createValueModal = document.getElementById("create-value-modal");
+const createValueTitle = document.getElementById("create-value-title");
+const createValueLabel = document.getElementById("create-value-label");
+const createValueInput = document.getElementById("create-value-input");
+const createValueSaveBtn = document.getElementById("create-value-save-btn");
+const createValueCancelBtn = document.getElementById("create-value-cancel-btn");
+const closeCreateValueBtn = document.getElementById("close-create-value-btn");
+
+let pendingCreateValueContext = null;
+
 function promptCreateEquipmentValue(kind, index) {
     const labels = {
-        type: "Ajouter un nouveau type",
-        marque: "Ajouter une nouvelle marque",
-        modele: "Ajouter un nouveau modèle"
+        type: {
+            title: "Ajouter un type",
+            label: "Nouveau type",
+            placeholder: "Ex. VASE D’EXPANSION"
+        },
+        marque: {
+            title: "Ajouter une marque",
+            label: "Nouvelle marque",
+            placeholder: "Ex. ATLANTIC"
+        },
+        modele: {
+            title: "Ajouter un modèle",
+            label: "Nouveau modèle",
+            placeholder: "Ex. NAEMA 2"
+        }
     };
 
-    const entered = prompt(labels[kind] || "Ajouter une valeur");
-    if (!entered) return;
+    const config = labels[kind];
+    if (!config) return;
+
+    pendingCreateValueContext = { kind, index };
+
+    createValueTitle.textContent = config.title;
+    createValueLabel.textContent = config.label;
+    createValueInput.placeholder = config.placeholder;
+    createValueInput.value = "";
+
+    createValueModal.classList.remove("hidden");
+
+    setTimeout(() => {
+        createValueInput.focus();
+    }, 0);
+}
+
+function closeCreateValueModal() {
+    createValueModal.classList.add("hidden");
+    createValueInput.value = "";
+    pendingCreateValueContext = null;
+}
+
+function submitCreateValueModal() {
+    if (!pendingCreateValueContext) return;
+
+    const { kind, index } = pendingCreateValueContext;
+    const entered = createValueInput.value.trim();
+
+    if (!entered) {
+        showToast("Merci de saisir une valeur.", "error");
+        return;
+    }
 
     const row = state.data.fiches[index];
     const createdValue = createNewEquipmentValue(kind, entered, row);
@@ -892,10 +945,10 @@ function promptCreateEquipmentValue(kind, index) {
         return;
     }
 
+    closeCreateValueModal();
     setFicheField(index, kind, createdValue);
     showToast("Valeur ajoutée.", "success");
 }
-
 function clearFicheAutoFile(row) {
     if (!row) return;
     delete row.file;
@@ -1618,6 +1671,35 @@ if (draftsModal) {
     });
 }
 
+if (createValueCancelBtn) {
+    createValueCancelBtn.onclick = closeCreateValueModal;
+}
+
+if (closeCreateValueBtn) {
+    closeCreateValueBtn.onclick = closeCreateValueModal;
+}
+
+if (createValueSaveBtn) {
+    createValueSaveBtn.onclick = submitCreateValueModal;
+}
+
+if (createValueInput) {
+    createValueInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            submitCreateValueModal();
+        }
+    });
+}
+
+if (createValueModal) {
+    createValueModal.addEventListener("click", (event) => {
+        if (event.target === createValueModal) {
+            closeCreateValueModal();
+        }
+    });
+}
+
 /* ========================
    INIT
 ======================== */
@@ -1659,3 +1741,7 @@ window.deleteFile = deleteFile;
 window.getTodayDate = getTodayDate;
 
 window.promptCreateEquipmentValue = promptCreateEquipmentValue;
+
+window.promptCreateEquipmentValue = promptCreateEquipmentValue;
+window.closeCreateValueModal = closeCreateValueModal;
+window.submitCreateValueModal = submitCreateValueModal;
