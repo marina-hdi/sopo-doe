@@ -1405,3 +1405,7 @@ button {
     color: #00448C;
     font-weight: 700;
 }
+
+.create-value-card {
+    max-width: 520px;
+}
