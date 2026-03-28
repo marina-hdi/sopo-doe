@@ -1397,3 +1397,11 @@ button {
         grid-template-columns: 1fr;
     }
 }
+
+.custom-select-create {
+    border-top: 1px solid rgba(171,171,171,0.18);
+    margin-top: 4px;
+    padding-top: 14px;
+    color: #00448C;
+    font-weight: 700;
+}
