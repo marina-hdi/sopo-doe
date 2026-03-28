@@ -5,11 +5,12 @@ console.log("DOE v2 clean app loaded ✅");
 ======================== */
 const AUTOSAVE_KEY = "doe_v2_autosave";
 const DRAFTS_KEY = "doe_v2_saved_drafts";
+const REFERENCE_DATA_KEY = "doe_v2_reference_data";
 
 /* ========================
-   REFERENCE DATA
+   DEFAULT REFERENCE DATA
 ======================== */
-const referenceData = {
+const defaultReferenceData = {
     workTypes: [
         "RENOVATION CHAUFFERIE",
         "RENOVATION SOUS-STATION"
@@ -63,6 +64,30 @@ const referenceData = {
         }
     ]
 };
+
+/* ========================
+   LOAD / SAVE REFERENCE DATA
+======================== */
+function loadReferenceData() {
+    try {
+        const raw = localStorage.getItem(REFERENCE_DATA_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+        console.error("Erreur chargement referenceData :", error);
+        return null;
+    }
+}
+
+function saveReferenceData() {
+    try {
+        localStorage.setItem(REFERENCE_DATA_KEY, JSON.stringify(referenceData));
+    } catch (error) {
+        console.error("Erreur sauvegarde referenceData :", error);
+        showToast("Impossible de sauvegarder la bibliothèque.", "error");
+    }
+}
+
+let referenceData = loadReferenceData() || structuredClone(defaultReferenceData);
 
 /* ========================
    EMPTY STATE
@@ -129,6 +154,14 @@ const confirmMessage = document.getElementById("confirm-message");
 const confirmOkBtn = document.getElementById("confirm-ok-btn");
 const confirmCancelBtn = document.getElementById("confirm-cancel-btn");
 const closeConfirmBtn = document.getElementById("close-confirm-btn");
+
+const createValueModal = document.getElementById("create-value-modal");
+const createValueTitle = document.getElementById("create-value-title");
+const createValueLabel = document.getElementById("create-value-label");
+const createValueInput = document.getElementById("create-value-input");
+const createValueSaveBtn = document.getElementById("create-value-save-btn");
+const createValueCancelBtn = document.getElementById("create-value-cancel-btn");
+const closeCreateValueBtn = document.getElementById("close-create-value-btn");
 
 /* ========================
    HELPERS
@@ -438,9 +471,97 @@ function askConfirm({
 }
 
 /* ========================
+   CREATE VALUE MODAL
+======================== */
+let pendingCreateValueContext = null;
+
+function getCreateValueModalConfig(kind, row) {
+    if (kind === "type") {
+        return {
+            title: "Ajouter un type",
+            label: "Nouveau type",
+            placeholder: "Ex. VASE D’EXPANSION"
+        };
+    }
+
+    if (kind === "marque") {
+        return {
+            title: row?.type ? `Ajouter une marque pour ${row.type}` : "Ajouter une marque",
+            label: "Nouvelle marque",
+            placeholder: "Ex. ATLANTIC"
+        };
+    }
+
+    if (kind === "modele") {
+        return {
+            title: row?.marque ? `Ajouter un modèle pour ${row.marque}` : "Ajouter un modèle",
+            label: "Nouveau modèle",
+            placeholder: "Ex. NAEMA 2"
+        };
+    }
+
+    return {
+        title: "Ajouter une valeur",
+        label: "Nouvelle valeur",
+        placeholder: "Saisir une valeur"
+    };
+}
+
+function promptCreateEquipmentValue(kind, index) {
+    const row = state.data.fiches[index];
+    const config = getCreateValueModalConfig(kind, row);
+
+    pendingCreateValueContext = { kind, index };
+
+    createValueTitle.textContent = config.title;
+    createValueLabel.textContent = config.label;
+    createValueInput.placeholder = config.placeholder;
+    createValueInput.value = "";
+
+    createValueModal.classList.remove("hidden");
+
+    setTimeout(() => {
+        createValueInput.focus();
+        createValueInput.select();
+    }, 0);
+}
+
+function closeCreateValueModal() {
+    createValueModal.classList.add("hidden");
+    createValueInput.value = "";
+    pendingCreateValueContext = null;
+}
+
+function submitCreateValueModal() {
+    if (!pendingCreateValueContext) return;
+
+    const { kind, index } = pendingCreateValueContext;
+    const entered = createValueInput.value.trim();
+
+    if (!entered) {
+        showToast("Merci de saisir une valeur.", "error");
+        return;
+    }
+
+    const row = state.data.fiches[index];
+    const createdValue = createNewEquipmentValue(kind, entered, row);
+
+    if (!createdValue) {
+        showToast("Impossible d’ajouter cette valeur.", "error");
+        return;
+    }
+
+    closeCreateValueModal();
+    setFicheField(index, kind, createdValue);
+    showToast("Valeur ajoutée.", "success");
+}
+
+/* ========================
    CUSTOM SELECTS
 ======================== */
 const customSelectHandlers = {};
+const customSelectSearchState = {};
+let customSelectsBound = false;
 
 function registerCustomSelectHandler(id, handler) {
     customSelectHandlers[id] = handler;
@@ -451,6 +572,7 @@ function handleCustomSelectOption(id, value) {
     if (typeof handler === "function") {
         handler(value);
     }
+    delete customSelectSearchState[id];
     closeAllCustomSelects();
 }
 
@@ -466,6 +588,11 @@ function renderCustomSelect({
     const displayValue = value || placeholder;
     const isPlaceholder = !value;
     const safeOptions = Array.isArray(options) ? options : [];
+    const searchValue = customSelectSearchState[id] || "";
+
+    const filteredOptions = safeOptions.filter(option =>
+        option.toLowerCase().includes(searchValue.toLowerCase())
+    );
 
     return `
         <div class="field">
@@ -485,16 +612,31 @@ function renderCustomSelect({
                     !disabled
                         ? `
                         <div class="custom-select-menu">
+                            <div class="custom-select-search-wrap">
+                                <input
+                                    type="text"
+                                    class="custom-select-search"
+                                    placeholder="Rechercher..."
+                                    value="${escapeHtml(searchValue)}"
+                                    oninput="updateCustomSelectSearch('${id}', this.value)"
+                                    onclick="event.stopPropagation()"
+                                />
+                            </div>
+
                             <div class="custom-select-list">
-                                ${safeOptions.map(option => `
-                                    <button
-                                        type="button"
-                                        class="custom-select-option ${value === option ? "is-active" : ""}"
-                                        onclick="handleCustomSelectOption('${id}', '${escapeJs(option)}')"
-                                    >
-                                        ${escapeHtml(option)}
-                                    </button>
-                                `).join("")}
+                                ${
+                                    filteredOptions.length
+                                        ? filteredOptions.map(option => `
+                                            <button
+                                                type="button"
+                                                class="custom-select-option ${value === option ? "is-active" : ""}"
+                                                onclick="handleCustomSelectOption('${id}', '${escapeJs(option)}')"
+                                            >
+                                                ${escapeHtml(option)}
+                                            </button>
+                                        `).join("")
+                                        : `<div class="custom-select-empty">Aucun résultat</div>`
+                                }
 
                                 ${
                                     createAction
@@ -519,6 +661,31 @@ function renderCustomSelect({
     `;
 }
 
+function updateCustomSelectSearch(id, value) {
+    customSelectSearchState[id] = value;
+    rerenderOpenCustomSelect(id);
+}
+
+function rerenderOpenCustomSelect(id) {
+    const selectEl = document.querySelector(`.custom-select[data-select-id="${id}"]`);
+    if (!selectEl) return;
+
+    const wasOpen = selectEl.classList.contains("is-open");
+    renderStep();
+
+    if (wasOpen) {
+        const next = document.querySelector(`.custom-select[data-select-id="${id}"]`);
+        if (next) {
+            next.classList.add("is-open");
+            const input = next.querySelector(".custom-select-search");
+            if (input) {
+                input.focus();
+                input.setSelectionRange(input.value.length, input.value.length);
+            }
+        }
+    }
+}
+
 function toggleCustomSelect(id) {
     const all = document.querySelectorAll(".custom-select");
     all.forEach(el => {
@@ -529,7 +696,16 @@ function toggleCustomSelect(id) {
 
     const target = document.querySelector(`.custom-select[data-select-id="${id}"]`);
     if (!target) return;
+
+    const willOpen = !target.classList.contains("is-open");
     target.classList.toggle("is-open");
+
+    if (willOpen) {
+        setTimeout(() => {
+            const input = target.querySelector(".custom-select-search");
+            if (input) input.focus();
+        }, 0);
+    }
 }
 
 function closeAllCustomSelects() {
@@ -537,8 +713,6 @@ function closeAllCustomSelects() {
         el.classList.remove("is-open");
     });
 }
-
-let customSelectsBound = false;
 
 function initCustomSelects() {
     if (customSelectsBound) return;
@@ -825,130 +999,6 @@ function getModelsForTypeAndBrand(type, brand) {
     return referenceData.equipment[type]?.brands?.[brand] || [];
 }
 
-function createNewEquipmentValue(kind, rawValue, currentRow) {
-    const value = String(rawValue || "").trim().toUpperCase();
-    if (!value) return null;
-
-    if (kind === "type") {
-        if (!referenceData.equipment[value]) {
-            referenceData.equipment[value] = { brands: {} };
-        }
-        return value;
-    }
-
-    if (kind === "marque") {
-        const type = currentRow?.type;
-        if (!type) return null;
-
-        if (!referenceData.equipment[type]) {
-            referenceData.equipment[type] = { brands: {} };
-        }
-
-        if (!referenceData.equipment[type].brands[value]) {
-            referenceData.equipment[type].brands[value] = [];
-        }
-
-        return value;
-    }
-
-    if (kind === "modele") {
-        const type = currentRow?.type;
-        const marque = currentRow?.marque;
-        if (!type || !marque) return null;
-
-        if (!referenceData.equipment[type]) {
-            referenceData.equipment[type] = { brands: {} };
-        }
-
-        if (!referenceData.equipment[type].brands[marque]) {
-            referenceData.equipment[type].brands[marque] = [];
-        }
-
-        if (!referenceData.equipment[type].brands[marque].includes(value)) {
-            referenceData.equipment[type].brands[marque].push(value);
-        }
-
-        return value;
-    }
-
-    return null;
-}
-
-const createValueModal = document.getElementById("create-value-modal");
-const createValueTitle = document.getElementById("create-value-title");
-const createValueLabel = document.getElementById("create-value-label");
-const createValueInput = document.getElementById("create-value-input");
-const createValueSaveBtn = document.getElementById("create-value-save-btn");
-const createValueCancelBtn = document.getElementById("create-value-cancel-btn");
-const closeCreateValueBtn = document.getElementById("close-create-value-btn");
-
-let pendingCreateValueContext = null;
-
-function promptCreateEquipmentValue(kind, index) {
-    const labels = {
-        type: {
-            title: "Ajouter un type",
-            label: "Nouveau type",
-            placeholder: "Ex. VASE D’EXPANSION"
-        },
-        marque: {
-            title: "Ajouter une marque",
-            label: "Nouvelle marque",
-            placeholder: "Ex. ATLANTIC"
-        },
-        modele: {
-            title: "Ajouter un modèle",
-            label: "Nouveau modèle",
-            placeholder: "Ex. NAEMA 2"
-        }
-    };
-
-    const config = labels[kind];
-    if (!config) return;
-
-    pendingCreateValueContext = { kind, index };
-
-    createValueTitle.textContent = config.title;
-    createValueLabel.textContent = config.label;
-    createValueInput.placeholder = config.placeholder;
-    createValueInput.value = "";
-
-    createValueModal.classList.remove("hidden");
-
-    setTimeout(() => {
-        createValueInput.focus();
-    }, 0);
-}
-
-function closeCreateValueModal() {
-    createValueModal.classList.add("hidden");
-    createValueInput.value = "";
-    pendingCreateValueContext = null;
-}
-
-function submitCreateValueModal() {
-    if (!pendingCreateValueContext) return;
-
-    const { kind, index } = pendingCreateValueContext;
-    const entered = createValueInput.value.trim();
-
-    if (!entered) {
-        showToast("Merci de saisir une valeur.", "error");
-        return;
-    }
-
-    const row = state.data.fiches[index];
-    const createdValue = createNewEquipmentValue(kind, entered, row);
-
-    if (!createdValue) {
-        showToast("Impossible d’ajouter cette valeur.", "error");
-        return;
-    }
-
-    closeCreateValueModal();
-    setFicheField(index, kind, createdValue);
-    showToast("Valeur ajoutée.", "success");
-}
 function clearFicheAutoFile(row) {
     if (!row) return;
     delete row.file;
@@ -976,6 +1026,85 @@ function tryAutoAttachTechnicalSheet(index) {
     } else {
         delete row.autoMatched;
     }
+}
+
+function upsertTechnicalSheetLibraryEntry(row) {
+    if (!row?.type || !row?.marque || !row?.modele) return;
+
+    const existing = referenceData.technicalSheetsLibrary.find(item =>
+        item.type === row.type &&
+        item.marque === row.marque &&
+        item.modele === row.modele
+    );
+
+    if (existing) {
+        if (row.fileName) existing.fileName = row.fileName;
+        if (row.fileType) existing.fileType = row.fileType;
+        if (row.file) existing.file = row.file;
+    } else {
+        referenceData.technicalSheetsLibrary.push({
+            type: row.type,
+            marque: row.marque,
+            modele: row.modele,
+            fileName: row.fileName || "",
+            fileType: row.fileType || "",
+            file: row.file || null
+        });
+    }
+
+    saveReferenceData();
+}
+
+function createNewEquipmentValue(kind, rawValue, currentRow) {
+    const value = String(rawValue || "").trim().toUpperCase();
+    if (!value) return null;
+
+    if (kind === "type") {
+        if (!referenceData.equipment[value]) {
+            referenceData.equipment[value] = { brands: {} };
+            saveReferenceData();
+        }
+        return value;
+    }
+
+    if (kind === "marque") {
+        const type = currentRow?.type;
+        if (!type) return null;
+
+        if (!referenceData.equipment[type]) {
+            referenceData.equipment[type] = { brands: {} };
+        }
+
+        if (!referenceData.equipment[type].brands[value]) {
+            referenceData.equipment[type].brands[value] = [];
+            saveReferenceData();
+        }
+
+        return value;
+    }
+
+    if (kind === "modele") {
+        const type = currentRow?.type;
+        const marque = currentRow?.marque;
+        if (!type || !marque) return null;
+
+        if (!referenceData.equipment[type]) {
+            referenceData.equipment[type] = { brands: {} };
+        }
+
+        if (!referenceData.equipment[type].brands[marque]) {
+            referenceData.equipment[type].brands[marque] = [];
+        }
+
+        if (!referenceData.equipment[type].brands[marque].includes(value)) {
+            referenceData.equipment[type].brands[marque].push(value);
+            saveReferenceData();
+        }
+
+        return value;
+    }
+
+    return null;
 }
 
 function setFicheField(index, field, value) {
@@ -1026,6 +1155,10 @@ function handleFileUpload(section, index, input) {
         state.data[section][index].fileName = file.name;
         state.data[section][index].fileType = file.type;
         delete state.data[section][index].autoMatched;
+
+        if (section === "fiches") {
+            upsertTechnicalSheetLibraryEntry(state.data[section][index]);
+        }
 
         saveAutosave();
         renderStep();
@@ -1302,39 +1435,39 @@ function renderFicheRow(item, index) {
 
             <div class="fiche-grid">
                 <div>
-                      ${renderCustomSelect({
-                          id: `fiche-type-${index}`,
-                          label: "Type",
-                          value: item.type || "",
-                          placeholder: "Sélectionner",
-                          options: typeOptions,
-                          createAction: `promptCreateEquipmentValue('type', ${index})`
-                      })}
-                  </div>
-                  
-                  <div>
-                      ${renderCustomSelect({
-                          id: `fiche-marque-${index}`,
-                          label: "Marque",
-                          value: item.marque || "",
-                          placeholder: "Sélectionner",
-                          options: brandOptions,
-                          disabled: !item.type,
-                          createAction: item.type ? `promptCreateEquipmentValue('marque', ${index})` : ""
-                      })}
-                  </div>
-                  
-                  <div>
-                      ${renderCustomSelect({
-                          id: `fiche-modele-${index}`,
-                          label: "Modèle",
-                          value: item.modele || "",
-                          placeholder: "Sélectionner",
-                          options: modelOptions,
-                          disabled: !item.marque,
-                          createAction: item.marque ? `promptCreateEquipmentValue('modele', ${index})` : ""
-                      })}
-                  </div>
+                    ${renderCustomSelect({
+                        id: `fiche-type-${index}`,
+                        label: "Type",
+                        value: item.type || "",
+                        placeholder: "Sélectionner",
+                        options: typeOptions,
+                        createAction: `promptCreateEquipmentValue('type', ${index})`
+                    })}
+                </div>
+
+                <div>
+                    ${renderCustomSelect({
+                        id: `fiche-marque-${index}`,
+                        label: "Marque",
+                        value: item.marque || "",
+                        placeholder: "Sélectionner",
+                        options: brandOptions,
+                        disabled: !item.type,
+                        createAction: item.type ? `promptCreateEquipmentValue('marque', ${index})` : ""
+                    })}
+                </div>
+
+                <div>
+                    ${renderCustomSelect({
+                        id: `fiche-modele-${index}`,
+                        label: "Modèle",
+                        value: item.modele || "",
+                        placeholder: "Sélectionner",
+                        options: modelOptions,
+                        disabled: !item.marque,
+                        createAction: item.marque ? `promptCreateEquipmentValue('modele', ${index})` : ""
+                    })}
+                </div>
 
                 <div class="field fiche-file-block">
                     <label>Fichier</label>
@@ -1373,7 +1506,7 @@ function renderFicheRow(item, index) {
                                         class="icon-btn-inline preview"
                                         type="button"
                                         aria-label="Voir le fichier"
-                                        onclick="${item.file ? `openFile('fiches', ${index}, this)` : `openTechnicalLibraryStub(${index})`}"
+                                        onclick="${item.file ? `openFile('fiches', ${index}, this)` : `openTechnicalLibraryStub()`}"
                                     >
                                         <span class="material-symbols-outlined icon-default">visibility</span>
                                         <span class="material-symbols-outlined icon-spinner">progress_activity</span>
@@ -1671,17 +1804,9 @@ if (draftsModal) {
     });
 }
 
-if (createValueCancelBtn) {
-    createValueCancelBtn.onclick = closeCreateValueModal;
-}
-
-if (closeCreateValueBtn) {
-    closeCreateValueBtn.onclick = closeCreateValueModal;
-}
-
-if (createValueSaveBtn) {
-    createValueSaveBtn.onclick = submitCreateValueModal;
-}
+if (createValueCancelBtn) createValueCancelBtn.onclick = closeCreateValueModal;
+if (closeCreateValueBtn) closeCreateValueBtn.onclick = closeCreateValueModal;
+if (createValueSaveBtn) createValueSaveBtn.onclick = submitCreateValueModal;
 
 if (createValueInput) {
     createValueInput.addEventListener("keydown", (event) => {
@@ -1714,6 +1839,7 @@ window.handlePostalCodeChange = handlePostalCodeChange;
 
 window.toggleCustomSelect = toggleCustomSelect;
 window.handleCustomSelectOption = handleCustomSelectOption;
+window.updateCustomSelectSearch = updateCustomSelectSearch;
 window.setNatureTravaux = setNatureTravaux;
 window.setVille = setVille;
 
@@ -1728,6 +1854,9 @@ window.updateRow = updateRow;
 
 window.setFicheField = setFicheField;
 window.openTechnicalLibraryStub = openTechnicalLibraryStub;
+window.promptCreateEquipmentValue = promptCreateEquipmentValue;
+window.closeCreateValueModal = closeCreateValueModal;
+window.submitCreateValueModal = submitCreateValueModal;
 
 window.saveDraft = saveDraft;
 window.clearAutosave = clearAutosave;
@@ -1739,9 +1868,3 @@ window.handleFileUpload = handleFileUpload;
 window.deleteFile = deleteFile;
 
 window.getTodayDate = getTodayDate;
-
-window.promptCreateEquipmentValue = promptCreateEquipmentValue;
-
-window.promptCreateEquipmentValue = promptCreateEquipmentValue;
-window.closeCreateValueModal = closeCreateValueModal;
-window.submitCreateValueModal = submitCreateValueModal;
