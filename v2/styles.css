@@ -1403,3 +1403,20 @@ button {
 .calendar-footer-btn.ghost:hover {
     background: rgba(206, 35, 42, 0.14);
 }
+
+.fiche-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
+}
+
+.fiche-file-block {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 1100px) {
+    .fiche-grid {
+        grid-template-columns: 1fr;
+    }
+}
