@@ -462,45 +462,40 @@ button {
     color: #7b8190;
 }
 
-/* ===== INFOS CUSTOM LAYOUT ===== */
+/* ===== INFOS LAYOUT ===== */
 .infos-form-grid {
     display: grid;
     grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
-    grid-template-areas:
-        "adresse nature"
-        "cp ville"
-        "notes dateReception"
-        "notes dateDoe";
     gap: 14px;
     align-items: start;
 }
 
 .infos-adresse {
-    grid-area: adresse;
+    grid-column: 1 / 2;
 }
 
 .infos-nature {
-    grid-area: nature;
+    grid-column: 2 / 3;
 }
 
-.infos-cp {
-    grid-area: cp;
+.infos-left-row {
+    grid-column: 1 / 2;
+    display: grid;
+    grid-template-columns: minmax(0, 0.42fr) minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
 }
 
-.infos-ville {
-    grid-area: ville;
-}
-
-.infos-date-reception {
-    grid-area: dateReception;
-}
-
-.infos-date-doe {
-    grid-area: dateDoe;
+.infos-right-row {
+    grid-column: 2 / 3;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
 }
 
 .infos-notes {
-    grid-area: notes;
+    grid-column: 1 / -1;
 }
 
 .infos-notes textarea {
@@ -508,12 +503,6 @@ button {
     min-height: 180px;
     height: 180px;
     resize: vertical;
-}
-
-.notes-field textarea {
-    width: 100%;
-    min-height: 180px;
-    height: 180px;
 }
 
 /* ===== CUSTOM SELECT ===== */
@@ -621,11 +610,6 @@ button {
     color: #00448C;
 }
 
-.custom-select-option.is-placeholder-option {
-    color: #9aa1ad;
-    font-style: italic;
-}
-
 /* ===== CUSTOM DATE FIELD ===== */
 .custom-date {
     position: relative;
@@ -658,6 +642,7 @@ button {
 
 .custom-date-button .date-value {
     display: block;
+    color: #1D1E18;
 }
 
 .custom-date-button .date-icon {
@@ -1140,14 +1125,19 @@ button {
 @media (max-width: 1200px) {
     .infos-form-grid {
         grid-template-columns: 1fr;
-        grid-template-areas:
-            "adresse"
-            "nature"
-            "cp"
-            "ville"
-            "dateReception"
-            "dateDoe"
-            "notes";
+    }
+
+    .infos-adresse,
+    .infos-nature,
+    .infos-left-row,
+    .infos-right-row,
+    .infos-notes {
+        grid-column: 1 / -1;
+    }
+
+    .infos-left-row,
+    .infos-right-row {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -1204,10 +1194,6 @@ button {
 
     .field {
         grid-column: span 12 !important;
-    }
-
-    .infos-right-dates {
-        grid-template-columns: 1fr;
     }
 
     .main-panel-footer {
