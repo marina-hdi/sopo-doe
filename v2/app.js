@@ -1,8 +1,14 @@
-console.log("DOE v2 dynamic system + clean infos layout 🚀");
+console.log("DOE v2 clean app loaded ✅");
 
+/* ========================
+   STORAGE KEYS
+======================== */
 const AUTOSAVE_KEY = "doe_v2_autosave";
 const DRAFTS_KEY = "doe_v2_saved_drafts";
 
+/* ========================
+   REFERENCE DATA
+======================== */
 const referenceData = {
     workTypes: [
         "RENOVATION CHAUFFERIE",
@@ -18,22 +24,22 @@ const referenceData = {
     },
 
     equipment: {
-        "CHAUDIERE": {
+        CHAUDIERE: {
             brands: {
-                "VIESSMANN": ["VITOCROSSAL 200", "VITODENS 100"],
+                VIESSMANN: ["VITOCROSSAL 200", "VITODENS 100"],
                 "DE DIETRICH": ["C310-280", "GT 512"],
-                "ELCO": ["TRIGON XL 200", "TRIGON XL 350"]
+                ELCO: ["TRIGON XL 200", "TRIGON XL 350"]
             }
         },
-        "POMPE": {
+        POMPE: {
             brands: {
-                "GRUNDFOS": ["MAGNA 3D 32-80"]
+                GRUNDFOS: ["MAGNA 3D 32-80"]
             }
         },
-        "BRULEUR": {
+        BRULEUR: {
             brands: {
-                "CUENOD": ["NC4", "NC9"],
-                "ELCO": ["VL2", "VG2"]
+                CUENOD: ["NC4", "NC9"],
+                ELCO: ["VL2", "VG2"]
             }
         }
     },
@@ -59,230 +65,6 @@ const referenceData = {
 };
 
 /* ========================
-   GLOBAL STATE
-======================== */
-let state = loadAutosave() || getEmptyState();
-
-/* ========================
-   STEP CONFIG
-======================== */
-const stepsConfig = [
-    { title: "Infos", render: renderInfos },
-    { title: "Fiches techniques", render: renderFichesStep },
-    { title: "Procès-verbaux", render: () => renderDynamicSection("pv", ["type", "fichier"]) },
-    { title: "Schémas", render: () => renderDynamicSection("schemas", ["type", "fichier"]) },
-    { title: "Export", render: renderSummary }
-];
-
-function renderFichesStep() {
-    const list = state.data.fiches;
-
-    content.innerHTML = `
-        <div class="single-panel-layout">
-            <div class="panel">
-                <div class="section-toolbar">
-                    <div>
-                        <h3>Fiches techniques</h3>
-                        <p class="panel-muted">Choisissez un type, une marque et un modèle. Si la fiche existe déjà dans la base, elle sera récupérée automatiquement.</p>
-                    </div>
-                    <button class="add-row-btn" onclick="addRow('fiches')">+ Ajouter</button>
-                </div>
-
-                ${
-                    list.length === 0
-                        ? `
-                        <div class="empty-state">
-                            <p>Aucune fiche technique ajoutée pour le moment.</p>
-                        </div>
-                        `
-                        : `
-                        <div class="dynamic-list">
-                            ${list.map((item, index) => renderFicheRow(item, index)).join("")}
-                        </div>
-                        `
-                }
-            </div>
-        </div>
-    `;
-}
-
-function renderFicheRow(item, index) {
-    const typeOptions = getEquipmentTypes();
-    const brandOptions = getBrandsForType(item.type);
-    const modelOptions = getModelsForTypeAndBrand(item.type, item.marque);
-
-    return `
-        <div class="dynamic-card">
-            <div class="dynamic-card-header">
-                <span class="dynamic-card-title">Fiche technique ${index + 1}</span>
-                <button class="remove-row-btn" onclick="removeRow('fiches', ${index})">Supprimer</button>
-            </div>
-
-            <div class="fiche-grid">
-                <div>
-                    ${renderCustomSelect({
-                        id: `fiche-type-${index}`,
-                        label: "Type",
-                        value: item.type || "",
-                        placeholder: "Sélectionner",
-                        options: typeOptions,
-                        onSelect: `setFicheField.bind(null, ${index}, 'type')`
-                    })}
-                </div>
-
-                <div>
-                    ${renderCustomSelect({
-                        id: `fiche-marque-${index}`,
-                        label: "Marque",
-                        value: item.marque || "",
-                        placeholder: "Sélectionner",
-                        options: brandOptions,
-                        onSelect: `setFicheField.bind(null, ${index}, 'marque')`,
-                        disabled: !item.type
-                    })}
-                </div>
-
-                <div>
-                    ${renderCustomSelect({
-                        id: `fiche-modele-${index}`,
-                        label: "Modèle",
-                        value: item.modele || "",
-                        placeholder: "Sélectionner",
-                        options: modelOptions,
-                        onSelect: `setFicheField.bind(null, ${index}, 'modele')`,
-                        disabled: !item.marque
-                    })}
-                </div>
-
-                <div class="field fiche-file-block">
-                    <label>Fichier</label>
-                    <div class="upload-inline">
-                        <input
-                            id="file-input-fiches-${index}"
-                            class="hidden-file-input"
-                            type="file"
-                            accept=".pdf,image/*"
-                            onchange="handleFileUpload('fiches', ${index}, this)"
-                        />
-
-                        <div
-                            class="dropzone-inline"
-                            data-input-id="file-input-fiches-${index}"
-                            data-section="fiches"
-                            data-index="${index}"
-                        >
-                            Déposer ou cliquer
-                        </div>
-
-                        <div class="file-name-inline ${(item.fileName || item.autoMatched) ? "has-file" : ""}">
-                            ${
-                                item.fileName
-                                    ? escapeHtml(item.fileName)
-                                    : item.autoMatched
-                                        ? "FICHE TROUVÉE EN BASE"
-                                        : "Aucun fichier"
-                            }
-                        </div>
-
-                        ${
-                            item.fileName || item.autoMatched
-                                ? `
-                                    <button
-                                        class="icon-btn-inline preview"
-                                        type="button"
-                                        aria-label="Voir le fichier"
-                                        onclick="${item.file ? `openFile('fiches', ${index}, this)` : `openTechnicalLibraryStub(${index})`}"
-                                    >
-                                        <span class="material-symbols-outlined icon-default">visibility</span>
-                                        <span class="material-symbols-outlined icon-spinner">progress_activity</span>
-                                    </button>
-
-                                    <button
-                                        class="icon-btn-inline delete"
-                                        type="button"
-                                        aria-label="Supprimer le fichier"
-                                        onclick="deleteFile('fiches', ${index})"
-                                    >
-                                        <span class="material-symbols-outlined icon-default">delete</span>
-                                    </button>
-                                  `
-                                : ""
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-/* ========================
-   DOM REFERENCES
-======================== */
-const steps = document.querySelectorAll(".step");
-const content = document.getElementById("step-content");
-const chantierBannerZone = document.getElementById("chantier-banner-zone");
-const nextStepBtn = document.getElementById("next-step");
-const prevStepBtn = document.getElementById("prev-step");
-
-const draftsModal = document.getElementById("drafts-modal");
-const draftsList = document.getElementById("drafts-list");
-const openDraftsBtn = document.getElementById("open-drafts-btn");
-const closeDraftsBtn = document.getElementById("close-drafts-btn");
-const toastContainer = document.getElementById("toast-container");
-
-const confirmModal = document.getElementById("confirm-modal");
-const confirmTitle = document.getElementById("confirm-title");
-const confirmMessage = document.getElementById("confirm-message");
-const confirmOkBtn = document.getElementById("confirm-ok-btn");
-const confirmCancelBtn = document.getElementById("confirm-cancel-btn");
-const closeConfirmBtn = document.getElementById("close-confirm-btn");
-
-/* ========================
-   STEP SWITCHING
-======================== */
-steps.forEach((step, index) => {
-    step.addEventListener("click", () => goToStep(index));
-});
-
-function goToStep(index) {
-    state.currentStep = index;
-
-    steps.forEach(step => step.classList.remove("active"));
-    if (steps[index]) steps[index].classList.add("active");
-
-    saveAutosave();
-    renderStep();
-}
-
-function registerStepSelectHandlers() {
-    Object.keys(customSelectHandlers).forEach(key => delete customSelectHandlers[key]);
-
-    registerCustomSelectHandler("nature-travaux-select", setNatureTravaux);
-    registerCustomSelectHandler("ville-select", setVille);
-
-    state.data.fiches.forEach((item, index) => {
-        registerCustomSelectHandler(`fiche-type-${index}`, (value) => setFicheField(index, "type", value));
-        registerCustomSelectHandler(`fiche-marque-${index}`, (value) => setFicheField(index, "marque", value));
-        registerCustomSelectHandler(`fiche-modele-${index}`, (value) => setFicheField(index, "modele", value));
-    });
-}
-
-function renderStep() {
-    renderChantierBanner();
-
-    const step = stepsConfig[state.currentStep];
-    content.innerHTML = "";
-    step.render();
-
-    prevStepBtn.style.visibility = state.currentStep === 0 ? "hidden" : "visible";
-    nextStepBtn.style.visibility = state.currentStep === stepsConfig.length - 1 ? "hidden" : "visible";
-
-    initDropzones();
-    initCustomSelects();
-    registerStepSelectHandlers();
-}
-
-/* ========================
    EMPTY STATE
 ======================== */
 function getEmptyState() {
@@ -306,8 +88,71 @@ function getEmptyState() {
 }
 
 /* ========================
-   DATE HELPERS
+   GLOBAL STATE
 ======================== */
+let state = loadAutosave() || getEmptyState();
+
+if (!state.data.infos.date_doe) {
+    state.data.infos.date_doe = getTodayDate();
+}
+
+/* ========================
+   STEP CONFIG
+======================== */
+const stepsConfig = [
+    { title: "Infos", render: renderInfos },
+    { title: "Fiches techniques", render: renderFichesStep },
+    { title: "Procès-verbaux", render: () => renderDynamicSection("pv", ["type", "fichier"]) },
+    { title: "Schémas", render: () => renderDynamicSection("schemas", ["type", "fichier"]) },
+    { title: "Export", render: renderSummary }
+];
+
+/* ========================
+   DOM REFERENCES
+======================== */
+const steps = document.querySelectorAll(".step");
+const content = document.getElementById("step-content");
+const chantierBannerZone = document.getElementById("chantier-banner-zone");
+const nextStepBtn = document.getElementById("next-step");
+const prevStepBtn = document.getElementById("prev-step");
+
+const draftsModal = document.getElementById("drafts-modal");
+const draftsList = document.getElementById("drafts-list");
+const openDraftsBtn = document.getElementById("open-drafts-btn");
+const closeDraftsBtn = document.getElementById("close-drafts-btn");
+
+const toastContainer = document.getElementById("toast-container");
+
+const confirmModal = document.getElementById("confirm-modal");
+const confirmTitle = document.getElementById("confirm-title");
+const confirmMessage = document.getElementById("confirm-message");
+const confirmOkBtn = document.getElementById("confirm-ok-btn");
+const confirmCancelBtn = document.getElementById("confirm-cancel-btn");
+const closeConfirmBtn = document.getElementById("close-confirm-btn");
+
+/* ========================
+   HELPERS
+======================== */
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function escapeJs(value) {
+    return String(value ?? "")
+        .replaceAll("\\", "\\\\")
+        .replaceAll("'", "\\'");
+}
+
+function capitalize(value) {
+    if (!value) return value;
+    return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 function getTodayDate() {
     return new Date().toISOString().split("T")[0];
 }
@@ -319,9 +164,57 @@ function formatDateDisplay(value) {
     return `${day}/${month}/${year}`;
 }
 
-/* ========================
-   CHANTIER BANNER
-======================== */
+function parseISODate(value) {
+    if (!value) return null;
+    const [year, month, day] = value.split("-").map(Number);
+    if (!year || !month || !day) return null;
+    return new Date(year, month - 1, day);
+}
+
+function formatISODate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function getSectionTitle(key) {
+    const map = {
+        fiches: "Fiches techniques",
+        pv: "Procès-verbaux",
+        schemas: "Schémas"
+    };
+    return map[key] || key;
+}
+
+function getSectionSubtitle(key) {
+    const map = {
+        pv: "Ajoutez les documents de réception, contrôle ou mise en service.",
+        schemas: "Ajoutez les schémas hydrauliques, électriques ou d’équilibrage."
+    };
+    return map[key] || "";
+}
+
+function prettyLabel(field) {
+    const map = {
+        type: "Type",
+        marque: "Marque",
+        modele: "Modèle",
+        fichier: "Fichier"
+    };
+    return map[field] || field;
+}
+
+function prettyPlaceholder(field) {
+    const map = {
+        type: "Ex. CHAUDIERE",
+        marque: "Ex. VIESSMANN",
+        modele: "Ex. VITOCROSSAL 200",
+        fichier: "Nom du document"
+    };
+    return map[field] || "";
+}
+
 function getCurrentAddressLine() {
     const { adresse, code_postal, ville } = state.data.infos;
     return [adresse, code_postal, ville].filter(Boolean).join(" ");
@@ -329,77 +222,244 @@ function getCurrentAddressLine() {
 
 function getDraftDisplayTitle() {
     const { adresse, ville, code_postal } = state.data.infos;
-    if (adresse || ville || code_postal) {
-        return [adresse, code_postal, ville].filter(Boolean).join(" ");
-    }
-    return "Brouillon sans adresse";
+    const parts = [adresse, code_postal, ville].filter(Boolean);
+    return parts.length ? parts.join(" ") : "Brouillon sans adresse";
 }
 
-function renderChantierBanner() {
-    const addressLine = getCurrentAddressLine();
+/* ========================
+   AUTOSAVE
+======================== */
+function saveAutosave() {
+    try {
+        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
+    } catch (error) {
+        console.error("Erreur autosave :", error);
+        showToast("Impossible de sauvegarder localement.", "error");
+    }
+}
 
-    chantierBannerZone.innerHTML = `
-        <div class="chantier-banner">
-            <div class="chantier-banner-text">
-                <span class="chantier-label">Chantier</span>
-                <div class="chantier-value">
-                    ${addressLine ? escapeHtml(addressLine) : "Adresse non renseignée"}
-                </div>
+function loadAutosave() {
+    try {
+        const raw = localStorage.getItem(AUTOSAVE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+        console.error("Erreur chargement autosave :", error);
+        return null;
+    }
+}
+
+function clearAutosave() {
+    askConfirm({
+        title: "Effacer le brouillon local",
+        message: "Le brouillon en cours sera supprimé de cet appareil. Cette action est irréversible.",
+        confirmLabel: "Effacer",
+        onConfirm: () => {
+            localStorage.removeItem(AUTOSAVE_KEY);
+            state = getEmptyState();
+            state.data.infos.date_doe = getTodayDate();
+            goToStep(0);
+            showToast("Brouillon local effacé.", "info");
+        }
+    });
+}
+
+/* ========================
+   DRAFTS
+======================== */
+function getAllDrafts() {
+    try {
+        const raw = localStorage.getItem(DRAFTS_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch (error) {
+        console.error("Erreur lecture brouillons :", error);
+        return [];
+    }
+}
+
+function setAllDrafts(drafts) {
+    localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
+}
+
+function buildDraftPayload() {
+    return {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        title: getDraftDisplayTitle(),
+        updatedAt: new Date().toISOString(),
+        state: JSON.parse(JSON.stringify(state))
+    };
+}
+
+function saveDraft() {
+    const drafts = getAllDrafts();
+    drafts.unshift(buildDraftPayload());
+    setAllDrafts(drafts);
+    saveAutosave();
+    showToast("Brouillon enregistré.", "success");
+}
+
+function openDraftsModal() {
+    renderDraftsList();
+    draftsModal.classList.remove("hidden");
+}
+
+function closeDraftsModal() {
+    draftsModal.classList.add("hidden");
+}
+
+function renderDraftsList() {
+    const drafts = getAllDrafts();
+
+    if (!drafts.length) {
+        draftsList.innerHTML = `<div class="empty-drafts">Aucun brouillon enregistré pour le moment.</div>`;
+        return;
+    }
+
+    draftsList.innerHTML = drafts.map(draft => `
+        <div class="draft-item">
+            <div class="draft-main">
+                <div class="draft-title">${escapeHtml(draft.title || "Brouillon")}</div>
+                <div class="draft-meta">Dernière mise à jour : ${formatDraftDate(draft.updatedAt)}</div>
             </div>
-
-            <div class="banner-actions">
-                <button type="button" class="banner-btn" onclick="saveDraft()">Enregistrer</button>
-                <button type="button" class="footer-btn secondary-action" onclick="clearAutosave()">Effacer</button>
+            <div class="draft-actions">
+                <button class="draft-btn load" onclick="loadDraft('${draft.id}')">Ouvrir</button>
+                <button class="draft-btn delete" onclick="deleteDraft('${draft.id}')">Supprimer</button>
             </div>
         </div>
+    `).join("");
+}
+
+function loadDraft(draftId) {
+    const draft = getAllDrafts().find(item => item.id === draftId);
+    if (!draft) return;
+
+    state = draft.state;
+    saveAutosave();
+    closeDraftsModal();
+    goToStep(state.currentStep || 0);
+    showToast("Brouillon chargé.", "success");
+}
+
+function deleteDraft(draftId) {
+    askConfirm({
+        title: "Supprimer le brouillon",
+        message: "Ce brouillon enregistré sera supprimé définitivement.",
+        confirmLabel: "Supprimer",
+        onConfirm: () => {
+            const drafts = getAllDrafts().filter(item => item.id !== draftId);
+            setAllDrafts(drafts);
+            renderDraftsList();
+            showToast("Brouillon supprimé.", "info");
+        }
+    });
+}
+
+function formatDraftDate(value) {
+    try {
+        return new Date(value).toLocaleString("fr-FR");
+    } catch {
+        return value || "Date inconnue";
+    }
+}
+
+/* ========================
+   TOASTS
+======================== */
+function showToast(message, type = "info") {
+    if (!toastContainer) return;
+
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+
+    const iconMap = {
+        success: "check_circle",
+        error: "error",
+        info: "info"
+    };
+
+    toast.innerHTML = `
+        <span class="material-symbols-outlined toast-icon">${iconMap[type] || "info"}</span>
+        <div class="toast-message">${escapeHtml(message)}</div>
     `;
+
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add("is-hiding");
+        toast.addEventListener("animationend", () => {
+            toast.remove();
+        }, { once: true });
+    }, 2600);
 }
 
 /* ========================
-   INFOS HELPERS
+   CONFIRM MODAL
 ======================== */
-function handleInputChange(section, field, value, inputEl = null) {
-    if (!state.data[section]) return;
+function askConfirm({
+    title = "Confirmation",
+    message = "Es-tu sûr de vouloir continuer ?",
+    confirmLabel = "Confirmer",
+    onConfirm = () => {}
+}) {
+    if (!confirmModal) return;
 
-    const shouldUppercase = !["notes", "date_reception", "date_doe"].includes(field);
-    const finalValue = shouldUppercase ? value.toUpperCase() : value;
+    confirmTitle.textContent = title;
+    confirmMessage.textContent = message;
+    confirmOkBtn.textContent = confirmLabel;
 
-    state.data[section][field] = finalValue;
+    confirmModal.classList.remove("hidden");
 
-    if (inputEl && shouldUppercase) {
-        inputEl.value = finalValue;
+    const handleConfirm = () => {
+        cleanup();
+        onConfirm();
+    };
+
+    const handleClose = () => {
+        cleanup();
+    };
+
+    const handleBackdrop = (event) => {
+        if (event.target === confirmModal) {
+            cleanup();
+        }
+    };
+
+    function cleanup() {
+        confirmModal.classList.add("hidden");
+        confirmOkBtn.removeEventListener("click", handleConfirm);
+        confirmCancelBtn.removeEventListener("click", handleClose);
+        closeConfirmBtn.removeEventListener("click", handleClose);
+        confirmModal.removeEventListener("click", handleBackdrop);
     }
 
-    saveAutosave();
-}
-
-function handlePostalCodeChange(value) {
-    const code = value.toUpperCase();
-    const villes = referenceData.postalCodes[code] || [];
-
-    state.data.infos.code_postal = code;
-
-    if (villes.length === 1) {
-        state.data.infos.ville = villes[0];
-    } else if (!villes.includes(state.data.infos.ville)) {
-        state.data.infos.ville = "";
-    }
-
-    saveAutosave();
-    renderChantierBanner();
-    renderStep();
+    confirmOkBtn.addEventListener("click", handleConfirm);
+    confirmCancelBtn.addEventListener("click", handleClose);
+    closeConfirmBtn.addEventListener("click", handleClose);
+    confirmModal.addEventListener("click", handleBackdrop);
 }
 
 /* ========================
-   CUSTOM SELECT
+   CUSTOM SELECTS
 ======================== */
+const customSelectHandlers = {};
+
+function registerCustomSelectHandler(id, handler) {
+    customSelectHandlers[id] = handler;
+}
+
+function handleCustomSelectOption(id, value) {
+    const handler = customSelectHandlers[id];
+    if (typeof handler === "function") {
+        handler(value);
+    }
+    closeAllCustomSelects();
+}
+
 function renderCustomSelect({
     id,
     label,
     value,
     placeholder,
     options,
-    onSelect,
     disabled = false
 }) {
     const displayValue = value || placeholder;
@@ -463,38 +523,29 @@ function closeAllCustomSelects() {
     });
 }
 
+let customSelectsBound = false;
+
 function initCustomSelects() {
-    document.addEventListener("click", handleDocumentClickForSelects, { once: true });
-}
+    if (customSelectsBound) return;
 
-function handleDocumentClickForSelects(event) {
-    const insideSelect = event.target.closest(".custom-select");
-    if (!insideSelect) {
-        closeAllCustomSelects();
-    } else {
-        initCustomSelects();
-    }
-}
+    document.addEventListener("click", (event) => {
+        if (!event.target.closest(".custom-select")) {
+            closeAllCustomSelects();
+        }
+    });
 
-function setNatureTravaux(value) {
-    state.data.infos.nature_travaux = value;
-    saveAutosave();
-    renderStep();
-}
-
-function setVille(value) {
-    state.data.infos.ville = value;
-    saveAutosave();
-    renderChantierBanner();
-    renderStep();
+    customSelectsBound = true;
 }
 
 /* ========================
-   CUSTOM DATE
+   CUSTOM DATE PICKER
 ======================== */
+let openDatePickerId = null;
+const datePickerViews = {};
+let datePickerBound = false;
+
 function renderCustomDateField({ label, field, value }) {
     const realValue = value || "";
-    const displayValue = formatDateDisplay(realValue);
 
     return `
         <div class="field">
@@ -505,7 +556,7 @@ function renderCustomDateField({ label, field, value }) {
                     class="custom-date-button"
                     onclick="toggleDatePicker('${field}')"
                 >
-                    <span class="date-value">${displayValue}</span>
+                    <span class="date-value">${formatDateDisplay(realValue)}</span>
                     <span class="material-symbols-outlined date-icon">calendar_today</span>
                 </button>
 
@@ -514,36 +565,6 @@ function renderCustomDateField({ label, field, value }) {
         </div>
     `;
 }
-
-function parseISODate(value) {
-    if (!value) return null;
-    const [year, month, day] = value.split("-").map(Number);
-    if (!year || !month || !day) return null;
-    return new Date(year, month - 1, day);
-}
-
-function formatISODate(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-}
-
-function getCalendarState(field) {
-    const selectedValue = state.data.infos[field];
-    const selectedDate = parseISODate(selectedValue) || new Date();
-
-    return {
-        field,
-        selectedValue: selectedValue || "",
-        selectedDate,
-        viewYear: selectedDate.getFullYear(),
-        viewMonth: selectedDate.getMonth()
-    };
-}
-
-let openDatePickerId = null;
-const datePickerViews = {};
 
 function toggleDatePicker(field) {
     const alreadyOpen = openDatePickerId === field;
@@ -559,7 +580,6 @@ function toggleDatePicker(field) {
 
     openDatePickerId = field;
     renderDatePicker(field);
-    bindOutsideDatePickerClose();
 }
 
 function closeAllDatePickers() {
@@ -574,17 +594,16 @@ function closeAllDatePickers() {
     openDatePickerId = null;
 }
 
-function bindOutsideDatePickerClose() {
-    document.addEventListener("click", handleOutsideDatePickerClose, { once: true });
-}
+function initDatePickerGlobalClose() {
+    if (datePickerBound) return;
 
-function handleOutsideDatePickerClose(event) {
-    const inside = event.target.closest(".custom-date");
-    if (!inside) {
-        closeAllDatePickers();
-    } else {
-        bindOutsideDatePickerClose();
-    }
+    document.addEventListener("click", (event) => {
+        if (!event.target.closest(".custom-date")) {
+            closeAllDatePickers();
+        }
+    });
+
+    datePickerBound = true;
 }
 
 function renderDatePicker(field) {
@@ -595,7 +614,6 @@ function renderDatePicker(field) {
     wrapper.classList.add("is-open");
 
     const selectedValue = state.data.infos[field] || "";
-    const selectedDate = parseISODate(selectedValue);
     const today = new Date();
 
     const view = datePickerViews[field] || {
@@ -608,7 +626,7 @@ function renderDatePicker(field) {
 
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    const startWeekday = (firstDay.getDay() + 6) % 7; // Monday first
+    const startWeekday = (firstDay.getDay() + 6) % 7;
     const daysInMonth = lastDay.getDate();
 
     const monthLabel = firstDay.toLocaleDateString("fr-FR", {
@@ -617,7 +635,6 @@ function renderDatePicker(field) {
     });
 
     const weekdays = ["L", "M", "M", "J", "V", "S", "D"];
-
     const cells = [];
 
     for (let i = 0; i < startWeekday; i++) {
@@ -627,7 +644,6 @@ function renderDatePicker(field) {
     for (let day = 1; day <= daysInMonth; day++) {
         const current = new Date(year, month, day);
         const iso = formatISODate(current);
-
         const isSelected = selectedValue === iso;
         const isToday = formatISODate(today) === iso;
 
@@ -711,13 +727,307 @@ function clearDateValue(field) {
     renderStep();
 }
 
-function capitalize(value) {
-    if (!value) return value;
-    return value.charAt(0).toUpperCase() + value.slice(1);
+/* ========================
+   INFOS STATE HELPERS
+======================== */
+function setNatureTravaux(value) {
+    state.data.infos.nature_travaux = value;
+    saveAutosave();
+    renderStep();
+}
+
+function setVille(value) {
+    state.data.infos.ville = value;
+    saveAutosave();
+    renderChantierBanner();
+    renderStep();
+}
+
+function updateVilleSelectUI() {
+    const infos = state.data.infos;
+    const cityOptions = referenceData.postalCodes[infos.code_postal] || [];
+    const container = document.querySelector(".infos-ville-slot");
+    if (!container) return;
+
+    container.innerHTML = renderCustomSelect({
+        id: "ville-select",
+        label: "Ville",
+        value: infos.ville,
+        placeholder: "Sélectionner",
+        options: cityOptions,
+        disabled: cityOptions.length === 0
+    });
+
+    registerCustomSelectHandler("ville-select", setVille);
+}
+
+function handleInputChange(section, field, value, inputEl = null) {
+    if (!state.data[section]) return;
+
+    const shouldUppercase = !["notes", "date_reception", "date_doe"].includes(field);
+    const finalValue = shouldUppercase ? value.toUpperCase() : value;
+
+    state.data[section][field] = finalValue;
+
+    if (inputEl && shouldUppercase) {
+        inputEl.value = finalValue;
+    }
+
+    saveAutosave();
+}
+
+function handlePostalCodeChange(value) {
+    const code = value.toUpperCase();
+    const villes = referenceData.postalCodes[code] || [];
+
+    state.data.infos.code_postal = code;
+
+    if (villes.length === 1) {
+        state.data.infos.ville = villes[0];
+    } else if (!villes.includes(state.data.infos.ville)) {
+        state.data.infos.ville = "";
+    }
+
+    saveAutosave();
+    renderChantierBanner();
+    updateVilleSelectUI();
 }
 
 /* ========================
-   STEP 1 — INFOS
+   FICHES HELPERS
+======================== */
+function getEquipmentTypes() {
+    return Object.keys(referenceData.equipment);
+}
+
+function getBrandsForType(type) {
+    if (!type || !referenceData.equipment[type]) return [];
+    return Object.keys(referenceData.equipment[type].brands || {});
+}
+
+function getModelsForTypeAndBrand(type, brand) {
+    if (!type || !brand) return [];
+    return referenceData.equipment[type]?.brands?.[brand] || [];
+}
+
+function clearFicheAutoFile(row) {
+    if (!row) return;
+    delete row.file;
+    delete row.fileName;
+    delete row.fileType;
+    delete row.autoMatched;
+}
+
+function tryAutoAttachTechnicalSheet(index) {
+    const row = state.data.fiches[index];
+    if (!row) return;
+
+    const match = referenceData.technicalSheetsLibrary.find(item =>
+        item.type === row.type &&
+        item.marque === row.marque &&
+        item.modele === row.modele
+    );
+
+    if (match) {
+        row.fileName = match.fileName;
+        row.fileType = match.fileType;
+        row.file = match.file || null;
+        row.autoMatched = true;
+        showToast("Fiche technique trouvée dans la base.", "success");
+    } else {
+        delete row.autoMatched;
+    }
+}
+
+function setFicheField(index, field, value) {
+    const row = state.data.fiches[index];
+    if (!row) return;
+
+    const upperValue = value.toUpperCase();
+
+    if (field === "type") {
+        row.type = upperValue;
+        row.marque = "";
+        row.modele = "";
+        clearFicheAutoFile(row);
+    }
+
+    if (field === "marque") {
+        row.marque = upperValue;
+        row.modele = "";
+        clearFicheAutoFile(row);
+    }
+
+    if (field === "modele") {
+        row.modele = upperValue;
+        tryAutoAttachTechnicalSheet(index);
+    }
+
+    saveAutosave();
+    renderStep();
+}
+
+function openTechnicalLibraryStub() {
+    showToast("La fiche existe en base, mais aucun fichier démo n’est encore chargé.", "info");
+}
+
+/* ========================
+   FILES
+======================== */
+function handleFileUpload(section, index, input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+        const base64 = e.target.result;
+
+        state.data[section][index].file = base64;
+        state.data[section][index].fileName = file.name;
+        state.data[section][index].fileType = file.type;
+        delete state.data[section][index].autoMatched;
+
+        saveAutosave();
+        renderStep();
+        showToast("Fichier ajouté.", "success");
+    };
+
+    reader.readAsDataURL(file);
+}
+
+function deleteFile(section, index) {
+    askConfirm({
+        title: "Supprimer le fichier",
+        message: "Le fichier joint à cette ligne sera supprimé.",
+        confirmLabel: "Supprimer",
+        onConfirm: () => {
+            const item = state.data[section]?.[index];
+            if (!item) return;
+
+            delete item.file;
+            delete item.fileName;
+            delete item.fileType;
+            delete item.autoMatched;
+
+            saveAutosave();
+            renderStep();
+            showToast("Fichier supprimé.", "info");
+        }
+    });
+}
+
+function openFile(section, index, buttonEl) {
+    const item = state.data[section]?.[index];
+    if (!item?.file) return;
+
+    if (buttonEl) {
+        buttonEl.classList.add("is-loading");
+        buttonEl.disabled = true;
+    }
+
+    try {
+        const blob = dataURLToBlob(item.file);
+        const objectUrl = URL.createObjectURL(blob);
+        window.open(objectUrl, "_blank");
+
+        setTimeout(() => {
+            URL.revokeObjectURL(objectUrl);
+        }, 10000);
+    } catch (error) {
+        console.error("Erreur ouverture fichier :", error);
+        showToast("Impossible d’ouvrir ce fichier.", "error");
+    } finally {
+        setTimeout(() => {
+            if (buttonEl) {
+                buttonEl.classList.remove("is-loading");
+                buttonEl.disabled = false;
+            }
+        }, 700);
+    }
+}
+
+function dataURLToBlob(dataURL) {
+    const parts = dataURL.split(",");
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+    const byteString = atob(parts[1]);
+    const arrayBuffer = new ArrayBuffer(byteString.length);
+    const uintArray = new Uint8Array(arrayBuffer);
+
+    for (let i = 0; i < byteString.length; i++) {
+        uintArray[i] = byteString.charCodeAt(i);
+    }
+
+    return new Blob([arrayBuffer], { type: mime });
+}
+
+function initDropzones() {
+    const dropzones = document.querySelectorAll(".dropzone-inline");
+
+    dropzones.forEach(dropzone => {
+        const inputId = dropzone.dataset.inputId;
+        const section = dropzone.dataset.section;
+        const index = Number(dropzone.dataset.index);
+        const input = document.getElementById(inputId);
+
+        if (!input || dropzone.dataset.bound === "true") return;
+        dropzone.dataset.bound = "true";
+
+        dropzone.addEventListener("click", () => {
+            input.click();
+        });
+
+        dropzone.addEventListener("dragover", (event) => {
+            event.preventDefault();
+            dropzone.classList.add("dragover");
+        });
+
+        dropzone.addEventListener("dragleave", () => {
+            dropzone.classList.remove("dragover");
+        });
+
+        dropzone.addEventListener("drop", (event) => {
+            event.preventDefault();
+            dropzone.classList.remove("dragover");
+
+            const files = event.dataTransfer.files;
+            if (!files || !files.length) return;
+
+            const dt = new DataTransfer();
+            dt.items.add(files[0]);
+            input.files = dt.files;
+
+            handleFileUpload(section, index, input);
+        });
+    });
+}
+
+/* ========================
+   RENDER — CHANTIER
+======================== */
+function renderChantierBanner() {
+    const addressLine = getCurrentAddressLine();
+
+    chantierBannerZone.innerHTML = `
+        <div class="chantier-banner">
+            <div class="chantier-banner-text">
+                <span class="chantier-label">Chantier</span>
+                <div class="chantier-value">
+                    ${addressLine ? escapeHtml(addressLine) : "Adresse non renseignée"}
+                </div>
+            </div>
+
+            <div class="banner-actions">
+                <button type="button" class="banner-btn" onclick="saveDraft()">Enregistrer</button>
+                <button type="button" class="footer-btn secondary-action" onclick="clearAutosave()">Effacer</button>
+            </div>
+        </div>
+    `;
+}
+
+/* ========================
+   RENDER — INFOS
 ======================== */
 function renderInfos() {
     const infos = state.data.infos;
@@ -749,9 +1059,7 @@ function renderInfos() {
                             label: "Nature des travaux",
                             value: infos.nature_travaux,
                             placeholder: "Rénovation chaufferie",
-                            options: referenceData.workTypes,
-                            onSelect: "setNatureTravaux",
-                            disabled: false
+                            options: referenceData.workTypes
                         })}
                     </div>
 
@@ -764,14 +1072,13 @@ function renderInfos() {
                             />
                         </div>
 
-                        <div>
+                        <div class="infos-ville-slot">
                             ${renderCustomSelect({
                                 id: "ville-select",
                                 label: "Ville",
                                 value: infos.ville,
                                 placeholder: "Sélectionner",
                                 options: cityOptions,
-                                onSelect: "setVille",
                                 disabled: cityOptions.length === 0
                             })}
                         </div>
@@ -806,7 +1113,150 @@ function renderInfos() {
 }
 
 /* ========================
-   DYNAMIC SECTION
+   RENDER — FICHES
+======================== */
+function renderFichesStep() {
+    const list = state.data.fiches;
+
+    content.innerHTML = `
+        <div class="single-panel-layout">
+            <div class="panel">
+                <div class="section-toolbar">
+                    <div>
+                        <h3>Fiches techniques</h3>
+                        <p class="panel-muted">
+                            Choisissez un type, une marque et un modèle. Si la fiche existe déjà dans la base, elle sera récupérée automatiquement.
+                        </p>
+                    </div>
+                    <button class="add-row-btn" onclick="addRow('fiches')">+ Ajouter</button>
+                </div>
+
+                ${
+                    list.length === 0
+                        ? `
+                        <div class="empty-state">
+                            <p>Aucune fiche technique ajoutée pour le moment.</p>
+                        </div>
+                        `
+                        : `
+                        <div class="dynamic-list">
+                            ${list.map((item, index) => renderFicheRow(item, index)).join("")}
+                        </div>
+                        `
+                }
+            </div>
+        </div>
+    `;
+}
+
+function renderFicheRow(item, index) {
+    const typeOptions = getEquipmentTypes();
+    const brandOptions = getBrandsForType(item.type);
+    const modelOptions = getModelsForTypeAndBrand(item.type, item.marque);
+
+    return `
+        <div class="dynamic-card">
+            <div class="dynamic-card-header">
+                <span class="dynamic-card-title">Fiche technique ${index + 1}</span>
+                <button class="remove-row-btn" onclick="removeRow('fiches', ${index})">Supprimer</button>
+            </div>
+
+            <div class="fiche-grid">
+                <div>
+                    ${renderCustomSelect({
+                        id: `fiche-type-${index}`,
+                        label: "Type",
+                        value: item.type || "",
+                        placeholder: "Sélectionner",
+                        options: typeOptions
+                    })}
+                </div>
+
+                <div>
+                    ${renderCustomSelect({
+                        id: `fiche-marque-${index}`,
+                        label: "Marque",
+                        value: item.marque || "",
+                        placeholder: "Sélectionner",
+                        options: brandOptions,
+                        disabled: !item.type
+                    })}
+                </div>
+
+                <div>
+                    ${renderCustomSelect({
+                        id: `fiche-modele-${index}`,
+                        label: "Modèle",
+                        value: item.modele || "",
+                        placeholder: "Sélectionner",
+                        options: modelOptions,
+                        disabled: !item.marque
+                    })}
+                </div>
+
+                <div class="field fiche-file-block">
+                    <label>Fichier</label>
+                    <div class="upload-inline">
+                        <input
+                            id="file-input-fiches-${index}"
+                            class="hidden-file-input"
+                            type="file"
+                            accept=".pdf,image/*"
+                            onchange="handleFileUpload('fiches', ${index}, this)"
+                        />
+
+                        <div
+                            class="dropzone-inline"
+                            data-input-id="file-input-fiches-${index}"
+                            data-section="fiches"
+                            data-index="${index}"
+                        >
+                            Déposer ou cliquer
+                        </div>
+
+                        <div class="file-name-inline ${(item.fileName || item.autoMatched) ? "has-file" : ""}">
+                            ${
+                                item.fileName
+                                    ? escapeHtml(item.fileName)
+                                    : item.autoMatched
+                                        ? "FICHE TROUVÉE EN BASE"
+                                        : "Aucun fichier"
+                            }
+                        </div>
+
+                        ${
+                            item.fileName || item.autoMatched
+                                ? `
+                                    <button
+                                        class="icon-btn-inline preview"
+                                        type="button"
+                                        aria-label="Voir le fichier"
+                                        onclick="${item.file ? `openFile('fiches', ${index}, this)` : `openTechnicalLibraryStub(${index})`}"
+                                    >
+                                        <span class="material-symbols-outlined icon-default">visibility</span>
+                                        <span class="material-symbols-outlined icon-spinner">progress_activity</span>
+                                    </button>
+
+                                    <button
+                                        class="icon-btn-inline delete"
+                                        type="button"
+                                        aria-label="Supprimer le fichier"
+                                        onclick="deleteFile('fiches', ${index})"
+                                    >
+                                        <span class="material-symbols-outlined icon-default">delete</span>
+                                    </button>
+                                  `
+                                : ""
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/* ========================
+   RENDER — GENERIC
 ======================== */
 function renderDynamicSection(key, fields) {
     const list = state.data[key];
@@ -924,6 +1374,9 @@ function renderRow(key, item, index, fields) {
     `;
 }
 
+/* ========================
+   STATE MUTATIONS
+======================== */
 function getInlineSpanClass(fieldCount) {
     if (fieldCount === 1) return "span-wide";
     if (fieldCount === 2) return "span-medium";
@@ -953,135 +1406,8 @@ function updateRow(key, index, field, value, inputEl = null) {
     saveAutosave();
 }
 
-function handleFileUpload(section, index, input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-
-    reader.onload = function (e) {
-        const base64 = e.target.result;
-
-        state.data[section][index].file = base64;
-        state.data[section][index].fileName = file.name;
-        state.data[section][index].fileType = file.type;
-
-        saveAutosave();
-        renderStep();
-        showToast("Fichier ajouté.", "success");
-    };
-
-    reader.readAsDataURL(file);
-}
-
-function deleteFile(section, index) {
-    askConfirm({
-        title: "Supprimer le fichier",
-        message: "Le fichier joint à cette ligne sera supprimé.",
-        confirmLabel: "Supprimer",
-        onConfirm: () => {
-            const item = state.data[section]?.[index];
-            if (!item) return;
-
-            delete item.file;
-            delete item.fileName;
-            delete item.fileType;
-            delete item.autoMatched;
-
-            saveAutosave();
-            renderStep();
-            showToast("Fichier supprimé.", "info");
-        }
-    });
-}
-
-function openFile(section, index, buttonEl) {
-    const item = state.data[section]?.[index];
-    if (!item?.file) return;
-
-    if (buttonEl) {
-        buttonEl.classList.add("is-loading");
-        buttonEl.disabled = true;
-    }
-
-    try {
-        const blob = dataURLToBlob(item.file);
-        const objectUrl = URL.createObjectURL(blob);
-        window.open(objectUrl, "_blank");
-
-        setTimeout(() => {
-            URL.revokeObjectURL(objectUrl);
-        }, 10000);
-    } catch (error) {
-        console.error("Erreur ouverture fichier :", error);
-        showToast("Impossible d’ouvrir ce fichier.", "error");
-    } finally {
-        setTimeout(() => {
-            if (buttonEl) {
-                buttonEl.classList.remove("is-loading");
-                buttonEl.disabled = false;
-            }
-        }, 700);
-    }
-}
-
-function dataURLToBlob(dataURL) {
-    const parts = dataURL.split(",");
-    const mimeMatch = parts[0].match(/:(.*?);/);
-    const mime = mimeMatch ? mimeMatch[1] : "application/octet-stream";
-    const byteString = atob(parts[1]);
-    const arrayBuffer = new ArrayBuffer(byteString.length);
-    const uintArray = new Uint8Array(arrayBuffer);
-
-    for (let i = 0; i < byteString.length; i++) {
-        uintArray[i] = byteString.charCodeAt(i);
-    }
-
-    return new Blob([arrayBuffer], { type: mime });
-}
-
-function initDropzones() {
-    const dropzones = document.querySelectorAll(".dropzone-inline");
-
-    dropzones.forEach(dropzone => {
-        const inputId = dropzone.dataset.inputId;
-        const section = dropzone.dataset.section;
-        const index = Number(dropzone.dataset.index);
-        const input = document.getElementById(inputId);
-
-        if (!input) return;
-
-        dropzone.addEventListener("click", () => {
-            input.click();
-        });
-
-        dropzone.addEventListener("dragover", (event) => {
-            event.preventDefault();
-            dropzone.classList.add("dragover");
-        });
-
-        dropzone.addEventListener("dragleave", () => {
-            dropzone.classList.remove("dragover");
-        });
-
-        dropzone.addEventListener("drop", (event) => {
-            event.preventDefault();
-            dropzone.classList.remove("dragover");
-
-            const files = event.dataTransfer.files;
-            if (!files || !files.length) return;
-
-            const dt = new DataTransfer();
-            dt.items.add(files[0]);
-            input.files = dt.files;
-
-            handleFileUpload(section, index, input);
-        });
-    });
-}
-
 /* ========================
-   EXPORT SUMMARY
+   EXPORT
 ======================== */
 function renderSummary() {
     const { infos, fiches, pv, schemas } = state.data;
@@ -1131,279 +1457,52 @@ function renderSummary() {
 }
 
 /* ========================
-   AUTOSAVE
+   SELECT HANDLER REGISTRY
 ======================== */
-function saveAutosave() {
-    try {
-        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
-    } catch (error) {
-        console.error("Erreur autosave :", error);
-        showToast("Impossible de sauvegarder localement.", "error");
-    }
-}
+function registerStepSelectHandlers() {
+    Object.keys(customSelectHandlers).forEach(key => delete customSelectHandlers[key]);
 
-function loadAutosave() {
-    try {
-        const raw = localStorage.getItem(AUTOSAVE_KEY);
-        return raw ? JSON.parse(raw) : null;
-    } catch (error) {
-        console.error("Erreur chargement autosave :", error);
-        return null;
-    }
-}
+    registerCustomSelectHandler("nature-travaux-select", setNatureTravaux);
+    registerCustomSelectHandler("ville-select", setVille);
 
-function clearAutosave() {
-    askConfirm({
-        title: "Effacer le brouillon local",
-        message: "Le brouillon en cours sera supprimé de cet appareil. Cette action est irréversible.",
-        confirmLabel: "Effacer",
-        onConfirm: () => {
-            localStorage.removeItem(AUTOSAVE_KEY);
-            state = getEmptyState();
-            goToStep(0);
-            showToast("Brouillon local effacé.", "info");
-        }
+    state.data.fiches.forEach((item, index) => {
+        registerCustomSelectHandler(`fiche-type-${index}`, (value) => setFicheField(index, "type", value));
+        registerCustomSelectHandler(`fiche-marque-${index}`, (value) => setFicheField(index, "marque", value));
+        registerCustomSelectHandler(`fiche-modele-${index}`, (value) => setFicheField(index, "modele", value));
     });
 }
 
 /* ========================
-   DRAFTS STORAGE
+   STEP SWITCHING
 ======================== */
-function getAllDrafts() {
-    try {
-        const raw = localStorage.getItem(DRAFTS_KEY);
-        return raw ? JSON.parse(raw) : [];
-    } catch (error) {
-        console.error("Erreur lecture brouillons :", error);
-        return [];
-    }
-}
+steps.forEach((step, index) => {
+    step.addEventListener("click", () => goToStep(index));
+});
 
-function setAllDrafts(drafts) {
-    localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
-}
+function goToStep(index) {
+    state.currentStep = index;
 
-function buildDraftPayload() {
-    return {
-        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-        title: getDraftDisplayTitle(),
-        updatedAt: new Date().toISOString(),
-        state: JSON.parse(JSON.stringify(state))
-    };
-}
+    steps.forEach(step => step.classList.remove("active"));
+    if (steps[index]) steps[index].classList.add("active");
 
-function saveDraft() {
-    const drafts = getAllDrafts();
-    const payload = buildDraftPayload();
-
-    drafts.unshift(payload);
-    setAllDrafts(drafts);
     saveAutosave();
-    showToast("Brouillon enregistré.", "success");
+    renderStep();
 }
 
-function openDraftsModal() {
-    renderDraftsList();
-    draftsModal.classList.remove("hidden");
-}
+function renderStep() {
+    renderChantierBanner();
 
-function closeDraftsModal() {
-    draftsModal.classList.add("hidden");
-}
+    const step = stepsConfig[state.currentStep];
+    content.innerHTML = "";
+    step.render();
 
-function renderDraftsList() {
-    const drafts = getAllDrafts();
+    prevStepBtn.style.visibility = state.currentStep === 0 ? "hidden" : "visible";
+    nextStepBtn.style.visibility = state.currentStep === stepsConfig.length - 1 ? "hidden" : "visible";
 
-    if (drafts.length === 0) {
-        draftsList.innerHTML = `
-            <div class="empty-drafts">
-                Aucun brouillon enregistré pour le moment.
-            </div>
-        `;
-        return;
-    }
-
-    draftsList.innerHTML = drafts.map(draft => `
-        <div class="draft-item">
-            <div class="draft-main">
-                <div class="draft-title">${escapeHtml(draft.title || "Brouillon")}</div>
-                <div class="draft-meta">
-                    Dernière mise à jour : ${formatDraftDate(draft.updatedAt)}
-                </div>
-            </div>
-
-            <div class="draft-actions">
-                <button class="draft-btn load" onclick="loadDraft('${draft.id}')">Ouvrir</button>
-                <button class="draft-btn delete" onclick="deleteDraft('${draft.id}')">Supprimer</button>
-            </div>
-        </div>
-    `).join("");
-}
-
-function loadDraft(draftId) {
-    const drafts = getAllDrafts();
-    const draft = drafts.find(item => item.id === draftId);
-    if (!draft) return;
-
-    state = draft.state;
-    saveAutosave();
-    closeDraftsModal();
-    goToStep(state.currentStep || 0);
-    showToast("Brouillon chargé.", "success");
-}
-
-function deleteDraft(draftId) {
-    askConfirm({
-        title: "Supprimer le brouillon",
-        message: "Ce brouillon enregistré sera supprimé définitivement.",
-        confirmLabel: "Supprimer",
-        onConfirm: () => {
-            const drafts = getAllDrafts().filter(item => item.id !== draftId);
-            setAllDrafts(drafts);
-            renderDraftsList();
-            showToast("Brouillon supprimé.", "info");
-        }
-    });
-}
-
-function formatDraftDate(value) {
-    try {
-        return new Date(value).toLocaleString("fr-FR");
-    } catch {
-        return value || "Date inconnue";
-    }
-}
-
-/* ========================
-   CONFIRM MODAL
-======================== */
-function askConfirm({
-    title = "Confirmation",
-    message = "Es-tu sûr de vouloir continuer ?",
-    confirmLabel = "Confirmer",
-    onConfirm = () => {}
-}) {
-    if (!confirmModal) return;
-
-    confirmTitle.textContent = title;
-    confirmMessage.textContent = message;
-    confirmOkBtn.textContent = confirmLabel;
-
-    confirmModal.classList.remove("hidden");
-
-    const handleConfirm = () => {
-        cleanup();
-        onConfirm();
-    };
-
-    const handleClose = () => {
-        cleanup();
-    };
-
-    const handleBackdrop = (event) => {
-        if (event.target === confirmModal) {
-            cleanup();
-        }
-    };
-
-    function cleanup() {
-        confirmModal.classList.add("hidden");
-        confirmOkBtn.removeEventListener("click", handleConfirm);
-        confirmCancelBtn.removeEventListener("click", handleClose);
-        closeConfirmBtn.removeEventListener("click", handleClose);
-        confirmModal.removeEventListener("click", handleBackdrop);
-    }
-
-    confirmOkBtn.addEventListener("click", handleConfirm);
-    confirmCancelBtn.addEventListener("click", handleClose);
-    closeConfirmBtn.addEventListener("click", handleClose);
-    confirmModal.addEventListener("click", handleBackdrop);
-}
-
-/* ========================
-   TOASTS
-======================== */
-function showToast(message, type = "info") {
-    if (!toastContainer) return;
-
-    const toast = document.createElement("div");
-    toast.className = `toast ${type}`;
-
-    const iconMap = {
-        success: "check_circle",
-        error: "error",
-        info: "info"
-    };
-
-    toast.innerHTML = `
-        <span class="material-symbols-outlined toast-icon">${iconMap[type] || "info"}</span>
-        <div class="toast-message">${escapeHtml(message)}</div>
-    `;
-
-    toastContainer.appendChild(toast);
-
-    setTimeout(() => {
-        toast.classList.add("is-hiding");
-        toast.addEventListener("animationend", () => {
-            toast.remove();
-        }, { once: true });
-    }, 2600);
-}
-
-/* ========================
-   HELPERS
-======================== */
-function getSectionTitle(key) {
-    const map = {
-        fiches: "Fiches techniques",
-        pv: "Procès-verbaux",
-        schemas: "Schémas"
-    };
-    return map[key] || key;
-}
-
-function getSectionSubtitle(key) {
-    const map = {
-        fiches: "Ajoutez les équipements, marques, modèles et fichiers.",
-        pv: "Ajoutez les documents de réception, contrôle ou mise en service.",
-        schemas: "Ajoutez les schémas hydrauliques, électriques ou d’équilibrage."
-    };
-    return map[key] || "";
-}
-
-function prettyLabel(field) {
-    const map = {
-        type: "Type",
-        marque: "Marque",
-        modele: "Modèle",
-        fichier: "Fichier"
-    };
-    return map[field] || field;
-}
-
-function prettyPlaceholder(field) {
-    const map = {
-        type: "Ex. CHAUDIERE",
-        marque: "Ex. VIESSMANN",
-        modele: "Ex. VITOCROSSAL 200",
-        fichier: "Nom du document"
-    };
-    return map[field] || "";
-}
-
-function escapeHtml(value) {
-    return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
-
-function escapeJs(value) {
-    return String(value)
-        .replaceAll("\\", "\\\\")
-        .replaceAll("'", "\\'");
+    initDropzones();
+    initCustomSelects();
+    initDatePickerGlobalClose();
+    registerStepSelectHandlers();
 }
 
 /* ========================
@@ -1433,33 +1532,39 @@ if (draftsModal) {
 /* ========================
    INIT
 ======================== */
-if (!state.data.infos.date_doe) {
-    state.data.infos.date_doe = getTodayDate();
-}
-
-goToStep(state.currentStep || 0);
+renderStep();
 
 /* ========================
-   EXPOSE FUNCTIONS
+   WINDOW EXPORTS
 ======================== */
 window.renderChantierBanner = renderChantierBanner;
 window.handleInputChange = handleInputChange;
 window.handlePostalCodeChange = handlePostalCodeChange;
+
 window.toggleCustomSelect = toggleCustomSelect;
+window.handleCustomSelectOption = handleCustomSelectOption;
 window.setNatureTravaux = setNatureTravaux;
 window.setVille = setVille;
+
 window.toggleDatePicker = toggleDatePicker;
 window.changeDateView = changeDateView;
 window.selectDateValue = selectDateValue;
 window.clearDateValue = clearDateValue;
+
 window.addRow = addRow;
 window.removeRow = removeRow;
 window.updateRow = updateRow;
+
+window.setFicheField = setFicheField;
+window.openTechnicalLibraryStub = openTechnicalLibraryStub;
+
 window.saveDraft = saveDraft;
 window.clearAutosave = clearAutosave;
 window.loadDraft = loadDraft;
 window.deleteDraft = deleteDraft;
+
 window.openFile = openFile;
 window.handleFileUpload = handleFileUpload;
 window.deleteFile = deleteFile;
+
 window.getTodayDate = getTodayDate;
