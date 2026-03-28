@@ -1204,3 +1204,15 @@ button {
         grid-template-columns: 1fr;
     }
 }
+
+/* Fix nested grids inside infos */
+.infos-left-row > *,
+.infos-right-row > * {
+    grid-column: auto !important;
+    min-width: 0;
+}
+
+.custom-select,
+.custom-date {
+    width: 100%;
+}
