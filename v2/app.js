@@ -460,7 +460,8 @@ function renderCustomSelect({
     value,
     placeholder,
     options,
-    disabled = false
+    disabled = false,
+    createAction = ""
 }) {
     const displayValue = value || placeholder;
     const isPlaceholder = !value;
@@ -481,7 +482,7 @@ function renderCustomSelect({
                 </button>
 
                 ${
-                    !disabled && safeOptions.length > 0
+                    !disabled
                         ? `
                         <div class="custom-select-menu">
                             <div class="custom-select-list">
@@ -494,6 +495,20 @@ function renderCustomSelect({
                                         ${escapeHtml(option)}
                                     </button>
                                 `).join("")}
+
+                                ${
+                                    createAction
+                                        ? `
+                                        <button
+                                            type="button"
+                                            class="custom-select-option custom-select-create"
+                                            onclick="${createAction}"
+                                        >
+                                            + Ajouter
+                                        </button>
+                                        `
+                                        : ""
+                                }
                             </div>
                         </div>
                         `
@@ -808,6 +823,77 @@ function getBrandsForType(type) {
 function getModelsForTypeAndBrand(type, brand) {
     if (!type || !brand) return [];
     return referenceData.equipment[type]?.brands?.[brand] || [];
+}
+
+function createNewEquipmentValue(kind, rawValue, currentRow) {
+    const value = String(rawValue || "").trim().toUpperCase();
+    if (!value) return null;
+
+    if (kind === "type") {
+        if (!referenceData.equipment[value]) {
+            referenceData.equipment[value] = { brands: {} };
+        }
+        return value;
+    }
+
+    if (kind === "marque") {
+        const type = currentRow?.type;
+        if (!type) return null;
+
+        if (!referenceData.equipment[type]) {
+            referenceData.equipment[type] = { brands: {} };
+        }
+
+        if (!referenceData.equipment[type].brands[value]) {
+            referenceData.equipment[type].brands[value] = [];
+        }
+
+        return value;
+    }
+
+    if (kind === "modele") {
+        const type = currentRow?.type;
+        const marque = currentRow?.marque;
+        if (!type || !marque) return null;
+
+        if (!referenceData.equipment[type]) {
+            referenceData.equipment[type] = { brands: {} };
+        }
+
+        if (!referenceData.equipment[type].brands[marque]) {
+            referenceData.equipment[type].brands[marque] = [];
+        }
+
+        if (!referenceData.equipment[type].brands[marque].includes(value)) {
+            referenceData.equipment[type].brands[marque].push(value);
+        }
+
+        return value;
+    }
+
+    return null;
+}
+
+function promptCreateEquipmentValue(kind, index) {
+    const labels = {
+        type: "Ajouter un nouveau type",
+        marque: "Ajouter une nouvelle marque",
+        modele: "Ajouter un nouveau modèle"
+    };
+
+    const entered = prompt(labels[kind] || "Ajouter une valeur");
+    if (!entered) return;
+
+    const row = state.data.fiches[index];
+    const createdValue = createNewEquipmentValue(kind, entered, row);
+
+    if (!createdValue) {
+        showToast("Impossible d’ajouter cette valeur.", "error");
+        return;
+    }
+
+    setFicheField(index, kind, createdValue);
+    showToast("Valeur ajoutée.", "success");
 }
 
 function clearFicheAutoFile(row) {
@@ -1163,36 +1249,39 @@ function renderFicheRow(item, index) {
 
             <div class="fiche-grid">
                 <div>
-                    ${renderCustomSelect({
-                        id: `fiche-type-${index}`,
-                        label: "Type",
-                        value: item.type || "",
-                        placeholder: "Sélectionner",
-                        options: typeOptions
-                    })}
-                </div>
-
-                <div>
-                    ${renderCustomSelect({
-                        id: `fiche-marque-${index}`,
-                        label: "Marque",
-                        value: item.marque || "",
-                        placeholder: "Sélectionner",
-                        options: brandOptions,
-                        disabled: !item.type
-                    })}
-                </div>
-
-                <div>
-                    ${renderCustomSelect({
-                        id: `fiche-modele-${index}`,
-                        label: "Modèle",
-                        value: item.modele || "",
-                        placeholder: "Sélectionner",
-                        options: modelOptions,
-                        disabled: !item.marque
-                    })}
-                </div>
+                      ${renderCustomSelect({
+                          id: `fiche-type-${index}`,
+                          label: "Type",
+                          value: item.type || "",
+                          placeholder: "Sélectionner",
+                          options: typeOptions,
+                          createAction: `promptCreateEquipmentValue('type', ${index})`
+                      })}
+                  </div>
+                  
+                  <div>
+                      ${renderCustomSelect({
+                          id: `fiche-marque-${index}`,
+                          label: "Marque",
+                          value: item.marque || "",
+                          placeholder: "Sélectionner",
+                          options: brandOptions,
+                          disabled: !item.type,
+                          createAction: item.type ? `promptCreateEquipmentValue('marque', ${index})` : ""
+                      })}
+                  </div>
+                  
+                  <div>
+                      ${renderCustomSelect({
+                          id: `fiche-modele-${index}`,
+                          label: "Modèle",
+                          value: item.modele || "",
+                          placeholder: "Sélectionner",
+                          options: modelOptions,
+                          disabled: !item.marque,
+                          createAction: item.marque ? `promptCreateEquipmentValue('modele', ${index})` : ""
+                      })}
+                  </div>
 
                 <div class="field fiche-file-block">
                     <label>Fichier</label>
@@ -1568,3 +1657,5 @@ window.handleFileUpload = handleFileUpload;
 window.deleteFile = deleteFile;
 
 window.getTodayDate = getTodayDate;
+
+window.promptCreateEquipmentValue = promptCreateEquipmentValue;
