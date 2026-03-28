@@ -1216,3 +1216,12 @@ button {
 .custom-date {
     width: 100%;
 }
+
+.custom-select.is-disabled .custom-select-trigger {
+    cursor: not-allowed;
+    opacity: 0.72;
+}
+
+.custom-select.is-disabled .select-chevron {
+    opacity: 0.5;
+}
