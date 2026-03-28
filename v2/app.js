@@ -204,37 +204,46 @@ function renderCustomSelect({
     value,
     placeholder,
     options,
-    onSelect
+    onSelect,
+    disabled = false
 }) {
     const displayValue = value || placeholder;
     const isPlaceholder = !value;
+    const safeOptions = Array.isArray(options) ? options : [];
 
     return `
         <div class="field">
             <label>${label}</label>
-            <div class="custom-select" data-select-id="${id}">
+            <div class="custom-select ${disabled ? "is-disabled" : ""}" data-select-id="${id}">
                 <button
                     type="button"
                     class="custom-select-trigger ${isPlaceholder ? "is-placeholder" : ""}"
-                    onclick="toggleCustomSelect('${id}')"
+                    onclick="${disabled ? "" : `toggleCustomSelect('${id}')`}"
+                    ${disabled ? "disabled" : ""}
                 >
                     <span class="select-value">${escapeHtml(displayValue)}</span>
                     <span class="material-symbols-outlined select-chevron">expand_more</span>
                 </button>
 
-                <div class="custom-select-menu">
-                    <div class="custom-select-list">
-                        ${options.map(option => `
-                            <button
-                                type="button"
-                                class="custom-select-option ${value === option ? "is-active" : ""}"
-                                onclick="${onSelect}('${escapeJs(option)}')"
-                            >
-                                ${escapeHtml(option)}
-                            </button>
-                        `).join("")}
-                    </div>
-                </div>
+                ${
+                    !disabled && safeOptions.length > 0
+                        ? `
+                        <div class="custom-select-menu">
+                            <div class="custom-select-list">
+                                ${safeOptions.map(option => `
+                                    <button
+                                        type="button"
+                                        class="custom-select-option ${value === option ? "is-active" : ""}"
+                                        onclick="${onSelect}('${escapeJs(option)}')"
+                                    >
+                                        ${escapeHtml(option)}
+                                    </button>
+                                `).join("")}
+                            </div>
+                        </div>
+                        `
+                        : ""
+                }
             </div>
         </div>
     `;
@@ -368,7 +377,8 @@ function renderInfos() {
                             value: infos.nature_travaux,
                             placeholder: "Rénovation chaufferie",
                             options: referenceData.workTypes,
-                            onSelect: "setNatureTravaux"
+                            onSelect: "setNatureTravaux",
+                            disabled: false
                         })}
                     </div>
 
@@ -388,7 +398,8 @@ function renderInfos() {
                                 value: infos.ville,
                                 placeholder: "Sélectionner",
                                 options: cityOptions,
-                                onSelect: "setVille"
+                                onSelect: "setVille",
+                                disabled: cityOptions.length === 0
                             })}
                         </div>
                     </div>
