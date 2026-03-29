@@ -511,7 +511,11 @@ function promptCreateEquipmentValue(kind, index) {
     const row = state.data.fiches[index];
     const config = getCreateValueModalConfig(kind, row, "fiches");
 
-    pendingCreateValueContext = { kind, index, section: "fiches" };
+    pendingCreateValueContext = {
+        kind,
+        index,
+        section: "fiches"
+    };
 
     createValueTitle.textContent = config.title;
     createValueLabel.textContent = config.label;
@@ -530,7 +534,11 @@ function promptCreateDocType(section, index) {
     const row = state.data[section][index];
     const config = getCreateValueModalConfig("type", row, section);
 
-    pendingCreateValueContext = { kind: "type", index, section };
+    pendingCreateValueContext = {
+        kind: "type",
+        index,
+        section
+    };
 
     createValueTitle.textContent = config.title;
     createValueLabel.textContent = config.label;
@@ -552,7 +560,10 @@ function closeCreateValueModal() {
 }
 
 function submitCreateValueModal() {
-    if (!pendingCreateValueContext) return;
+    if (!pendingCreateValueContext) {
+        showToast("Contexte introuvable.", "error");
+        return;
+    }
 
     const { kind, index, section } = pendingCreateValueContext;
     const entered = createValueInput.value.trim();
@@ -588,7 +599,10 @@ function submitCreateValueModal() {
         closeCreateValueModal();
         setDocTypeField(section, index, createdValue);
         showToast("Valeur ajoutée.", "success");
+        return;
     }
+
+    showToast("Section inconnue.", "error");
 }
 
 /* ========================
@@ -1882,9 +1896,17 @@ if (draftsModal) {
     });
 }
 
-if (createValueCancelBtn) createValueCancelBtn.onclick = closeCreateValueModal;
-if (closeCreateValueBtn) closeCreateValueBtn.onclick = closeCreateValueModal;
-if (createValueSaveBtn) createValueSaveBtn.onclick = submitCreateValueModal;
+if (createValueCancelBtn) {
+    createValueCancelBtn.onclick = closeCreateValueModal;
+}
+
+if (closeCreateValueBtn) {
+    closeCreateValueBtn.onclick = closeCreateValueModal;
+}
+
+if (createValueSaveBtn) {
+    createValueSaveBtn.onclick = submitCreateValueModal;
+}
 
 if (createValueInput) {
     createValueInput.addEventListener("keydown", (event) => {
