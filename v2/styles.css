@@ -867,20 +867,23 @@ button {
 }
 
 /* ========================
-   FICHES GRID
+   FICHES / PV / SCHEMAS GRID
 ======================== */
-.fiche-grid {
+.fiche-grid,
+.doc-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
     align-items: start;
 }
 
-.fiche-grid > * {
+.fiche-grid > *,
+.doc-grid > * {
     min-width: 0;
 }
 
-.fiche-file-block {
+.fiche-file-block,
+.doc-file-block {
     grid-column: 1 / -1;
 }
 
@@ -1405,7 +1408,8 @@ button {
         flex: 1 1 100%;
     }
 
-    .fiche-grid {
+    .fiche-grid,
+    .doc-grid {
         grid-template-columns: 1fr;
     }
 }
