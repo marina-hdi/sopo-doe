@@ -2129,3 +2129,6 @@ window.handleFileUpload = handleFileUpload;
 window.deleteFile = deleteFile;
 
 window.getTodayDate = getTodayDate;
+
+window.downloadFile = downloadFile;
+window.triggerReplaceFile = triggerReplaceFile;
