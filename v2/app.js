@@ -1934,14 +1934,7 @@ if (createValueSaveBtn) {
     createValueSaveBtn.onclick = submitCreateValueModal;
 }
 
-if (createValueInput) {
-    createValueInput.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            submitCreateValueModal();
-        }
-    });
-}
+if (createValueInput)
 
 if (createValueModal) {
     createValueModal.addEventListener("click", (event) => {
