@@ -101,6 +101,25 @@ function saveReferenceData() {
 
 let referenceData = loadReferenceData() || structuredClone(defaultReferenceData);
 
+referenceData = {
+    ...structuredClone(defaultReferenceData),
+    ...referenceData,
+    equipment: {
+        ...structuredClone(defaultReferenceData).equipment,
+        ...(referenceData.equipment || {})
+    },
+    technicalSheetsLibrary: Array.isArray(referenceData.technicalSheetsLibrary)
+        ? referenceData.technicalSheetsLibrary
+        : structuredClone(defaultReferenceData).technicalSheetsLibrary,
+    pvTypes: Array.isArray(referenceData.pvTypes)
+        ? referenceData.pvTypes
+        : structuredClone(defaultReferenceData).pvTypes,
+    schemaTypes: Array.isArray(referenceData.schemaTypes)
+        ? referenceData.schemaTypes
+        : structuredClone(defaultReferenceData).schemaTypes
+};
+
+saveReferenceData();
 /* ========================
    EMPTY STATE
 ======================== */
@@ -1201,6 +1220,14 @@ function createNewDocType(section, rawValue) {
     const value = String(rawValue || "").trim().toUpperCase();
     if (!value) return null;
 
+    if (!Array.isArray(referenceData.pvTypes)) {
+        referenceData.pvTypes = [...defaultReferenceData.pvTypes];
+    }
+
+    if (!Array.isArray(referenceData.schemaTypes)) {
+        referenceData.schemaTypes = [...defaultReferenceData.schemaTypes];
+    }
+
     if (section === "pv") {
         if (!referenceData.pvTypes.includes(value)) {
             referenceData.pvTypes.push(value);
@@ -1219,7 +1246,6 @@ function createNewDocType(section, rawValue) {
 
     return null;
 }
-
 function setDocTypeField(section, index, value) {
     const row = state.data[section][index];
     if (!row) return;
