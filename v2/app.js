@@ -329,6 +329,112 @@ function triggerReplaceFile(section, index) {
     input.click();
 }
 
+function getEstimatedZipSize() {
+    const sections = ["fiches", "pv", "schemas"];
+    let total = 0;
+
+    sections.forEach(section => {
+        state.data[section].forEach(item => {
+            if (item.fileSize) {
+                total += Number(item.fileSize) || 0;
+            } else if (item.file) {
+                total += estimateBase64Size(item.file);
+            }
+        });
+    });
+
+    return total;
+}
+
+function estimateBase64Size(dataUrl) {
+    if (!dataUrl || typeof dataUrl !== "string") return 0;
+    const parts = dataUrl.split(",");
+    if (parts.length < 2) return 0;
+
+    const base64 = parts[1];
+    const padding = (base64.match(/=*$/) || [""])[0].length;
+    return Math.floor((base64.length * 3) / 4) - padding;
+}
+
+function renderExportDocSection(title, items, sectionKey) {
+    const count = items.length;
+
+    return `
+        <div class="export-doc-block">
+            <button
+                type="button"
+                class="export-doc-toggle"
+                onclick="toggleExportDocList('${sectionKey}')"
+            >
+                <span>${escapeHtml(title)}</span>
+                <strong>${count}</strong>
+            </button>
+
+            <div id="export-doc-list-${sectionKey}" class="export-doc-list hidden">
+                ${
+                    count === 0
+                        ? `<div class="export-doc-empty">Aucun document</div>`
+                        : items.map(item => `
+                            <div class="export-doc-item">
+                                ${escapeHtml(formatExportDocLabel(sectionKey, item))}
+                            </div>
+                        `).join("")
+                }
+            </div>
+        </div>
+    `;
+}
+
+function formatExportDocLabel(sectionKey, item) {
+    if (sectionKey === "fiches") {
+        const parts = [item.type, item.marque, item.modele].filter(Boolean);
+        return parts.length ? parts.join(" : ") : "Document sans détail";
+    }
+
+    if (sectionKey === "pv" || sectionKey === "schemas") {
+        const type = item.type || "TYPE NON RENSEIGNÉ";
+        const fileName = item.fileName || "AUCUN FICHIER";
+        return `${type} : ${fileName}`;
+    }
+
+    return "Document";
+}
+
+function toggleExportDocList(sectionKey) {
+    const el = document.getElementById(`export-doc-list-${sectionKey}`);
+    if (!el) return;
+    el.classList.toggle("hidden");
+}
+
+function startFakeExportPrep() {
+    const fill = document.getElementById("export-progress-fill");
+    const text = document.getElementById("export-progress-text");
+
+    if (!fill || !text) return;
+
+    let progress = 0;
+    fill.style.width = "0%";
+    text.textContent = "Préparation du ZIP...";
+
+    const interval = setInterval(() => {
+        progress += 8;
+        if (progress > 100) progress = 100;
+
+        fill.style.width = `${progress}%`;
+
+        if (progress < 35) {
+            text.textContent = "Collecte des fichiers...";
+        } else if (progress < 70) {
+            text.textContent = "Compression du ZIP...";
+        } else if (progress < 100) {
+            text.textContent = "Finalisation...";
+        } else {
+            text.textContent = "ZIP prêt — génération réelle à brancher";
+            clearInterval(interval);
+        }
+    }, 120);
+}
+
 /* ========================
    AUTOSAVE
 ======================== */
@@ -1937,6 +2043,10 @@ function updateRow(key, index, field, value, inputEl = null) {
 function renderSummary() {
     const { infos, fiches, pv, schemas } = state.data;
 
+    const fullAddress = [infos.adresse, infos.code_postal, infos.ville].filter(Boolean).join(" ");
+    const totalEstimatedBytes = getEstimatedZipSize();
+    const totalEstimatedLabel = formatFileSize(totalEstimatedBytes || 0) || "0 o";
+
     content.innerHTML = `
         <div class="single-panel-layout">
             <div class="panel">
@@ -1946,34 +2056,43 @@ function renderSummary() {
                     </div>
                 </div>
 
-                <div class="summary-list">
+                <div class="summary-list export-recap-list">
                     <div class="summary-item">
                         <span>Adresse</span>
-                        <strong>${infos.adresse ? escapeHtml(infos.adresse) : "—"}</strong>
+                        <strong>${fullAddress ? escapeHtml(fullAddress) : "—"}</strong>
                     </div>
-                    <div class="summary-item">
-                        <span>Ville</span>
-                        <strong>${infos.ville ? escapeHtml(infos.ville) : "—"}</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span>Code postal</span>
-                        <strong>${infos.code_postal ? escapeHtml(infos.code_postal) : "—"}</strong>
-                    </div>
+
                     <div class="summary-item">
                         <span>Nature des travaux</span>
                         <strong>${infos.nature_travaux ? escapeHtml(infos.nature_travaux) : "—"}</strong>
                     </div>
-                    <div class="summary-item">
-                        <span>Fiches techniques</span>
-                        <strong>${fiches.length}</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span>Procès-verbaux</span>
-                        <strong>${pv.length}</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span>Schémas</span>
-                        <strong>${schemas.length}</strong>
+
+                    ${renderExportDocSection("Fiches techniques", fiches, "fiches")}
+                    ${renderExportDocSection("Procès-verbaux", pv, "pv")}
+                    ${renderExportDocSection("Schémas", schemas, "schemas")}
+
+                    <div class="export-final-row">
+                        <div class="export-final-top">
+                            <div class="export-final-text">
+                                <span class="export-final-label">Exporter</span>
+                                <strong class="export-final-size">ZIP estimé : ${escapeHtml(totalEstimatedLabel)}</strong>
+                            </div>
+
+                            <button
+                                type="button"
+                                class="footer-btn"
+                                onclick="startFakeExportPrep()"
+                            >
+                                Télécharger le ZIP
+                            </button>
+                        </div>
+
+                        <div class="export-progress-wrap">
+                            <div class="export-progress-bar">
+                                <div id="export-progress-fill" class="export-progress-fill"></div>
+                            </div>
+                            <div id="export-progress-text" class="export-progress-text">Prêt à exporter</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2132,3 +2251,6 @@ window.getTodayDate = getTodayDate;
 
 window.downloadFile = downloadFile;
 window.triggerReplaceFile = triggerReplaceFile;
+
+window.toggleExportDocList = toggleExportDocList;
+window.startFakeExportPrep = startFakeExportPrep;
