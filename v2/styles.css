@@ -1460,3 +1460,7 @@ button {
         grid-template-columns: 1fr;
     }
 }
+
+#create-value-input {
+    text-transform: uppercase;
+}
