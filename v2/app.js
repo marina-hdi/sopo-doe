@@ -62,6 +62,18 @@ const defaultReferenceData = {
             fileType: "application/pdf",
             file: null
         }
+    ],
+
+    pvTypes: [
+        "PV RECEPTION",
+        "PV MISE EN SERVICE",
+        "PV ESSAIS"
+    ],
+
+    schemaTypes: [
+        "SCHEMA HYDRAULIQUE",
+        "SCHEMA ELECTRIQUE",
+        "SCHEMA DE PRINCIPE"
     ]
 };
 
@@ -127,8 +139,8 @@ if (!state.data.infos.date_doe) {
 const stepsConfig = [
     { title: "Infos", render: renderInfos },
     { title: "Fiches techniques", render: renderFichesStep },
-    { title: "Procès-verbaux", render: () => renderDynamicSection("pv", ["type", "fichier"]) },
-    { title: "Schémas", render: () => renderDynamicSection("schemas", ["type", "fichier"]) },
+    { title: "Procès-verbaux", render: renderPvStep },
+    { title: "Schémas", render: renderSchemasStep },
     { title: "Export", render: renderSummary }
 ];
 
@@ -218,34 +230,6 @@ function getSectionTitle(key) {
         schemas: "Schémas"
     };
     return map[key] || key;
-}
-
-function getSectionSubtitle(key) {
-    const map = {
-        pv: "Ajoutez les documents de réception, contrôle ou mise en service.",
-        schemas: "Ajoutez les schémas hydrauliques, électriques ou d’équilibrage."
-    };
-    return map[key] || "";
-}
-
-function prettyLabel(field) {
-    const map = {
-        type: "Type",
-        marque: "Marque",
-        modele: "Modèle",
-        fichier: "Fichier"
-    };
-    return map[field] || field;
-}
-
-function prettyPlaceholder(field) {
-    const map = {
-        type: "Ex. CHAUDIERE",
-        marque: "Ex. VIESSMANN",
-        modele: "Ex. VITOCROSSAL 200",
-        fichier: "Nom du document"
-    };
-    return map[field] || "";
 }
 
 function getCurrentAddressLine() {
@@ -475,8 +459,8 @@ function askConfirm({
 ======================== */
 let pendingCreateValueContext = null;
 
-function getCreateValueModalConfig(kind, row) {
-    if (kind === "type") {
+function getCreateValueModalConfig(kind, row, section) {
+    if (kind === "type" && section === "fiches") {
         return {
             title: "Ajouter un type",
             label: "Nouveau type",
@@ -500,6 +484,22 @@ function getCreateValueModalConfig(kind, row) {
         };
     }
 
+    if (kind === "type" && section === "pv") {
+        return {
+            title: "Ajouter un type de PV",
+            label: "Nouveau type de PV",
+            placeholder: "Ex. PV CONTROLE"
+        };
+    }
+
+    if (kind === "type" && section === "schemas") {
+        return {
+            title: "Ajouter un type de schéma",
+            label: "Nouveau type de schéma",
+            placeholder: "Ex. SCHEMA IMPLANTATION"
+        };
+    }
+
     return {
         title: "Ajouter une valeur",
         label: "Nouvelle valeur",
@@ -509,9 +509,28 @@ function getCreateValueModalConfig(kind, row) {
 
 function promptCreateEquipmentValue(kind, index) {
     const row = state.data.fiches[index];
-    const config = getCreateValueModalConfig(kind, row);
+    const config = getCreateValueModalConfig(kind, row, "fiches");
 
-    pendingCreateValueContext = { kind, index };
+    pendingCreateValueContext = { kind, index, section: "fiches" };
+
+    createValueTitle.textContent = config.title;
+    createValueLabel.textContent = config.label;
+    createValueInput.placeholder = config.placeholder;
+    createValueInput.value = "";
+
+    createValueModal.classList.remove("hidden");
+
+    setTimeout(() => {
+        createValueInput.focus();
+        createValueInput.select();
+    }, 0);
+}
+
+function promptCreateDocType(section, index) {
+    const row = state.data[section][index];
+    const config = getCreateValueModalConfig("type", row, section);
+
+    pendingCreateValueContext = { kind: "type", index, section };
 
     createValueTitle.textContent = config.title;
     createValueLabel.textContent = config.label;
@@ -535,7 +554,7 @@ function closeCreateValueModal() {
 function submitCreateValueModal() {
     if (!pendingCreateValueContext) return;
 
-    const { kind, index } = pendingCreateValueContext;
+    const { kind, index, section } = pendingCreateValueContext;
     const entered = createValueInput.value.trim();
 
     if (!entered) {
@@ -543,17 +562,33 @@ function submitCreateValueModal() {
         return;
     }
 
-    const row = state.data.fiches[index];
-    const createdValue = createNewEquipmentValue(kind, entered, row);
+    if (section === "fiches") {
+        const row = state.data.fiches[index];
+        const createdValue = createNewEquipmentValue(kind, entered, row);
 
-    if (!createdValue) {
-        showToast("Impossible d’ajouter cette valeur.", "error");
+        if (!createdValue) {
+            showToast("Impossible d’ajouter cette valeur.", "error");
+            return;
+        }
+
+        closeCreateValueModal();
+        setFicheField(index, kind, createdValue);
+        showToast("Valeur ajoutée.", "success");
         return;
     }
 
-    closeCreateValueModal();
-    setFicheField(index, kind, createdValue);
-    showToast("Valeur ajoutée.", "success");
+    if (section === "pv" || section === "schemas") {
+        const createdValue = createNewDocType(section, entered);
+
+        if (!createdValue) {
+            showToast("Impossible d’ajouter cette valeur.", "error");
+            return;
+        }
+
+        closeCreateValueModal();
+        setDocTypeField(section, index, createdValue);
+        showToast("Valeur ajoutée.", "success");
+    }
 }
 
 /* ========================
@@ -1140,6 +1175,47 @@ function openTechnicalLibraryStub() {
 }
 
 /* ========================
+   PV / SCHEMAS HELPERS
+======================== */
+function getDocTypeOptions(section) {
+    if (section === "pv") return referenceData.pvTypes || [];
+    if (section === "schemas") return referenceData.schemaTypes || [];
+    return [];
+}
+
+function createNewDocType(section, rawValue) {
+    const value = String(rawValue || "").trim().toUpperCase();
+    if (!value) return null;
+
+    if (section === "pv") {
+        if (!referenceData.pvTypes.includes(value)) {
+            referenceData.pvTypes.push(value);
+            saveReferenceData();
+        }
+        return value;
+    }
+
+    if (section === "schemas") {
+        if (!referenceData.schemaTypes.includes(value)) {
+            referenceData.schemaTypes.push(value);
+            saveReferenceData();
+        }
+        return value;
+    }
+
+    return null;
+}
+
+function setDocTypeField(section, index, value) {
+    const row = state.data[section][index];
+    if (!row) return;
+
+    row.type = String(value || "").toUpperCase();
+    saveAutosave();
+    renderStep();
+}
+
+/* ========================
    FILES
 ======================== */
 function handleFileUpload(section, index, input) {
@@ -1531,20 +1607,21 @@ function renderFicheRow(item, index) {
 }
 
 /* ========================
-   RENDER — GENERIC
+   RENDER — DOC STEP
 ======================== */
-function renderDynamicSection(key, fields) {
-    const list = state.data[key];
+function renderDocStep(section, titleText) {
+    const list = state.data[section];
+    const options = getDocTypeOptions(section);
 
     content.innerHTML = `
         <div class="single-panel-layout">
             <div class="panel">
                 <div class="section-toolbar">
                     <div>
-                        <h3>${getSectionTitle(key)}</h3>
-                        <p class="panel-muted">${getSectionSubtitle(key)}</p>
+                        <h3>${titleText}</h3>
+                        <p class="panel-muted">Choisissez un type, joignez un fichier, ou ajoutez un nouveau type directement depuis le menu.</p>
                     </div>
-                    <button class="add-row-btn" onclick="addRow('${key}')">+ Ajouter</button>
+                    <button class="add-row-btn" onclick="addRow('${section}')">+ Ajouter</button>
                 </div>
 
                 ${
@@ -1556,7 +1633,7 @@ function renderDynamicSection(key, fields) {
                         `
                         : `
                         <div class="dynamic-list">
-                            ${list.map((item, index) => renderRow(key, item, index, fields)).join("")}
+                            ${list.map((item, index) => renderDocRow(section, item, index, options)).join("")}
                         </div>
                         `
                 }
@@ -1565,85 +1642,84 @@ function renderDynamicSection(key, fields) {
     `;
 }
 
-function renderRow(key, item, index, fields) {
-    const nonFileFields = fields.filter(field => field !== "fichier");
-    const hasFileField = fields.includes("fichier");
+function renderPvStep() {
+    renderDocStep("pv", "Procès-verbaux");
+}
 
+function renderSchemasStep() {
+    renderDocStep("schemas", "Schémas");
+}
+
+function renderDocRow(section, item, index, typeOptions) {
     return `
         <div class="dynamic-card">
             <div class="dynamic-card-header">
-                <span class="dynamic-card-title">${getSectionTitle(key)} ${index + 1}</span>
-                <button class="remove-row-btn" onclick="removeRow('${key}', ${index})">Supprimer</button>
+                <span class="dynamic-card-title">${getSectionTitle(section)} ${index + 1}</span>
+                <button class="remove-row-btn" onclick="removeRow('${section}', ${index})">Supprimer</button>
             </div>
 
-            <div class="row-inline-layout">
-                ${nonFileFields.map(field => `
-                    <div class="field row-inline-field ${getInlineSpanClass(nonFileFields.length)}">
-                        <label>${prettyLabel(field)}</label>
+            <div class="doc-grid">
+                <div>
+                    ${renderCustomSelect({
+                        id: `${section}-type-${index}`,
+                        label: "Type",
+                        value: item.type || "",
+                        placeholder: "Sélectionner",
+                        options: typeOptions,
+                        createAction: `promptCreateDocType('${section}', ${index})`
+                    })}
+                </div>
+
+                <div class="field doc-file-block">
+                    <label>Fichier</label>
+                    <div class="upload-inline">
                         <input
-                            value="${escapeHtml(item[field] || "")}"
-                            placeholder="${prettyPlaceholder(field)}"
-                            oninput="updateRow('${key}', ${index}, '${field}', this.value, this)"
+                            id="file-input-${section}-${index}"
+                            class="hidden-file-input"
+                            type="file"
+                            accept=".pdf,image/*"
+                            onchange="handleFileUpload('${section}', ${index}, this)"
                         />
-                    </div>
-                `).join("")}
 
-                ${
-                    hasFileField
-                        ? `
-                        <div class="field row-inline-upload">
-                            <label>Fichier</label>
-                            <div class="upload-inline">
-                                <input
-                                    id="file-input-${key}-${index}"
-                                    class="hidden-file-input"
-                                    type="file"
-                                    accept=".pdf,image/*"
-                                    onchange="handleFileUpload('${key}', ${index}, this)"
-                                />
-
-                                <div
-                                    class="dropzone-inline"
-                                    data-input-id="file-input-${key}-${index}"
-                                    data-section="${key}"
-                                    data-index="${index}"
-                                >
-                                    Déposer ou cliquer
-                                </div>
-
-                                <div class="file-name-inline ${item.fileName ? "has-file" : ""}">
-                                    ${item.fileName ? escapeHtml(item.fileName) : "Aucun fichier"}
-                                </div>
-
-                                ${
-                                    item.file
-                                        ? `
-                                            <button
-                                                class="icon-btn-inline preview"
-                                                type="button"
-                                                aria-label="Voir le fichier"
-                                                onclick="openFile('${key}', ${index}, this)"
-                                            >
-                                                <span class="material-symbols-outlined icon-default">visibility</span>
-                                                <span class="material-symbols-outlined icon-spinner">progress_activity</span>
-                                            </button>
-
-                                            <button
-                                                class="icon-btn-inline delete"
-                                                type="button"
-                                                aria-label="Supprimer le fichier"
-                                                onclick="deleteFile('${key}', ${index})"
-                                            >
-                                                <span class="material-symbols-outlined icon-default">delete</span>
-                                            </button>
-                                          `
-                                        : ""
-                                }
-                            </div>
+                        <div
+                            class="dropzone-inline"
+                            data-input-id="file-input-${section}-${index}"
+                            data-section="${section}"
+                            data-index="${index}"
+                        >
+                            Déposer ou cliquer
                         </div>
-                        `
-                        : ""
-                }
+
+                        <div class="file-name-inline ${item.fileName ? "has-file" : ""}">
+                            ${item.fileName ? escapeHtml(item.fileName) : "Aucun fichier"}
+                        </div>
+
+                        ${
+                            item.file
+                                ? `
+                                    <button
+                                        class="icon-btn-inline preview"
+                                        type="button"
+                                        aria-label="Voir le fichier"
+                                        onclick="openFile('${section}', ${index}, this)"
+                                    >
+                                        <span class="material-symbols-outlined icon-default">visibility</span>
+                                        <span class="material-symbols-outlined icon-spinner">progress_activity</span>
+                                    </button>
+
+                                    <button
+                                        class="icon-btn-inline delete"
+                                        type="button"
+                                        aria-label="Supprimer le fichier"
+                                        onclick="deleteFile('${section}', ${index})"
+                                    >
+                                        <span class="material-symbols-outlined icon-default">delete</span>
+                                    </button>
+                                  `
+                                : ""
+                        }
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -1652,12 +1728,6 @@ function renderRow(key, item, index, fields) {
 /* ========================
    STATE MUTATIONS
 ======================== */
-function getInlineSpanClass(fieldCount) {
-    if (fieldCount === 1) return "span-wide";
-    if (fieldCount === 2) return "span-medium";
-    return "span-small";
-}
-
 function addRow(key) {
     state.data[key].push({});
     saveAutosave();
@@ -1744,6 +1814,14 @@ function registerStepSelectHandlers() {
         registerCustomSelectHandler(`fiche-type-${index}`, (value) => setFicheField(index, "type", value));
         registerCustomSelectHandler(`fiche-marque-${index}`, (value) => setFicheField(index, "marque", value));
         registerCustomSelectHandler(`fiche-modele-${index}`, (value) => setFicheField(index, "modele", value));
+    });
+
+    state.data.pv.forEach((item, index) => {
+        registerCustomSelectHandler(`pv-type-${index}`, (value) => setDocTypeField("pv", index, value));
+    });
+
+    state.data.schemas.forEach((item, index) => {
+        registerCustomSelectHandler(`schemas-type-${index}`, (value) => setDocTypeField("schemas", index, value));
     });
 }
 
@@ -1853,8 +1931,10 @@ window.removeRow = removeRow;
 window.updateRow = updateRow;
 
 window.setFicheField = setFicheField;
+window.setDocTypeField = setDocTypeField;
 window.openTechnicalLibraryStub = openTechnicalLibraryStub;
 window.promptCreateEquipmentValue = promptCreateEquipmentValue;
+window.promptCreateDocType = promptCreateDocType;
 window.closeCreateValueModal = closeCreateValueModal;
 window.submitCreateValueModal = submitCreateValueModal;
 
