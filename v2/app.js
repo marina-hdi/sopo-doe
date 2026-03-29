@@ -417,6 +417,11 @@ async function startFakeExportPrep() {
         return;
     }
 
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        showToast("jsPDF n’est pas chargé.", "error");
+        return;
+    }
+
     const zip = new JSZip();
 
     const fullAddress = [state.data.infos.adresse, state.data.infos.code_postal, state.data.infos.ville]
@@ -435,55 +440,74 @@ async function startFakeExportPrep() {
     fill.style.width = "0%";
     text.textContent = "Préparation du ZIP...";
 
-    const sections = [
-        {
-            key: "fiches",
-            folderName: "FICHES TECHNIQUES",
-            getFileName: (item, index) => {
-                const base = [item.type, item.marque, item.modele].filter(Boolean).join(" - ");
-                return sanitizeFileName(base || `FICHE-${index + 1}`);
-            }
-        },
-        {
-            key: "pv",
-            folderName: "PROCES-VERBAUX",
-            getFileName: (item, index) => {
-                const base = item.type || `PV-${index + 1}`;
-                return sanitizeFileName(base);
-            }
-        },
-        {
-            key: "schemas",
-            folderName: "SCHEMAS",
-            getFileName: (item, index) => {
-                const base = item.type || `SCHEMA-${index + 1}`;
-                return sanitizeFileName(base);
-            }
-        }
-    ];
-
-    const allFiles = [];
-
-    sections.forEach(section => {
-        state.data[section.key].forEach((item, index) => {
-            if (item.file) {
-                allFiles.push({
-                    section,
-                    item,
-                    index
-                });
-            }
-        });
-    });
-
-    if (allFiles.length === 0) {
-        showToast("Aucun fichier à exporter.", "error");
-        text.textContent = "Aucun fichier à exporter";
-        fill.style.width = "0%";
-        return;
-    }
-
     try {
+        text.textContent = "Génération du PDF DOE...";
+        fill.style.width = "12%";
+
+        const pdfBlob = buildDoePdfBlob();
+        root.file("DOE.pdf", pdfBlob);
+
+        fill.style.width = "22%";
+
+        const recapText = [
+            `ADRESSE : ${fullAddress || "-"}`,
+            `NATURE DES TRAVAUX : ${state.data.infos.nature_travaux || "-"}`,
+            "",
+            `FICHES TECHNIQUES : ${state.data.fiches.length}`,
+            ...state.data.fiches.map(item => `- ${formatExportDocLabel("fiches", item)}`),
+            "",
+            `PROCES-VERBAUX : ${state.data.pv.length}`,
+            ...state.data.pv.map(item => `- ${formatExportDocLabel("pv", item)}`),
+            "",
+            `SCHEMAS : ${state.data.schemas.length}`,
+            ...state.data.schemas.map(item => `- ${formatExportDocLabel("schemas", item)}`)
+        ].join("\n");
+
+        root.file("RECAP.txt", recapText);
+
+        fill.style.width = "30%";
+
+        const sections = [
+            {
+                key: "fiches",
+                folderName: "FICHES TECHNIQUES",
+                getFileName: (item, index) => {
+                    const base = [item.type, item.marque, item.modele].filter(Boolean).join(" - ");
+                    return sanitizeFileName(base || `FICHE-${index + 1}`);
+                }
+            },
+            {
+                key: "pv",
+                folderName: "PROCES-VERBAUX",
+                getFileName: (item, index) => {
+                    const base = item.type || `PV-${index + 1}`;
+                    return sanitizeFileName(base);
+                }
+            },
+            {
+                key: "schemas",
+                folderName: "SCHEMAS",
+                getFileName: (item, index) => {
+                    const base = item.type || `SCHEMA-${index + 1}`;
+                    return sanitizeFileName(base);
+                }
+            }
+        ];
+
+        const allFiles = [];
+
+        sections.forEach(section => {
+            state.data[section.key].forEach((item, index) => {
+                if (item.file) {
+                    allFiles.push({
+                        section,
+                        item,
+                        index
+                    });
+                }
+            });
+        });
+
         for (let i = 0; i < allFiles.length; i++) {
             const { section, item, index } = allFiles[i];
 
@@ -499,7 +523,7 @@ async function startFakeExportPrep() {
             const blob = dataURLToBlob(item.file);
             sectionFolder.file(finalFileName, blob);
 
-            const percent = Math.round(((i + 1) / (allFiles.length + 1)) * 70);
+            const percent = 30 + Math.round(((i + 1) / Math.max(allFiles.length, 1)) * 35);
             fill.style.width = `${percent}%`;
         }
 
@@ -508,7 +532,7 @@ async function startFakeExportPrep() {
         const zipBlob = await zip.generateAsync(
             { type: "blob" },
             (metadata) => {
-                const progress = 70 + Math.round((metadata.percent / 100) * 30);
+                const progress = 65 + Math.round((metadata.percent / 100) * 35);
                 fill.style.width = `${Math.min(progress, 100)}%`;
             }
         );
@@ -565,6 +589,135 @@ function triggerBlobDownload(blob, fileName) {
     setTimeout(() => {
         URL.revokeObjectURL(objectUrl);
     }, 10000);
+}
+
+
+function buildDoePdfBlob() {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        throw new Error("jsPDF n’est pas chargé");
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 18;
+    const contentWidth = pageWidth - margin * 2;
+
+    const infos = state.data.infos;
+    const fullAddress = [infos.adresse, infos.code_postal, infos.ville].filter(Boolean).join(" ") || "-";
+
+    let y = 24;
+
+    function addPageIfNeeded(extraHeight = 10) {
+        if (y + extraHeight > pageHeight - 18) {
+            doc.addPage();
+            y = 24;
+        }
+    }
+
+    function addTitle(text) {
+        addPageIfNeeded(16);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18);
+        doc.text(text, margin, y);
+        y += 10;
+    }
+
+    function addSectionTitle(text) {
+        addPageIfNeeded(12);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.text(text, margin, y);
+        y += 7;
+    }
+
+    function addLabelValue(label, value) {
+        addPageIfNeeded(10);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.text(`${label}`, margin, y);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+
+        const lines = doc.splitTextToSize(String(value || "-"), contentWidth - 32);
+        doc.text(lines, margin + 32, y);
+        y += Math.max(6, lines.length * 5.2);
+    }
+
+    function addBulletList(items) {
+        if (!items.length) {
+            addPageIfNeeded(8);
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(10);
+            doc.text("Aucun document", margin + 4, y);
+            y += 6;
+            return;
+        }
+
+        items.forEach(item => {
+            const text = `• ${item}`;
+            const lines = doc.splitTextToSize(text, contentWidth - 4);
+            addPageIfNeeded(lines.length * 5.2 + 2);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.text(lines, margin + 4, y);
+            y += lines.length * 5.2 + 1.5;
+        });
+    }
+
+    function addDivider() {
+        addPageIfNeeded(6);
+        doc.setDrawColor(220, 225, 232);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 7;
+    }
+
+    function sectionItems(sectionKey, items) {
+        return items.map(item => formatExportDocLabel(sectionKey, item));
+    }
+
+    addTitle("DOSSIER DOE");
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text("Récapitulatif d’export", margin, y);
+    y += 10;
+
+    addSectionTitle("Informations chantier");
+    addLabelValue("Adresse", fullAddress);
+    addLabelValue("Nature", infos.nature_travaux || "-");
+    addLabelValue("Fiches", state.data.fiches.length);
+    addLabelValue("PV", state.data.pv.length);
+    addLabelValue("Schémas", state.data.schemas.length);
+
+    addDivider();
+
+    addSectionTitle("Fiches techniques");
+    addBulletList(sectionItems("fiches", state.data.fiches));
+
+    addDivider();
+
+    addSectionTitle("Procès-verbaux");
+    addBulletList(sectionItems("pv", state.data.pv));
+
+    addDivider();
+
+    addSectionTitle("Schémas");
+    addBulletList(sectionItems("schemas", state.data.schemas));
+
+    addDivider();
+
+    addSectionTitle("Date d’export");
+    addLabelValue("Généré le", new Date().toLocaleString("fr-FR"));
+
+    return doc.output("blob");
 }
 
 /* ========================
