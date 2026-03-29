@@ -934,6 +934,121 @@ button {
     font-weight: 700;
 }
 
+.export-recap-list {
+    gap: 14px;
+}
+
+.export-doc-block {
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.export-doc-toggle {
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    color: #1D1E18;
+    font-weight: 600;
+    transition: background 0.18s ease;
+}
+
+.export-doc-toggle:hover {
+    background: rgba(0, 68, 140, 0.05);
+}
+
+.export-doc-list {
+    padding: 0 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.export-doc-item {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(0, 68, 140, 0.05);
+    color: #1D1E18;
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+.export-doc-empty {
+    padding: 10px 12px;
+    color: #7b8190;
+    font-size: 14px;
+}
+
+.export-final-row {
+    background: rgba(255,255,255,0.75);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 18px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.export-final-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.export-final-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.export-final-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #3d4451;
+    letter-spacing: 0.04em;
+}
+
+.export-final-size {
+    font-size: 18px;
+    color: #1D1E18;
+}
+
+.export-progress-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.export-progress-bar {
+    width: 100%;
+    height: 12px;
+    border-radius: 999px;
+    background: rgba(0, 68, 140, 0.08);
+    overflow: hidden;
+}
+
+.export-progress-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #00448C, #1699D1);
+    transition: width 0.18s ease;
+}
+
+.export-progress-text {
+    font-size: 13px;
+    color: #5f6673;
+    font-weight: 500;
+}
+
 /* ========================
    EMPTY STATE
 ======================== */
@@ -1461,6 +1576,13 @@ button {
     }
 }
 
+@media (max-width: 900px) {
+    .export-final-top {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
 #create-value-input {
     text-transform: uppercase;
 }
@@ -1486,3 +1608,4 @@ button {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
