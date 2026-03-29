@@ -1464,3 +1464,25 @@ button {
 #create-value-input {
     text-transform: uppercase;
 }
+
+.file-name-stack {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.2;
+}
+
+.file-primary-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-secondary-meta {
+    font-size: 12px;
+    color: #7b8190;
+    margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
