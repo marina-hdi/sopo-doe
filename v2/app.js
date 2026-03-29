@@ -406,33 +406,165 @@ function toggleExportDocList(sectionKey) {
     el.classList.toggle("hidden");
 }
 
-function startFakeExportPrep() {
+async function startFakeExportPrep() {
     const fill = document.getElementById("export-progress-fill");
     const text = document.getElementById("export-progress-text");
 
     if (!fill || !text) return;
 
-    let progress = 0;
+    if (typeof JSZip === "undefined") {
+        showToast("JSZip n’est pas chargé.", "error");
+        return;
+    }
+
+    const zip = new JSZip();
+
+    const fullAddress = [state.data.infos.adresse, state.data.infos.code_postal, state.data.infos.ville]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || "DOE";
+
+    const safeFolderName = sanitizeFileName(fullAddress);
+    const root = zip.folder(safeFolderName);
+
+    if (!root) {
+        showToast("Impossible de créer le ZIP.", "error");
+        return;
+    }
+
     fill.style.width = "0%";
     text.textContent = "Préparation du ZIP...";
 
-    const interval = setInterval(() => {
-        progress += 8;
-        if (progress > 100) progress = 100;
-
-        fill.style.width = `${progress}%`;
-
-        if (progress < 35) {
-            text.textContent = "Collecte des fichiers...";
-        } else if (progress < 70) {
-            text.textContent = "Compression du ZIP...";
-        } else if (progress < 100) {
-            text.textContent = "Finalisation...";
-        } else {
-            text.textContent = "ZIP prêt — génération réelle à brancher";
-            clearInterval(interval);
+    const sections = [
+        {
+            key: "fiches",
+            folderName: "FICHES TECHNIQUES",
+            getFileName: (item, index) => {
+                const base = [item.type, item.marque, item.modele].filter(Boolean).join(" - ");
+                return sanitizeFileName(base || `FICHE-${index + 1}`);
+            }
+        },
+        {
+            key: "pv",
+            folderName: "PROCES-VERBAUX",
+            getFileName: (item, index) => {
+                const base = item.type || `PV-${index + 1}`;
+                return sanitizeFileName(base);
+            }
+        },
+        {
+            key: "schemas",
+            folderName: "SCHEMAS",
+            getFileName: (item, index) => {
+                const base = item.type || `SCHEMA-${index + 1}`;
+                return sanitizeFileName(base);
+            }
         }
-    }, 120);
+    ];
+
+    const allFiles = [];
+
+    sections.forEach(section => {
+        state.data[section.key].forEach((item, index) => {
+            if (item.file) {
+                allFiles.push({
+                    section,
+                    item,
+                    index
+                });
+            }
+        });
+    });
+
+    if (allFiles.length === 0) {
+        showToast("Aucun fichier à exporter.", "error");
+        text.textContent = "Aucun fichier à exporter";
+        fill.style.width = "0%";
+        return;
+    }
+
+    try {
+        for (let i = 0; i < allFiles.length; i++) {
+            const { section, item, index } = allFiles[i];
+
+            const sectionFolder = root.folder(section.folderName);
+            if (!sectionFolder) continue;
+
+            text.textContent = `Ajout des fichiers (${i + 1}/${allFiles.length})...`;
+
+            const extension = getFileExtension(item.fileName, item.fileType);
+            const fileBaseName = section.getFileName(item, index);
+            const finalFileName = `${fileBaseName}${extension}`;
+
+            const blob = dataURLToBlob(item.file);
+            sectionFolder.file(finalFileName, blob);
+
+            const percent = Math.round(((i + 1) / (allFiles.length + 1)) * 70);
+            fill.style.width = `${percent}%`;
+        }
+
+        text.textContent = "Compression du ZIP...";
+
+        const zipBlob = await zip.generateAsync(
+            { type: "blob" },
+            (metadata) => {
+                const progress = 70 + Math.round((metadata.percent / 100) * 30);
+                fill.style.width = `${Math.min(progress, 100)}%`;
+            }
+        );
+
+        text.textContent = "Téléchargement...";
+        fill.style.width = "100%";
+
+        const zipFileName = `${safeFolderName}.zip`;
+        triggerBlobDownload(zipBlob, zipFileName);
+
+        text.textContent = "ZIP téléchargé";
+        showToast("ZIP généré avec succès.", "success");
+    } catch (error) {
+        console.error("Erreur génération ZIP :", error);
+        text.textContent = "Erreur lors de l’export";
+        fill.style.width = "0%";
+        showToast("Impossible de générer le ZIP.", "error");
+    }
+}
+
+function sanitizeFileName(value) {
+    return String(value || "DOCUMENT")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(/\./g, "-");
+}
+
+function getFileExtension(fileName, fileType) {
+    if (fileName && fileName.includes(".")) {
+        return "." + fileName.split(".").pop().toLowerCase();
+    }
+
+    if (fileType === "application/pdf") return ".pdf";
+    if (fileType?.startsWith("image/jpeg")) return ".jpg";
+    if (fileType?.startsWith("image/png")) return ".png";
+    if (fileType?.startsWith("image/webp")) return ".webp";
+
+    return "";
+}
+
+function triggerBlobDownload(blob, fileName) {
+    const objectUrl = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => {
+        URL.revokeObjectURL(objectUrl);
+    }, 10000);
 }
 
 /* ========================
