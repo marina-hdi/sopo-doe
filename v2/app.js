@@ -262,6 +262,73 @@ function getDraftDisplayTitle() {
     return parts.length ? parts.join(" ") : "Brouillon sans adresse";
 }
 
+function formatFileSize(bytes) {
+    if (!bytes || Number.isNaN(bytes)) return "";
+    if (bytes < 1024) return `${bytes} o`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
+function getFileMetaLabel(item) {
+    if (!item) return "";
+
+    const parts = [];
+
+    if (item.fileType) {
+        if (item.fileType.includes("pdf")) parts.push("PDF");
+        else if (item.fileType.startsWith("image/")) parts.push("Image");
+        else parts.push(item.fileType);
+    }
+
+    if (item.fileSize) {
+        parts.push(formatFileSize(item.fileSize));
+    }
+
+    if (item.fileSource === "library" || item.autoMatched) {
+        parts.push("Base");
+    } else if (item.fileSource === "upload") {
+        parts.push("Upload");
+    }
+
+    return parts.join(" • ");
+}
+
+function downloadFile(section, index) {
+    const item = state.data[section]?.[index];
+    if (!item?.file) {
+        showToast("Aucun fichier à télécharger.", "error");
+        return;
+    }
+
+    try {
+        const blob = dataURLToBlob(item.file);
+        const objectUrl = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = item.fileName || "document";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        setTimeout(() => {
+            URL.revokeObjectURL(objectUrl);
+        }, 10000);
+    } catch (error) {
+        console.error("Erreur téléchargement fichier :", error);
+        showToast("Impossible de télécharger ce fichier.", "error");
+    }
+}
+
+function triggerReplaceFile(section, index) {
+    const input = document.getElementById(`file-input-${section}-${index}`);
+    if (!input) {
+        showToast("Champ fichier introuvable.", "error");
+        return;
+    }
+    input.click();
+}
+
 /* ========================
    AUTOSAVE
 ======================== */
@@ -1086,13 +1153,18 @@ function tryAutoAttachTechnicalSheet(index) {
     );
 
     if (match) {
-        row.fileName = match.fileName;
-        row.fileType = match.fileType;
+        row.fileName = match.fileName || "";
+        row.fileType = match.fileType || "";
         row.file = match.file || null;
+        row.fileSize = match.fileSize || 0;
+        row.fileLastModified = match.fileLastModified || null;
+        row.fileSource = "library";
         row.autoMatched = true;
+
         showToast("Fiche technique trouvée dans la base.", "success");
     } else {
         delete row.autoMatched;
+        delete row.fileSource;
     }
 }
 
@@ -1109,6 +1181,8 @@ function upsertTechnicalSheetLibraryEntry(row) {
         if (row.fileName) existing.fileName = row.fileName;
         if (row.fileType) existing.fileType = row.fileType;
         if (row.file) existing.file = row.file;
+        if (row.fileSize) existing.fileSize = row.fileSize;
+        if (row.fileLastModified) existing.fileLastModified = row.fileLastModified;
     } else {
         referenceData.technicalSheetsLibrary.push({
             type: row.type,
@@ -1116,7 +1190,9 @@ function upsertTechnicalSheetLibraryEntry(row) {
             modele: row.modele,
             fileName: row.fileName || "",
             fileType: row.fileType || "",
-            file: row.file || null
+            file: row.file || null,
+            fileSize: row.fileSize || 0,
+            fileLastModified: row.fileLastModified || null
         });
     }
 
@@ -1259,21 +1335,26 @@ function setDocTypeField(section, index, value) {
    FILES
 ======================== */
 function handleFileUpload(section, index, input) {
-    const file = input.files[0];
+    const file = input.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
 
     reader.onload = function (e) {
         const base64 = e.target.result;
+        const item = state.data[section]?.[index];
+        if (!item) return;
 
-        state.data[section][index].file = base64;
-        state.data[section][index].fileName = file.name;
-        state.data[section][index].fileType = file.type;
-        delete state.data[section][index].autoMatched;
+        item.file = base64;
+        item.fileName = file.name;
+        item.fileType = file.type || "application/octet-stream";
+        item.fileSize = file.size || 0;
+        item.fileLastModified = file.lastModified || null;
+        item.fileSource = "upload";
+        delete item.autoMatched;
 
         if (section === "fiches") {
-            upsertTechnicalSheetLibraryEntry(state.data[section][index]);
+            upsertTechnicalSheetLibraryEntry(item);
         }
 
         saveAutosave();
@@ -1296,6 +1377,9 @@ function deleteFile(section, index) {
             delete item.file;
             delete item.fileName;
             delete item.fileType;
+            delete item.fileSize;
+            delete item.fileLastModified;
+            delete item.fileSource;
             delete item.autoMatched;
 
             saveAutosave();
@@ -1585,61 +1669,89 @@ function renderFicheRow(item, index) {
                     })}
                 </div>
 
-                <div class="field fiche-file-block">
-                    <label>Fichier</label>
-                    <div class="upload-inline">
-                        <input
-                            id="file-input-fiches-${index}"
-                            class="hidden-file-input"
-                            type="file"
-                            accept=".pdf,image/*"
-                            onchange="handleFileUpload('fiches', ${index}, this)"
-                        />
-
-                        <div
-                            class="dropzone-inline"
-                            data-input-id="file-input-fiches-${index}"
-                            data-section="fiches"
-                            data-index="${index}"
-                        >
-                            Déposer ou cliquer
-                        </div>
-
-                        <div class="file-name-inline ${(item.fileName || item.autoMatched) ? "has-file" : ""}">
-                            ${
-                                item.fileName
-                                    ? escapeHtml(item.fileName)
-                                    : item.autoMatched
-                                        ? "FICHE TROUVÉE EN BASE"
-                                        : "Aucun fichier"
-                            }
-                        </div>
-
-                        ${
-                            item.fileName || item.autoMatched
-                                ? `
-                                    <button
-                                        class="icon-btn-inline preview"
-                                        type="button"
-                                        aria-label="Voir le fichier"
-                                        onclick="${item.file ? `openFile('fiches', ${index}, this)` : `openTechnicalLibraryStub()`}"
-                                    >
-                                        <span class="material-symbols-outlined icon-default">visibility</span>
-                                        <span class="material-symbols-outlined icon-spinner">progress_activity</span>
-                                    </button>
-
-                                    <button
-                                        class="icon-btn-inline delete"
-                                        type="button"
-                                        aria-label="Supprimer le fichier"
-                                        onclick="deleteFile('fiches', ${index})"
-                                    >
-                                        <span class="material-symbols-outlined icon-default">delete</span>
-                                    </button>
-                                  `
-                                : ""
-                        }
-                    </div>
+               <div class="field fiche-file-block">
+                      <label>Fichier</label>
+                      <div class="upload-inline">
+                          <input
+                              id="file-input-fiches-${index}"
+                              class="hidden-file-input"
+                              type="file"
+                              accept=".pdf,image/*"
+                              onchange="handleFileUpload('fiches', ${index}, this)"
+                          />
+                  
+                          <div
+                              class="dropzone-inline"
+                              data-input-id="file-input-fiches-${index}"
+                              data-section="fiches"
+                              data-index="${index}"
+                          >
+                              ${item.file ? "Remplacer" : "Déposer ou cliquer"}
+                          </div>
+                  
+                          <div class="file-name-inline ${(item.fileName || item.autoMatched) ? "has-file" : ""}">
+                              <div class="file-name-stack">
+                                  <span class="file-primary-name">
+                                      ${
+                                          item.fileName
+                                              ? escapeHtml(item.fileName)
+                                              : item.autoMatched
+                                                  ? "FICHE TROUVÉE EN BASE"
+                                                  : "Aucun fichier"
+                                      }
+                                  </span>
+                                  ${
+                                      item.fileName || item.autoMatched
+                                          ? `<span class="file-secondary-meta">${escapeHtml(getFileMetaLabel(item))}</span>`
+                                          : ""
+                                  }
+                              </div>
+                          </div>
+                  
+                          ${
+                              item.file
+                                  ? `
+                                      <button
+                                          class="icon-btn-inline preview"
+                                          type="button"
+                                          aria-label="Voir le fichier"
+                                          onclick="openFile('fiches', ${index}, this)"
+                                      >
+                                          <span class="material-symbols-outlined icon-default">visibility</span>
+                                          <span class="material-symbols-outlined icon-spinner">progress_activity</span>
+                                      </button>
+                  
+                                      <button
+                                          class="icon-btn-inline preview"
+                                          type="button"
+                                          aria-label="Télécharger le fichier"
+                                          onclick="downloadFile('fiches', ${index})"
+                                      >
+                                          <span class="material-symbols-outlined icon-default">download</span>
+                                      </button>
+                  
+                                      <button
+                                          class="icon-btn-inline preview"
+                                          type="button"
+                                          aria-label="Remplacer le fichier"
+                                          onclick="triggerReplaceFile('fiches', ${index})"
+                                      >
+                                          <span class="material-symbols-outlined icon-default">upload</span>
+                                      </button>
+                  
+                                      <button
+                                          class="icon-btn-inline delete"
+                                          type="button"
+                                          aria-label="Supprimer le fichier"
+                                          onclick="deleteFile('fiches', ${index})"
+                                      >
+                                          <span class="material-symbols-outlined icon-default">delete</span>
+                                      </button>
+                                    `
+                                  : ""
+                          }
+                      </div>
+                  </div>
                 </div>
             </div>
         </div>
@@ -1711,54 +1823,82 @@ function renderDocRow(section, item, index, typeOptions) {
                 </div>
 
                 <div class="field doc-file-block">
-                    <label>Fichier</label>
-                    <div class="upload-inline">
-                        <input
-                            id="file-input-${section}-${index}"
-                            class="hidden-file-input"
-                            type="file"
-                            accept=".pdf,image/*"
-                            onchange="handleFileUpload('${section}', ${index}, this)"
-                        />
-
-                        <div
-                            class="dropzone-inline"
-                            data-input-id="file-input-${section}-${index}"
-                            data-section="${section}"
-                            data-index="${index}"
-                        >
-                            Déposer ou cliquer
-                        </div>
-
-                        <div class="file-name-inline ${item.fileName ? "has-file" : ""}">
-                            ${item.fileName ? escapeHtml(item.fileName) : "Aucun fichier"}
-                        </div>
-
-                        ${
-                            item.file
-                                ? `
-                                    <button
-                                        class="icon-btn-inline preview"
-                                        type="button"
-                                        aria-label="Voir le fichier"
-                                        onclick="openFile('${section}', ${index}, this)"
-                                    >
-                                        <span class="material-symbols-outlined icon-default">visibility</span>
-                                        <span class="material-symbols-outlined icon-spinner">progress_activity</span>
-                                    </button>
-
-                                    <button
-                                        class="icon-btn-inline delete"
-                                        type="button"
-                                        aria-label="Supprimer le fichier"
-                                        onclick="deleteFile('${section}', ${index})"
-                                    >
-                                        <span class="material-symbols-outlined icon-default">delete</span>
-                                    </button>
-                                  `
-                                : ""
-                        }
-                    </div>
+                   <label>Fichier</label>
+                   <div class="upload-inline">
+                       <input
+                           id="file-input-${section}-${index}"
+                           class="hidden-file-input"
+                           type="file"
+                           accept=".pdf,image/*"
+                           onchange="handleFileUpload('${section}', ${index}, this)"
+                       />
+               
+                       <div
+                           class="dropzone-inline"
+                           data-input-id="file-input-${section}-${index}"
+                           data-section="${section}"
+                           data-index="${index}"
+                       >
+                           ${item.file ? "Remplacer" : "Déposer ou cliquer"}
+                       </div>
+               
+                       <div class="file-name-inline ${item.fileName ? "has-file" : ""}">
+                           <div class="file-name-stack">
+                               <span class="file-primary-name">
+                                   ${item.fileName ? escapeHtml(item.fileName) : "Aucun fichier"}
+                               </span>
+                               ${
+                                   item.fileName
+                                       ? `<span class="file-secondary-meta">${escapeHtml(getFileMetaLabel(item))}</span>`
+                                       : ""
+                               }
+                           </div>
+                       </div>
+               
+                       ${
+                           item.file
+                               ? `
+                                   <button
+                                       class="icon-btn-inline preview"
+                                       type="button"
+                                       aria-label="Voir le fichier"
+                                       onclick="openFile('${section}', ${index}, this)"
+                                   >
+                                       <span class="material-symbols-outlined icon-default">visibility</span>
+                                       <span class="material-symbols-outlined icon-spinner">progress_activity</span>
+                                   </button>
+               
+                                   <button
+                                       class="icon-btn-inline preview"
+                                       type="button"
+                                       aria-label="Télécharger le fichier"
+                                       onclick="downloadFile('${section}', ${index})"
+                                   >
+                                       <span class="material-symbols-outlined icon-default">download</span>
+                                   </button>
+               
+                                   <button
+                                       class="icon-btn-inline preview"
+                                       type="button"
+                                       aria-label="Remplacer le fichier"
+                                       onclick="triggerReplaceFile('${section}', ${index})"
+                                   >
+                                       <span class="material-symbols-outlined icon-default">upload</span>
+                                   </button>
+               
+                                   <button
+                                       class="icon-btn-inline delete"
+                                       type="button"
+                                       aria-label="Supprimer le fichier"
+                                       onclick="deleteFile('${section}', ${index})"
+                                   >
+                                       <span class="material-symbols-outlined icon-default">delete</span>
+                                   </button>
+                                 `
+                               : ""
+                       }
+                   </div>
+               </div>
                 </div>
             </div>
         </div>
