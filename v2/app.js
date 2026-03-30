@@ -650,12 +650,103 @@ async function buildRealDoePdfBlob() {
     const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
+    const COLORS = {
+        ink: rgb(0.11, 0.12, 0.09),          // #1D1E18-ish
+        muted: rgb(0.34, 0.38, 0.44),
+        line: rgb(0.86, 0.89, 0.93),
+        blue: rgb(0.0, 0.266, 0.549),        // #00448C
+        cyan: rgb(0.086, 0.6, 0.82),         // #1699D1
+        red: rgb(0.808, 0.137, 0.165),       // #CE232A
+        softBg: rgb(0.975, 0.982, 0.99),
+        white: rgb(1, 1, 1)
+    };
+
     const infos = state.data.infos;
     const fullAddress = [infos.adresse, infos.code_postal, infos.ville].filter(Boolean).join(" ") || "-";
     const workType = infos.nature_travaux || "-";
+    const exportDate = new Date().toLocaleString("fr-FR");
+
+    const generatedPageRefs = [];
+
+    function registerGeneratedPage(page) {
+        generatedPageRefs.push(page);
+        return page;
+    }
+
+    function drawWrappedText(page, text, x, y, maxWidth, font, size, color, lineHeight = 16) {
+        const words = String(text || "").split(/\s+/);
+        let line = "";
+        let currentY = y;
+
+        for (const word of words) {
+            const candidate = line ? `${line} ${word}` : word;
+            const width = font.widthOfTextAtSize(candidate, size);
+
+            if (width <= maxWidth) {
+                line = candidate;
+            } else {
+                if (line) {
+                    page.drawText(line, { x, y: currentY, size, font, color });
+                    currentY -= lineHeight;
+                }
+                line = word;
+            }
+        }
+
+        if (line) {
+            page.drawText(line, { x, y: currentY, size, font, color });
+            currentY -= lineHeight;
+        }
+
+        return currentY;
+    }
+
+    function drawCenteredText(page, text, y, font, size, color) {
+        const pageWidth = page.getWidth();
+        const textWidth = font.widthOfTextAtSize(text, size);
+        const x = (pageWidth - textWidth) / 2;
+        page.drawText(text, { x, y, size, font, color });
+    }
+
+    function drawFooter(page, pageIndexLabel) {
+        const { width } = page.getSize();
+
+        page.drawLine({
+            start: { x: 36, y: 28 },
+            end: { x: width - 36, y: 28 },
+            thickness: 1,
+            color: COLORS.line
+        });
+
+        page.drawText("DOE", {
+            x: 36,
+            y: 15,
+            size: 9,
+            font: fontBold,
+            color: COLORS.blue
+        });
+
+        const footerAddress = fullAddress.length > 70 ? `${fullAddress.slice(0, 67)}...` : fullAddress;
+        page.drawText(footerAddress, {
+            x: 68,
+            y: 15,
+            size: 8.5,
+            font: fontRegular,
+            color: COLORS.muted
+        });
+
+        const labelWidth = fontRegular.widthOfTextAtSize(pageIndexLabel, 8.5);
+        page.drawText(pageIndexLabel, {
+            x: width - 36 - labelWidth,
+            y: 15,
+            size: 8.5,
+            font: fontRegular,
+            color: COLORS.muted
+        });
+    }
 
     function addCoverPage() {
-        const page = pdfDoc.addPage([595.28, 841.89]); // A4
+        const page = registerGeneratedPage(pdfDoc.addPage([595.28, 841.89]));
         const { width, height } = page.getSize();
 
         page.drawRectangle({
@@ -663,40 +754,137 @@ async function buildRealDoePdfBlob() {
             y: 0,
             width,
             height,
-            color: rgb(0.97, 0.98, 0.99)
+            color: COLORS.softBg
+        });
+
+        page.drawRectangle({
+            x: 0,
+            y: height - 120,
+            width,
+            height: 120,
+            color: COLORS.blue
+        });
+
+        page.drawRectangle({
+            x: width - 140,
+            y: height - 120,
+            width: 140,
+            height: 120,
+            color: COLORS.cyan,
+            opacity: 0.16
         });
 
         page.drawRectangle({
             x: 0,
             y: 0,
-            width,
-            height: 110,
-            color: rgb(0.0, 0.266, 0.549)
+            width: 32,
+            height,
+            color: COLORS.red,
+            opacity: 0.08
         });
 
-        drawCenteredText(page, "DOSSIER DOE", height - 180, fontBold, 28, rgb(0.11, 0.12, 0.09));
-        drawCenteredText(page, fullAddress, height - 225, fontRegular, 14, rgb(0.18, 0.2, 0.25));
-        drawCenteredText(page, workType, height - 250, fontRegular, 12, rgb(0.25, 0.27, 0.32));
+        page.drawText("DOSSIER DOE", {
+            x: 50,
+            y: height - 210,
+            size: 28,
+            font: fontBold,
+            color: COLORS.ink
+        });
 
-        page.drawText("Date d’export", {
-            x: 60,
+        page.drawText("Dossier des ouvrages exécutés", {
+            x: 50,
+            y: height - 238,
+            size: 12,
+            font: fontRegular,
+            color: COLORS.muted
+        });
+
+        page.drawRectangle({
+            x: 50,
+            y: height - 330,
+            width: width - 100,
+            height: 92,
+            color: COLORS.white
+        });
+
+        page.drawRectangle({
+            x: 50,
+            y: height - 330,
+            width: width - 100,
+            height: 92,
+            borderColor: COLORS.line,
+            borderWidth: 1
+        });
+
+        page.drawText("CHANTIER", {
+            x: 68,
+            y: height - 266,
+            size: 10,
+            font: fontBold,
+            color: COLORS.blue
+        });
+
+        drawWrappedText(
+            page,
+            fullAddress,
+            68,
+            height - 288,
+            width - 136,
+            fontBold,
+            14,
+            COLORS.ink,
+            18
+        );
+
+        page.drawText("NATURE DES TRAVAUX", {
+            x: 68,
+            y: height - 340,
+            size: 10,
+            font: fontBold,
+            color: COLORS.blue
+        });
+
+        drawWrappedText(
+            page,
+            workType,
+            68,
+            height - 362,
+            width - 136,
+            fontRegular,
+            12,
+            COLORS.ink,
+            16
+        );
+
+        page.drawText("Export généré le", {
+            x: 50,
             y: 120,
             size: 10,
             font: fontBold,
-            color: rgb(0.25, 0.27, 0.32)
+            color: COLORS.muted
         });
 
-        page.drawText(new Date().toLocaleString("fr-FR"), {
-            x: 60,
+        page.drawText(exportDate, {
+            x: 50,
             y: 104,
             size: 10,
             font: fontRegular,
-            color: rgb(0.25, 0.27, 0.32)
+            color: COLORS.ink
         });
+
+        page.drawText("SOPODEX", {
+            x: 50,
+            y: height - 72,
+            size: 11,
+            font: fontBold,
+            color: COLORS.white
+        });
+
+        drawFooter(page, "PAGE DE GARDE");
     }
 
-    function addSectionDivider(sectionTitle, items) {
-        const page = pdfDoc.addPage([595.28, 841.89]);
+    function addSummaryPage() {
+        const page = registerGeneratedPage(pdfDoc.addPage([595.28, 841.89]));
         const { width, height } = page.getSize();
 
         page.drawRectangle({
@@ -704,94 +892,242 @@ async function buildRealDoePdfBlob() {
             y: 0,
             width,
             height,
-            color: rgb(1, 1, 1)
+            color: COLORS.white
+        });
+
+        page.drawText("SOMMAIRE", {
+            x: 42,
+            y: height - 70,
+            size: 22,
+            font: fontBold,
+            color: COLORS.ink
+        });
+
+        page.drawText("Vue d’ensemble du dossier", {
+            x: 42,
+            y: height - 94,
+            size: 11,
+            font: fontRegular,
+            color: COLORS.muted
+        });
+
+        let y = height - 145;
+
+        const blocks = [
+            {
+                title: "Informations chantier",
+                rows: [
+                    ["Adresse", fullAddress],
+                    ["Nature des travaux", workType]
+                ]
+            },
+            {
+                title: "Contenu",
+                rows: [
+                    ["Fiches techniques", String(state.data.fiches.length)],
+                    ["Procès-verbaux", String(state.data.pv.length)],
+                    ["Schémas", String(state.data.schemas.length)]
+                ]
+            }
+        ];
+
+        for (const block of blocks) {
+            page.drawRectangle({
+                x: 42,
+                y: y - 88,
+                width: width - 84,
+                height: 88,
+                color: COLORS.softBg
+            });
+
+            page.drawRectangle({
+                x: 42,
+                y: y - 88,
+                width: width - 84,
+                height: 88,
+                borderColor: COLORS.line,
+                borderWidth: 1
+            });
+
+            page.drawText(block.title.toUpperCase(), {
+                x: 58,
+                y: y - 20,
+                size: 10,
+                font: fontBold,
+                color: COLORS.blue
+            });
+
+            let rowY = y - 42;
+
+            for (const [label, value] of block.rows) {
+                page.drawText(label, {
+                    x: 58,
+                    y: rowY,
+                    size: 10,
+                    font: fontBold,
+                    color: COLORS.ink
+                });
+
+                const valueText = String(value || "-");
+                const valueWidth = fontRegular.widthOfTextAtSize(valueText, 10);
+
+                page.drawText(valueText, {
+                    x: width - 58 - valueWidth,
+                    y: rowY,
+                    size: 10,
+                    font: fontRegular,
+                    color: COLORS.muted
+                });
+
+                rowY -= 18;
+            }
+
+            y -= 112;
+        }
+
+        drawFooter(page, "SOMMAIRE");
+    }
+
+    function addSectionDivider(sectionTitle, items, sectionKey) {
+        const page = registerGeneratedPage(pdfDoc.addPage([595.28, 841.89]));
+        const { width, height } = page.getSize();
+
+        page.drawRectangle({
+            x: 0,
+            y: 0,
+            width,
+            height,
+            color: COLORS.white
         });
 
         page.drawRectangle({
-            x: 40,
-            y: height - 170,
-            width: width - 80,
-            height: 90,
-            color: rgb(0.0, 0.266, 0.549)
+            x: 42,
+            y: height - 180,
+            width: width - 84,
+            height: 96,
+            color: COLORS.blue
         });
 
-        drawCenteredText(page, sectionTitle, height - 120, fontBold, 24, rgb(1, 1, 1));
+        page.drawRectangle({
+            x: 42,
+            y: height - 180,
+            width: 18,
+            height: 96,
+            color: COLORS.cyan
+        });
 
-        page.drawText(`Documents : ${items.length}`, {
-            x: 50,
-            y: height - 220,
-            size: 12,
+        page.drawText(sectionTitle, {
+            x: 72,
+            y: height - 126,
+            size: 24,
             font: fontBold,
-            color: rgb(0.11, 0.12, 0.09)
+            color: COLORS.white
         });
 
-        let y = height - 250;
+        page.drawText(`Documents dans cette section : ${items.length}`, {
+            x: 42,
+            y: height - 225,
+            size: 11,
+            font: fontBold,
+            color: COLORS.ink
+        });
+
+        let y = height - 260;
 
         if (!items.length) {
             page.drawText("Aucun document dans cette section.", {
-                x: 50,
+                x: 48,
                 y,
                 size: 11,
                 font: fontRegular,
-                color: rgb(0.4, 0.45, 0.5)
+                color: COLORS.muted
             });
+            drawFooter(page, sectionTitle);
             return;
         }
 
-        for (const item of items.slice(0, 12)) {
-            const label = formatExportDocLabel(
-                sectionTitle === "FICHES TECHNIQUES" ? "fiches" :
-                sectionTitle === "PROCES-VERBAUX" ? "pv" : "schemas",
-                item
-            );
+        const maxItemsToShow = 14;
 
-            y = drawWrappedText(
+        for (const item of items.slice(0, maxItemsToShow)) {
+            const label = formatExportDocLabel(sectionKey, item);
+
+            page.drawRectangle({
+                x: 48,
+                y: y - 16,
+                width: width - 96,
+                height: 24,
+                color: rgb(0.97, 0.98, 1)
+            });
+
+            drawWrappedText(
                 page,
-                `• ${label}`,
-                55,
+                label,
+                58,
                 y,
-                width - 110,
+                width - 116,
                 fontRegular,
                 10,
-                rgb(0.18, 0.2, 0.25),
-                14
+                COLORS.ink,
+                13
             );
 
-            if (y < 80) break;
+            y -= 30;
+            if (y < 100) break;
         }
+
+        drawFooter(page, sectionTitle);
     }
 
     function addSkippedFilePage(fileName, reason) {
-        const page = pdfDoc.addPage([595.28, 841.89]);
+        const page = registerGeneratedPage(pdfDoc.addPage([595.28, 841.89]));
         const { width, height } = page.getSize();
 
-        page.drawText("Document non intégré", {
-            x: 50,
-            y: height - 90,
-            size: 22,
+        page.drawRectangle({
+            x: 42,
+            y: height - 140,
+            width: width - 84,
+            height: 68,
+            color: rgb(1, 0.97, 0.97)
+        });
+
+        page.drawRectangle({
+            x: 42,
+            y: height - 140,
+            width: width - 84,
+            height: 68,
+            borderColor: rgb(0.96, 0.84, 0.84),
+            borderWidth: 1
+        });
+
+        page.drawText("DOCUMENT NON INTÉGRÉ", {
+            x: 58,
+            y: height - 102,
+            size: 18,
             font: fontBold,
-            color: rgb(0.81, 0.14, 0.16)
+            color: COLORS.red
         });
 
         page.drawText(fileName || "Fichier inconnu", {
             x: 50,
-            y: height - 130,
+            y: height - 190,
             size: 12,
             font: fontBold,
-            color: rgb(0.11, 0.12, 0.09)
+            color: COLORS.ink
         });
 
         drawWrappedText(
             page,
             reason,
             50,
-            height - 170,
+            height - 225,
             width - 100,
             fontRegular,
             11,
-            rgb(0.3, 0.33, 0.38),
+            COLORS.muted,
             16
         );
+
+        drawFooter(page, "DOCUMENT NON INTÉGRÉ");
     }
 
     async function appendFileToDoe(item) {
@@ -813,12 +1149,21 @@ async function buildRealDoePdfBlob() {
             const page = pdfDoc.addPage([595.28, 841.89]);
             const { width, height } = page.getSize();
 
-            const maxWidth = width - 60;
-            const maxHeight = height - 100;
+            const maxWidth = width - 70;
+            const maxHeight = height - 110;
             const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
 
             const drawWidth = image.width * scale;
             const drawHeight = image.height * scale;
+
+            page.drawRectangle({
+                x: 30,
+                y: 30,
+                width: width - 60,
+                height: height - 60,
+                borderColor: COLORS.line,
+                borderWidth: 1
+            });
 
             page.drawImage(image, {
                 x: (width - drawWidth) / 2,
@@ -826,6 +1171,7 @@ async function buildRealDoePdfBlob() {
                 width: drawWidth,
                 height: drawHeight
             });
+
             return;
         }
 
@@ -834,12 +1180,21 @@ async function buildRealDoePdfBlob() {
             const page = pdfDoc.addPage([595.28, 841.89]);
             const { width, height } = page.getSize();
 
-            const maxWidth = width - 60;
-            const maxHeight = height - 100;
+            const maxWidth = width - 70;
+            const maxHeight = height - 110;
             const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
 
             const drawWidth = image.width * scale;
             const drawHeight = image.height * scale;
+
+            page.drawRectangle({
+                x: 30,
+                y: 30,
+                width: width - 60,
+                height: height - 60,
+                borderColor: COLORS.line,
+                borderWidth: 1
+            });
 
             page.drawImage(image, {
                 x: (width - drawWidth) / 2,
@@ -847,6 +1202,7 @@ async function buildRealDoePdfBlob() {
                 width: drawWidth,
                 height: drawHeight
             });
+
             return;
         }
 
@@ -857,6 +1213,7 @@ async function buildRealDoePdfBlob() {
     }
 
     addCoverPage();
+    addSummaryPage();
 
     const sections = [
         { key: "fiches", title: "FICHES TECHNIQUES" },
@@ -866,12 +1223,18 @@ async function buildRealDoePdfBlob() {
 
     for (const section of sections) {
         const items = getSectionExportItems(section.key);
-        addSectionDivider(section.title, items);
+        addSectionDivider(section.title, items, section.key);
 
         for (const item of items) {
             await appendFileToDoe(item);
         }
     }
+
+    const totalPages = pdfDoc.getPageCount();
+
+    generatedPageRefs.forEach((page, idx) => {
+        drawFooter(page, `${idx + 1} / ${totalPages}`);
+    });
 
     const pdfBytes = await pdfDoc.save();
     return new Blob([pdfBytes], { type: "application/pdf" });
