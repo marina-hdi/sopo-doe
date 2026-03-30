@@ -447,24 +447,6 @@ async function startFakeExportPrep() {
         const pdfBlob = buildDoePdfBlob();
         root.file("DOE.pdf", pdfBlob);
 
-        fill.style.width = "22%";
-
-        const recapText = [
-            `ADRESSE : ${fullAddress || "-"}`,
-            `NATURE DES TRAVAUX : ${state.data.infos.nature_travaux || "-"}`,
-            "",
-            `FICHES TECHNIQUES : ${state.data.fiches.length}`,
-            ...state.data.fiches.map(item => `- ${formatExportDocLabel("fiches", item)}`),
-            "",
-            `PROCES-VERBAUX : ${state.data.pv.length}`,
-            ...state.data.pv.map(item => `- ${formatExportDocLabel("pv", item)}`),
-            "",
-            `SCHEMAS : ${state.data.schemas.length}`,
-            ...state.data.schemas.map(item => `- ${formatExportDocLabel("schemas", item)}`)
-        ].join("\n");
-
-        root.file("RECAP.txt", recapText);
-
         fill.style.width = "30%";
 
         const sections = [
