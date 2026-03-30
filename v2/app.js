@@ -417,8 +417,8 @@ async function startFakeExportPrep() {
         return;
     }
 
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-        showToast("jsPDF n’est pas chargé.", "error");
+    if (typeof PDFLib === "undefined") {
+        showToast("PDF-lib n’est pas chargé.", "error");
         return;
     }
 
@@ -441,13 +441,13 @@ async function startFakeExportPrep() {
     text.textContent = "Préparation du ZIP...";
 
     try {
-        text.textContent = "Génération du PDF DOE...";
+        text.textContent = "Génération du DOE.pdf...";
         fill.style.width = "12%";
 
-        const pdfBlob = buildDoePdfBlob();
+        const pdfBlob = await buildRealDoePdfBlob();
         root.file("DOE.pdf", pdfBlob);
 
-        fill.style.width = "30%";
+        fill.style.width = "28%";
 
         const sections = [
             {
@@ -492,11 +492,10 @@ async function startFakeExportPrep() {
 
         for (let i = 0; i < allFiles.length; i++) {
             const { section, item, index } = allFiles[i];
-
             const sectionFolder = root.folder(section.folderName);
             if (!sectionFolder) continue;
 
-            text.textContent = `Ajout des fichiers (${i + 1}/${allFiles.length})...`;
+            text.textContent = `Ajout des fichiers originaux (${i + 1}/${allFiles.length})...`;
 
             const extension = getFileExtension(item.fileName, item.fileType);
             const fileBaseName = section.getFileName(item, index);
@@ -505,7 +504,7 @@ async function startFakeExportPrep() {
             const blob = dataURLToBlob(item.file);
             sectionFolder.file(finalFileName, blob);
 
-            const percent = 30 + Math.round(((i + 1) / Math.max(allFiles.length, 1)) * 35);
+            const percent = 28 + Math.round(((i + 1) / Math.max(allFiles.length, 1)) * 32);
             fill.style.width = `${percent}%`;
         }
 
@@ -514,7 +513,7 @@ async function startFakeExportPrep() {
         const zipBlob = await zip.generateAsync(
             { type: "blob" },
             (metadata) => {
-                const progress = 65 + Math.round((metadata.percent / 100) * 35);
+                const progress = 60 + Math.round((metadata.percent / 100) * 40);
                 fill.style.width = `${Math.min(progress, 100)}%`;
             }
         );
@@ -573,133 +572,309 @@ function triggerBlobDownload(blob, fileName) {
     }, 10000);
 }
 
+function dataURLToUint8Array(dataURL) {
+    if (!dataURL || typeof dataURL !== "string") return new Uint8Array();
 
-function buildDoePdfBlob() {
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-        throw new Error("jsPDF n’est pas chargé");
+    const parts = dataURL.split(",");
+    if (parts.length < 2) return new Uint8Array();
+
+    const byteString = atob(parts[1]);
+    const array = new Uint8Array(byteString.length);
+
+    for (let i = 0; i < byteString.length; i++) {
+        array[i] = byteString.charCodeAt(i);
     }
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4"
-    });
+    return array;
+}
 
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 18;
-    const contentWidth = pageWidth - margin * 2;
+function drawWrappedText(page, text, x, y, maxWidth, font, size, color, lineHeight = 16) {
+    const words = String(text || "").split(/\s+/);
+    let line = "";
+    let currentY = y;
+
+    for (const word of words) {
+        const candidate = line ? `${line} ${word}` : word;
+        const width = font.widthOfTextAtSize(candidate, size);
+
+        if (width <= maxWidth) {
+            line = candidate;
+        } else {
+            if (line) {
+                page.drawText(line, { x, y: currentY, size, font, color });
+                currentY -= lineHeight;
+            }
+            line = word;
+        }
+    }
+
+    if (line) {
+        page.drawText(line, { x, y: currentY, size, font, color });
+        currentY -= lineHeight;
+    }
+
+    return currentY;
+}
+
+function drawCenteredText(page, text, y, font, size, color) {
+    const pageWidth = page.getWidth();
+    const textWidth = font.widthOfTextAtSize(text, size);
+    const x = (pageWidth - textWidth) / 2;
+
+    page.drawText(text, { x, y, size, font, color });
+}
+
+function getSectionExportItems(sectionKey) {
+    return state.data[sectionKey].filter(item => item.file);
+}
+
+function getSectionDisplayLabel(sectionKey) {
+    const map = {
+        fiches: "FICHES TECHNIQUES",
+        pv: "PROCES-VERBAUX",
+        schemas: "SCHEMAS"
+    };
+    return map[sectionKey] || sectionKey.toUpperCase();
+}
+
+
+async function buildRealDoePdfBlob() {
+    if (typeof PDFLib === "undefined") {
+        throw new Error("PDF-lib n’est pas chargé");
+    }
+
+    const { PDFDocument, StandardFonts, rgb } = PDFLib;
+
+    const pdfDoc = await PDFDocument.create();
+
+    const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
     const infos = state.data.infos;
     const fullAddress = [infos.adresse, infos.code_postal, infos.ville].filter(Boolean).join(" ") || "-";
+    const workType = infos.nature_travaux || "-";
 
-    let y = 24;
+    function addCoverPage() {
+        const page = pdfDoc.addPage([595.28, 841.89]); // A4
+        const { width, height } = page.getSize();
 
-    function addPageIfNeeded(extraHeight = 10) {
-        if (y + extraHeight > pageHeight - 18) {
-            doc.addPage();
-            y = 24;
-        }
-    }
+        page.drawRectangle({
+            x: 0,
+            y: 0,
+            width,
+            height,
+            color: rgb(0.97, 0.98, 0.99)
+        });
 
-    function addTitle(text) {
-        addPageIfNeeded(16);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(18);
-        doc.text(text, margin, y);
-        y += 10;
-    }
+        page.drawRectangle({
+            x: 0,
+            y: 0,
+            width,
+            height: 110,
+            color: rgb(0.0, 0.266, 0.549)
+        });
 
-    function addSectionTitle(text) {
-        addPageIfNeeded(12);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(13);
-        doc.text(text, margin, y);
-        y += 7;
-    }
+        drawCenteredText(page, "DOSSIER DOE", height - 180, fontBold, 28, rgb(0.11, 0.12, 0.09));
+        drawCenteredText(page, fullAddress, height - 225, fontRegular, 14, rgb(0.18, 0.2, 0.25));
+        drawCenteredText(page, workType, height - 250, fontRegular, 12, rgb(0.25, 0.27, 0.32));
 
-    function addLabelValue(label, value) {
-        addPageIfNeeded(10);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
-        doc.text(`${label}`, margin, y);
+        page.drawText("Date d’export", {
+            x: 60,
+            y: 120,
+            size: 10,
+            font: fontBold,
+            color: rgb(0.25, 0.27, 0.32)
+        });
 
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-
-        const lines = doc.splitTextToSize(String(value || "-"), contentWidth - 32);
-        doc.text(lines, margin + 32, y);
-        y += Math.max(6, lines.length * 5.2);
-    }
-
-    function addBulletList(items) {
-        if (!items.length) {
-            addPageIfNeeded(8);
-            doc.setFont("helvetica", "italic");
-            doc.setFontSize(10);
-            doc.text("Aucun document", margin + 4, y);
-            y += 6;
-            return;
-        }
-
-        items.forEach(item => {
-            const text = `• ${item}`;
-            const lines = doc.splitTextToSize(text, contentWidth - 4);
-            addPageIfNeeded(lines.length * 5.2 + 2);
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
-            doc.text(lines, margin + 4, y);
-            y += lines.length * 5.2 + 1.5;
+        page.drawText(new Date().toLocaleString("fr-FR"), {
+            x: 60,
+            y: 104,
+            size: 10,
+            font: fontRegular,
+            color: rgb(0.25, 0.27, 0.32)
         });
     }
 
-    function addDivider() {
-        addPageIfNeeded(6);
-        doc.setDrawColor(220, 225, 232);
-        doc.line(margin, y, pageWidth - margin, y);
-        y += 7;
+    function addSectionDivider(sectionTitle, items) {
+        const page = pdfDoc.addPage([595.28, 841.89]);
+        const { width, height } = page.getSize();
+
+        page.drawRectangle({
+            x: 0,
+            y: 0,
+            width,
+            height,
+            color: rgb(1, 1, 1)
+        });
+
+        page.drawRectangle({
+            x: 40,
+            y: height - 170,
+            width: width - 80,
+            height: 90,
+            color: rgb(0.0, 0.266, 0.549)
+        });
+
+        drawCenteredText(page, sectionTitle, height - 120, fontBold, 24, rgb(1, 1, 1));
+
+        page.drawText(`Documents : ${items.length}`, {
+            x: 50,
+            y: height - 220,
+            size: 12,
+            font: fontBold,
+            color: rgb(0.11, 0.12, 0.09)
+        });
+
+        let y = height - 250;
+
+        if (!items.length) {
+            page.drawText("Aucun document dans cette section.", {
+                x: 50,
+                y,
+                size: 11,
+                font: fontRegular,
+                color: rgb(0.4, 0.45, 0.5)
+            });
+            return;
+        }
+
+        for (const item of items.slice(0, 12)) {
+            const label = formatExportDocLabel(
+                sectionTitle === "FICHES TECHNIQUES" ? "fiches" :
+                sectionTitle === "PROCES-VERBAUX" ? "pv" : "schemas",
+                item
+            );
+
+            y = drawWrappedText(
+                page,
+                `• ${label}`,
+                55,
+                y,
+                width - 110,
+                fontRegular,
+                10,
+                rgb(0.18, 0.2, 0.25),
+                14
+            );
+
+            if (y < 80) break;
+        }
     }
 
-    function sectionItems(sectionKey, items) {
-        return items.map(item => formatExportDocLabel(sectionKey, item));
+    function addSkippedFilePage(fileName, reason) {
+        const page = pdfDoc.addPage([595.28, 841.89]);
+        const { width, height } = page.getSize();
+
+        page.drawText("Document non intégré", {
+            x: 50,
+            y: height - 90,
+            size: 22,
+            font: fontBold,
+            color: rgb(0.81, 0.14, 0.16)
+        });
+
+        page.drawText(fileName || "Fichier inconnu", {
+            x: 50,
+            y: height - 130,
+            size: 12,
+            font: fontBold,
+            color: rgb(0.11, 0.12, 0.09)
+        });
+
+        drawWrappedText(
+            page,
+            reason,
+            50,
+            height - 170,
+            width - 100,
+            fontRegular,
+            11,
+            rgb(0.3, 0.33, 0.38),
+            16
+        );
     }
 
-    addTitle("DOSSIER DOE");
+    async function appendFileToDoe(item) {
+        if (!item?.file) return;
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text("Récapitulatif d’export", margin, y);
-    y += 10;
+        const bytes = dataURLToUint8Array(item.file);
+        const fileType = item.fileType || "";
+        const fileName = item.fileName || "document";
 
-    addSectionTitle("Informations chantier");
-    addLabelValue("Adresse", fullAddress);
-    addLabelValue("Nature", infos.nature_travaux || "-");
-    addLabelValue("Fiches", state.data.fiches.length);
-    addLabelValue("PV", state.data.pv.length);
-    addLabelValue("Schémas", state.data.schemas.length);
+        if (fileType.includes("pdf")) {
+            const srcPdf = await PDFDocument.load(bytes);
+            const pages = await pdfDoc.copyPages(srcPdf, srcPdf.getPageIndices());
+            pages.forEach(page => pdfDoc.addPage(page));
+            return;
+        }
 
-    addDivider();
+        if (fileType.includes("png")) {
+            const image = await pdfDoc.embedPng(bytes);
+            const page = pdfDoc.addPage([595.28, 841.89]);
+            const { width, height } = page.getSize();
 
-    addSectionTitle("Fiches techniques");
-    addBulletList(sectionItems("fiches", state.data.fiches));
+            const maxWidth = width - 60;
+            const maxHeight = height - 100;
+            const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
 
-    addDivider();
+            const drawWidth = image.width * scale;
+            const drawHeight = image.height * scale;
 
-    addSectionTitle("Procès-verbaux");
-    addBulletList(sectionItems("pv", state.data.pv));
+            page.drawImage(image, {
+                x: (width - drawWidth) / 2,
+                y: (height - drawHeight) / 2,
+                width: drawWidth,
+                height: drawHeight
+            });
+            return;
+        }
 
-    addDivider();
+        if (fileType.includes("jpeg") || fileType.includes("jpg")) {
+            const image = await pdfDoc.embedJpg(bytes);
+            const page = pdfDoc.addPage([595.28, 841.89]);
+            const { width, height } = page.getSize();
 
-    addSectionTitle("Schémas");
-    addBulletList(sectionItems("schemas", state.data.schemas));
+            const maxWidth = width - 60;
+            const maxHeight = height - 100;
+            const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
 
-    addDivider();
+            const drawWidth = image.width * scale;
+            const drawHeight = image.height * scale;
 
-    addSectionTitle("Date d’export");
-    addLabelValue("Généré le", new Date().toLocaleString("fr-FR"));
+            page.drawImage(image, {
+                x: (width - drawWidth) / 2,
+                y: (height - drawHeight) / 2,
+                width: drawWidth,
+                height: drawHeight
+            });
+            return;
+        }
 
-    return doc.output("blob");
+        addSkippedFilePage(
+            fileName,
+            "Ce fichier n’a pas pu être intégré automatiquement dans le DOE PDF. Le format est actuellement non pris en charge pour la fusion PDF."
+        );
+    }
+
+    addCoverPage();
+
+    const sections = [
+        { key: "fiches", title: "FICHES TECHNIQUES" },
+        { key: "pv", title: "PROCES-VERBAUX" },
+        { key: "schemas", title: "SCHEMAS" }
+    ];
+
+    for (const section of sections) {
+        const items = getSectionExportItems(section.key);
+        addSectionDivider(section.title, items);
+
+        for (const item of items) {
+            await appendFileToDoe(item);
+        }
+    }
+
+    const pdfBytes = await pdfDoc.save();
+    return new Blob([pdfBytes], { type: "application/pdf" });
 }
 
 /* ========================
