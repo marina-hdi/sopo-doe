@@ -718,16 +718,8 @@ async function buildRealDoePdfBlob() {
             color: COLORS.line
         });
 
-        page.drawText("SOPODEX", {
+        page.drawText("SOPODEX // DOE", {
             x: 36,
-            y: 15,
-            size: 9,
-            font: fontBold,
-            color: COLORS.blue
-        });
-
-        page.drawText("DOE", {
-            x: 92,
             y: 15,
             size: 9,
             font: fontBold,
@@ -736,7 +728,7 @@ async function buildRealDoePdfBlob() {
 
         const footerAddress = fullAddress.length > 65 ? `${fullAddress.slice(0, 62)}...` : fullAddress;
         page.drawText(footerAddress, {
-            x: 122,
+            x: 110,
             y: 15,
             size: 8.5,
             font: fontRegular,
@@ -768,33 +760,32 @@ async function buildRealDoePdfBlob() {
         /* reduced top blue block */
         page.drawRectangle({
             x: 0,
-            y: height - 78,
+            y: height - 7,
             width,
-            height: 78,
+            height: 7,
             color: COLORS.blue
         });
 
         page.drawRectangle({
             x: width - 135,
-            y: height - 78,
+            y: height - 7,
             width: 135,
-            height: 78,
+            height: 7,
             color: COLORS.cyan,
-            opacity: 0.12
+            opacity: 0.25
         });
 
         page.drawRectangle({
             x: 0,
             y: 0,
-            width: 30,
+            width: 4,
             height,
-            color: COLORS.red,
-            opacity: 0.06
+            color: COLORS.red
         });
 
         /* removed little white text in blue band */
 
-        page.drawText("DOSSIER DOE", {
+        page.drawText("DOSSIER DES OUVRAGES EXÉCUTÉS", {
             x: 50,
             y: height - 132,
             size: 26,
@@ -802,41 +793,7 @@ async function buildRealDoePdfBlob() {
             color: COLORS.ink
         });
 
-        /* subtitle uppercase */
-        page.drawText("DOSSIER DES OUVRAGES EXÉCUTÉS", {
-            x: 50,
-            y: height - 156,
-            size: 10.5,
-            font: fontRegular,
-            color: COLORS.muted
-        });
-
-        page.drawRectangle({
-            x: 50,
-            y: height - 255,
-            width: width - 100,
-            height: 118,
-            color: COLORS.white
-        });
-
-        page.drawRectangle({
-            x: 50,
-            y: height - 255,
-            width: width - 100,
-            height: 118,
-            borderColor: COLORS.line,
-            borderWidth: 1
-        });
-
         /* removed tiny colored labels above boxes */
-
-        page.drawText("CHANTIER", {
-            x: 68,
-            y: height - 170,
-            size: 10,
-            font: fontBold,
-            color: COLORS.blue
-        });
 
         drawWrappedText(
             page,
@@ -849,14 +806,6 @@ async function buildRealDoePdfBlob() {
             COLORS.ink,
             18
         );
-
-        page.drawText("NATURE DES TRAVAUX", {
-            x: 68,
-            y: height - 230,
-            size: 10,
-            font: fontBold,
-            color: COLORS.blue
-        });
 
         drawWrappedText(
             page,
@@ -871,7 +820,7 @@ async function buildRealDoePdfBlob() {
         );
 
         /* added DATE DOE */
-        page.drawText("DATE DOE", {
+        page.drawText("DATE", {
             x: 50,
             y: height - 320,
             size: 10,
@@ -888,8 +837,6 @@ async function buildRealDoePdfBlob() {
         });
 
         /* removed export date block from lower left */
-
-        drawFooter(page, "PAGE DE GARDE");
     }
 
     function addSummaryPage() {
