@@ -648,6 +648,8 @@ async function buildRealDoePdfBlob() {
 
     const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique);
 
     const COLORS = {
         ink: rgb(0.11, 0.12, 0.09),
@@ -757,38 +759,36 @@ async function buildRealDoePdfBlob() {
             color: COLORS.softBg
         });
 
-        /* reduced top blue block */
         page.drawRectangle({
-            x: 0,
-            y: height - 7,
-            width,
-            height: 7,
+            x: 36,
+            y: height - 65,
+            width : width - 36,
+            height: 65,
             color: COLORS.blue
         });
 
         page.drawRectangle({
-            x: width - 250,
-            y: height - 7,
-            width: 250,
-            height: 7,
+            x: 150,
+            y: height - 65,
+            width : width - 150,
+            height: 65,
             color: COLORS.cyan
         });
-
+       
         page.drawRectangle({
-            x: width - 135,
-            y: height - 7,
-            width: 135,
-            height: 7,
+            x: 138,
+            y: height - 65,
+            width : width - 138,
+            height: 65,
             color: COLORS.red
         });
-        /* removed little white text in blue band */
 
         page.drawText("DOSSIER DES OUVRAGES EXÉCUTÉS", {
-            x: 50,
-            y: height - 132,
-            size: 18,
+            x: 70,
+            y: height - 65,
+            size: 12,
             font: fontBold,
-            color: COLORS.ink
+            color: COLORS.white
         });
 
         /* removed tiny colored labels above boxes */
