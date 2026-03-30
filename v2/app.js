@@ -644,523 +644,89 @@ async function buildRealDoePdfBlob() {
 
     const { PDFDocument, StandardFonts, rgb } = PDFLib;
 
-    const pdfDoc = await PDFDocument.create();
+    const mergedPdf = await PDFDocument.create();
 
-    const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const helveticaBold = await mergedPdf.embedFont(StandardFonts.HelveticaBold);
+    const helveticaOblique = await mergedPdf.embedFont(StandardFonts.HelveticaOblique);
+    const helvetica = await mergedPdf.embedFont(StandardFonts.Helvetica);
 
-    const COLORS = {
-        ink: rgb(0.11, 0.12, 0.09),
-        muted: rgb(0.34, 0.38, 0.44),
-        line: rgb(0.86, 0.89, 0.93),
-        blue: rgb(0.0, 0.266, 0.549),
-        cyan: rgb(0.086, 0.6, 0.82),
-        red: rgb(0.808, 0.137, 0.165),
-        softBg: rgb(0.975, 0.982, 0.99),
-        white: rgb(1, 1, 1)
+    const adresse = (state.data.infos.adresse || "").trim().toUpperCase();
+    const postalCity = [state.data.infos.code_postal, state.data.infos.ville]
+        .filter(Boolean)
+        .join(" ")
+        .trim()
+        .toUpperCase();
+    const objet = (state.data.infos.nature_travaux || "").trim().toUpperCase();
+    const formattedDate = state.data.infos.date_doe
+        ? formatDateDisplay(state.data.infos.date_doe)
+        : "";
+
+    const sectionFiles = {
+        "FICHES TECHNIQUES": state.data.fiches.map(item => ({
+            name: [item.type, item.marque, item.modele].filter(Boolean).join(" "),
+            file: item.file || null,
+            fileName: item.fileName || ""
+        })),
+        "PROCES VERBAUX": state.data.pv.map(item => ({
+            name: item.type || "",
+            file: item.file || null,
+            fileName: item.fileName || ""
+        })),
+        "SCHEMAS": state.data.schemas.map(item => ({
+            name: item.type || "",
+            file: item.file || null,
+            fileName: item.fileName || ""
+        }))
     };
 
-    const infos = state.data.infos;
-    const fullAddress = [infos.adresse, infos.code_postal, infos.ville].filter(Boolean).join(" ") || "-";
-    const workType = infos.nature_travaux || "-";
-    const exportDate = new Date().toLocaleString("fr-FR");
-    const doeDate = infos.date_doe ? formatDateDisplay(infos.date_doe) : "-";
-
-    const generatedPageRefs = [];
-
-    function registerGeneratedPage(page) {
-        generatedPageRefs.push(page);
-        return page;
-    }
-
-    function drawWrappedText(page, text, x, y, maxWidth, font, size, color, lineHeight = 16) {
-        const words = String(text || "").split(/\s+/);
-        let line = "";
-        let currentY = y;
-
-        for (const word of words) {
-            const candidate = line ? `${line} ${word}` : word;
-            const width = font.widthOfTextAtSize(candidate, size);
-
-            if (width <= maxWidth) {
-                line = candidate;
-            } else {
-                if (line) {
-                    page.drawText(line, { x, y: currentY, size, font, color });
-                    currentY -= lineHeight;
-                }
-                line = word;
-            }
+    function dataUrlToBytes(dataUrl) {
+        const base64 = dataUrl.split(",")[1];
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
         }
-
-        if (line) {
-            page.drawText(line, { x, y: currentY, size, font, color });
-            currentY -= lineHeight;
-        }
-
-        return currentY;
+        return bytes;
     }
 
-    function drawCenteredText(page, text, y, font, size, color) {
-        const pageWidth = page.getWidth();
-        const textWidth = font.widthOfTextAtSize(text, size);
-        const x = (pageWidth - textWidth) / 2;
-        page.drawText(text, { x, y, size, font, color });
-    }
+    async function addFileToMergedPdf(pdfDoc, sectionName, fileDataUrl, meta = {}) {
+        if (!fileDataUrl) return;
 
-    function drawFooter(page, pageIndexLabel) {
-        const { width } = page.getSize();
+        const bytes = dataUrlToBytes(fileDataUrl);
+        const fileName = meta.fileName || "";
+        const lowerName = fileName.toLowerCase();
 
-        page.drawLine({
-            start: { x: 36, y: 28 },
-            end: { x: width - 36, y: 28 },
-            thickness: 1,
-            color: COLORS.line
-        });
+        const isPdf = lowerName.endsWith(".pdf") || fileDataUrl.startsWith("data:application/pdf");
+        const isPng = lowerName.endsWith(".png") || fileDataUrl.startsWith("data:image/png");
+        const isJpg =
+            lowerName.endsWith(".jpg") ||
+            lowerName.endsWith(".jpeg") ||
+            fileDataUrl.startsWith("data:image/jpeg");
 
-        page.drawText("SOPODEX", {
-            x: 36,
-            y: 15,
-            size: 9,
-            font: fontBold,
-            color: COLORS.blue
-        });
-
-        page.drawText("DOE", {
-            x: 92,
-            y: 15,
-            size: 9,
-            font: fontBold,
-            color: COLORS.blue
-        });
-
-        const footerAddress = fullAddress.length > 65 ? `${fullAddress.slice(0, 62)}...` : fullAddress;
-        page.drawText(footerAddress, {
-            x: 122,
-            y: 15,
-            size: 8.5,
-            font: fontRegular,
-            color: COLORS.muted
-        });
-
-        const labelWidth = fontRegular.widthOfTextAtSize(pageIndexLabel, 8.5);
-        page.drawText(pageIndexLabel, {
-            x: width - 36 - labelWidth,
-            y: 15,
-            size: 8.5,
-            font: fontRegular,
-            color: COLORS.muted
-        });
-    }
-
-    function addCoverPage() {
-    const page = registerGeneratedPage(pdfDoc.addPage([595.28, 841.89])); // A4
-    const { width, height } = page.getSize();
-
-    const marginX = 36;
-    const topBandY = height - 54;
-    const topBandH = 54;
-    const bottomBandY = 0;
-    const bottomBandH = 8;
-
-    const leftBlueW = width * 0.64;
-    const cyanW = width * 0.11;
-    const redW = width - leftBlueW - cyanW;
-
-    const address = [infos.adresse, `${infos.code_postal || ""} ${infos.ville || ""}`.trim()]
-        .filter(Boolean)
-        .join("\n")
-        .toUpperCase();
-
-    const workTypeUpper = (workType || "-").toUpperCase();
-
-    /* page background */
-    page.drawRectangle({
-        x: 0,
-        y: 0,
-        width,
-        height,
-        color: COLORS.softBg
-    });
-
-    /* top band */
-    page.drawRectangle({
-        x: 0,
-        y: topBandY,
-        width: leftBlueW,
-        height: topBandH,
-        color: COLORS.blue
-    });
-
-    page.drawRectangle({
-        x: leftBlueW,
-        y: topBandY,
-        width: cyanW,
-        height: topBandH,
-        color: COLORS.cyan
-    });
-
-    page.drawRectangle({
-        x: leftBlueW + cyanW,
-        y: topBandY,
-        width: redW,
-        height: topBandH,
-        color: COLORS.red
-    });
-
-    /* bottom band */
-    page.drawRectangle({
-        x: 0,
-        y: bottomBandY,
-        width: leftBlueW,
-        height: bottomBandH,
-        color: COLORS.blue
-    });
-
-    page.drawRectangle({
-        x: leftBlueW,
-        y: bottomBandY,
-        width: cyanW,
-        height: bottomBandH,
-        color: COLORS.cyan
-    });
-
-    page.drawRectangle({
-        x: leftBlueW + cyanW,
-        y: bottomBandY,
-        width: redW,
-        height: bottomBandH,
-        color: COLORS.red
-    });
-
-    /* top left title */
-    page.drawText("DOSSIER DES OUVRAGES EXECUTES", {
-        x: marginX,
-        y: topBandY + 17,
-        size: 16,
-        font: fontBold,
-        color: COLORS.white
-    });
-
-    /* top right brand */
-    const brand = "SOPODEX";
-    const brandSize = 16;
-    const brandWidth = fontRegular.widthOfTextAtSize(brand, brandSize);
-    page.drawText(brand, {
-        x: width - marginX - brandWidth,
-        y: topBandY + 17,
-        size: brandSize,
-        font: fontRegular,
-        color: COLORS.white
-    });
-
-    /* central address block */
-    const addressLines = address.split("\n");
-    const addrFontSize = 28;
-    const addrLineHeight = 34;
-    let addrY = 420;
-
-    addressLines.forEach((line) => {
-        page.drawText(line, {
-            x: marginX,
-            y: addrY,
-            size: addrFontSize,
-            font: fontBold,
-            color: COLORS.ink
-        });
-        addrY -= addrLineHeight;
-    });
-
-    /* bottom left metadata */
-    page.drawText(workTypeUpper, {
-        x: marginX,
-        y: 86,
-        size: 15,
-        font: fontRegular,
-        color: COLORS.ink
-    });
-
-    page.drawText(doeDate, {
-        x: marginX,
-        y: 58,
-        size: 14,
-        font: fontRegular,
-        color: COLORS.ink
-    });
-}
-
-    function addSummaryPage() {
-        const page = registerGeneratedPage(pdfDoc.addPage([595.28, 841.89]));
-        const { width, height } = page.getSize();
-
-        page.drawRectangle({
-            x: 0,
-            y: 0,
-            width,
-            height,
-            color: COLORS.white
-        });
-
-        page.drawText("SOMMAIRE", {
-            x: 42,
-            y: height - 70,
-            size: 22,
-            font: fontBold,
-            color: COLORS.ink
-        });
-
-        let y = height - 130;
-
-        const blocks = [
-            {
-                title: "INFORMATIONS CHANTIER",
-                rows: [
-                    ["Adresse", fullAddress],
-                    ["Nature des travaux", workType],
-                    ["Date DOE", doeDate]
-                ]
-            },
-            {
-                title: "CONTENU",
-                rows: [
-                    ["Fiches techniques", String(state.data.fiches.length)],
-                    ["Procès-verbaux", String(state.data.pv.length)],
-                    ["Schémas", String(state.data.schemas.length)]
-                ]
-            }
-        ];
-
-        for (const block of blocks) {
-            page.drawRectangle({
-                x: 42,
-                y: y - 102,
-                width: width - 84,
-                height: 102,
-                color: COLORS.softBg
-            });
-
-            page.drawRectangle({
-                x: 42,
-                y: y - 102,
-                width: width - 84,
-                height: 102,
-                borderColor: COLORS.line,
-                borderWidth: 1
-            });
-
-            page.drawText(block.title, {
-                x: 58,
-                y: y - 20,
-                size: 10,
-                font: fontBold,
-                color: COLORS.blue
-            });
-
-            let rowY = y - 44;
-
-            for (const [label, value] of block.rows) {
-                page.drawText(label, {
-                    x: 58,
-                    y: rowY,
-                    size: 10,
-                    font: fontBold,
-                    color: COLORS.ink
-                });
-
-                const valueText = String(value || "-");
-                const valueWidth = fontRegular.widthOfTextAtSize(valueText, 10);
-
-                page.drawText(valueText, {
-                    x: width - 58 - valueWidth,
-                    y: rowY,
-                    size: 10,
-                    font: fontRegular,
-                    color: COLORS.muted
-                });
-
-                rowY -= 18;
-            }
-
-            y -= 126;
-        }
-
-        drawFooter(page, "SOMMAIRE");
-    }
-
-    function addSectionDivider(sectionTitle, items, sectionKey) {
-        const page = registerGeneratedPage(pdfDoc.addPage([595.28, 841.89]));
-        const { width, height } = page.getSize();
-
-        page.drawRectangle({
-            x: 0,
-            y: 0,
-            width,
-            height,
-            color: COLORS.white
-        });
-
-        page.drawRectangle({
-            x: 42,
-            y: height - 155,
-            width: width - 84,
-            height: 78,
-            color: COLORS.blue
-        });
-
-        page.drawRectangle({
-            x: 42,
-            y: height - 155,
-            width: 16,
-            height: 78,
-            color: COLORS.cyan
-        });
-
-        page.drawText(sectionTitle, {
-            x: 72,
-            y: height - 112,
-            size: 23,
-            font: fontBold,
-            color: COLORS.white
-        });
-
-        page.drawText(`Documents : ${items.length}`, {
-            x: 42,
-            y: height - 195,
-            size: 11,
-            font: fontBold,
-            color: COLORS.ink
-        });
-
-        let y = height - 228;
-
-        if (!items.length) {
-            page.drawText("AUCUN DOCUMENT DANS CETTE SECTION", {
-                x: 48,
-                y,
-                size: 10.5,
-                font: fontRegular,
-                color: COLORS.muted
-            });
-            drawFooter(page, sectionTitle);
-            return;
-        }
-
-        for (const item of items.slice(0, 14)) {
-            const label = formatExportDocLabel(sectionKey, item);
-
-            page.drawRectangle({
-                x: 48,
-                y: y - 16,
-                width: width - 96,
-                height: 24,
-                color: rgb(0.97, 0.98, 1)
-            });
-
-            drawWrappedText(
-                page,
-                label.toUpperCase(),
-                58,
-                y,
-                width - 116,
-                fontRegular,
-                10,
-                COLORS.ink,
-                13
-            );
-
-            y -= 30;
-            if (y < 100) break;
-        }
-
-        drawFooter(page, sectionTitle);
-    }
-
-    function addSkippedFilePage(fileName, reason) {
-        const page = registerGeneratedPage(pdfDoc.addPage([595.28, 841.89]));
-        const { width, height } = page.getSize();
-
-        page.drawRectangle({
-            x: 42,
-            y: height - 140,
-            width: width - 84,
-            height: 68,
-            color: rgb(1, 0.97, 0.97)
-        });
-
-        page.drawRectangle({
-            x: 42,
-            y: height - 140,
-            width: width - 84,
-            height: 68,
-            borderColor: rgb(0.96, 0.84, 0.84),
-            borderWidth: 1
-        });
-
-        page.drawText("DOCUMENT NON INTÉGRÉ", {
-            x: 58,
-            y: height - 102,
-            size: 18,
-            font: fontBold,
-            color: COLORS.red
-        });
-
-        page.drawText((fileName || "FICHIER INCONNU").toUpperCase(), {
-            x: 50,
-            y: height - 190,
-            size: 12,
-            font: fontBold,
-            color: COLORS.ink
-        });
-
-        drawWrappedText(
-            page,
-            reason,
-            50,
-            height - 225,
-            width - 100,
-            fontRegular,
-            11,
-            COLORS.muted,
-            16
-        );
-
-        drawFooter(page, "DOCUMENT NON INTÉGRÉ");
-    }
-
-    async function appendFileToDoe(item) {
-        if (!item?.file) return;
-
-        const bytes = dataURLToUint8Array(item.file);
-        const fileType = item.fileType || "";
-        const fileName = item.fileName || "document";
-
-        if (fileType.includes("pdf")) {
+        if (isPdf) {
             const srcPdf = await PDFDocument.load(bytes);
-            const pages = await pdfDoc.copyPages(srcPdf, srcPdf.getPageIndices());
-            pages.forEach(page => pdfDoc.addPage(page));
+            const copiedPages = await pdfDoc.copyPages(srcPdf, srcPdf.getPageIndices());
+            copiedPages.forEach(page => pdfDoc.addPage(page));
             return;
         }
 
-        if (fileType.includes("png")) {
-            const image = await pdfDoc.embedPng(bytes);
-            const page = pdfDoc.addPage([595.28, 841.89]);
+        if (isPng || isJpg) {
+            const page = pdfDoc.addPage([600, 800]);
             const { width, height } = page.getSize();
 
-            const maxWidth = width - 70;
-            const maxHeight = height - 110;
+            let image;
+            if (isPng) {
+                image = await pdfDoc.embedPng(bytes);
+            } else {
+                image = await pdfDoc.embedJpg(bytes);
+            }
+
+            const maxWidth = 500;
+            const maxHeight = 680;
             const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
 
             const drawWidth = image.width * scale;
             const drawHeight = image.height * scale;
-
-            page.drawRectangle({
-                x: 30,
-                y: 30,
-                width: width - 60,
-                height: height - 60,
-                borderColor: COLORS.line,
-                borderWidth: 1
-            });
 
             page.drawImage(image, {
                 x: (width - drawWidth) / 2,
@@ -1168,75 +734,192 @@ async function buildRealDoePdfBlob() {
                 width: drawWidth,
                 height: drawHeight
             });
-
             return;
         }
 
-        if (fileType.includes("jpeg") || fileType.includes("jpg")) {
-            const image = await pdfDoc.embedJpg(bytes);
-            const page = pdfDoc.addPage([595.28, 841.89]);
-            const { width, height } = page.getSize();
-
-            const maxWidth = width - 70;
-            const maxHeight = height - 110;
-            const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
-
-            const drawWidth = image.width * scale;
-            const drawHeight = image.height * scale;
-
-            page.drawRectangle({
-                x: 30,
-                y: 30,
-                width: width - 60,
-                height: height - 60,
-                borderColor: COLORS.line,
-                borderWidth: 1
-            });
-
-            page.drawImage(image, {
-                x: (width - drawWidth) / 2,
-                y: (height - drawHeight) / 2,
-                width: drawWidth,
-                height: drawHeight
-            });
-
-            return;
-        }
-
-        addSkippedFilePage(
-            fileName,
-            "Ce fichier n’a pas pu être intégré automatiquement dans le DOE PDF. Le format est actuellement non pris en charge pour la fusion PDF."
-        );
+        const fallbackPage = pdfDoc.addPage([600, 800]);
+        fallbackPage.drawText("DOCUMENT NON INTEGRE", {
+            x: 75,
+            y: 720,
+            size: 22,
+            font: helveticaBold,
+            color: rgb(0.8, 0, 0)
+        });
+        fallbackPage.drawText(meta.itemName || "FICHIER", {
+            x: 75,
+            y: 680,
+            size: 14,
+            font: helvetica,
+            color: rgb(0, 0, 0)
+        });
     }
 
-    addCoverPage();
-    addSummaryPage();
+    function checkPageOverflow(pdfDoc, currentPage, yPosition) {
+        if (yPosition < 100) {
+            currentPage = pdfDoc.addPage([600, 800]);
+            currentPage.drawText("SOMMAIRE", {
+                x: 75,
+                y: 720,
+                size: 26,
+                font: helveticaBold,
+                color: rgb(0, 0, 0)
+            });
+            currentPage.drawRectangle({
+                x: 75,
+                y: 709,
+                width: 85,
+                height: 2,
+                color: rgb(0, 0, 0)
+            });
+            currentPage.drawText("DOE - " + adresse + ", " + postalCity + " - SOPODEX", {
+                x: 75,
+                y: 37,
+                size: 9,
+                font: helveticaOblique,
+                color: rgb(0.5, 0.5, 0.5)
+            });
 
-    const sections = [
-        { key: "fiches", title: "FICHES TECHNIQUES" },
-        { key: "pv", title: "PROCES-VERBAUX" },
-        { key: "schemas", title: "SCHEMAS" }
-    ];
-
-    for (const section of sections) {
-        const items = getSectionExportItems(section.key);
-        addSectionDivider(section.title, items, section.key);
-
-        for (const item of items) {
-            await appendFileToDoe(item);
+            return { currentPage, yPosition: 650 };
         }
+        return { currentPage, yPosition };
     }
 
-    const totalPages = pdfDoc.getPageCount();
+    // COVER
+    const coverPage = mergedPdf.addPage([600, 800]);
 
-    generatedPageRefs.forEach((page, idx) => {
-        drawFooter(page, `${idx + 1} / ${totalPages}`);
+    const coverPageTitleA = "DOSSIER DES";
+    const coverPageTitleB = "OUVRAGES EXECUTES";
+    const coverPageAdress = adresse;
+    const coverPageCode = postalCity;
+    const coverPageObjet = objet;
+    const coverPageDate = formattedDate;
+    const coverPageFooter = "SOPODEX - 82 rue Alexandre Dumas,75020 PARIS";
+
+    coverPage.drawText(coverPageTitleA, { x: 75, y: 720, size: 26, font: helveticaBold });
+    coverPage.drawText(coverPageTitleB, { x: 75, y: 690, size: 26, font: helveticaBold });
+    coverPage.drawText(coverPageAdress, { x: 75, y: 450, size: 26, font: helveticaBold });
+    coverPage.drawText(coverPageCode, { x: 75, y: 420, size: 26, font: helveticaBold });
+    coverPage.drawText(coverPageObjet, { x: 75, y: 390, size: 18, font: helveticaOblique });
+    coverPage.drawText(coverPageDate, { x: 75, y: 371, size: 16, font: helveticaOblique });
+    coverPage.drawText(coverPageFooter, { x: 75, y: 50, size: 12, font: helvetica });
+
+    coverPage.drawRectangle({ x: 75, y: 678, width: 85, height: 2, color: rgb(0, 0, 0) });
+    coverPage.drawRectangle({ x: 75, y: 0, width: 150, height: 10, color: rgb(0.19, 0.56, 0.63) });
+    coverPage.drawRectangle({ x: 225, y: 0, width: 150, height: 10, color: rgb(0.12, 0.21, 0.36) });
+    coverPage.drawRectangle({ x: 375, y: 0, width: 150, height: 10, color: rgb(0.8, 0.42, 0.086) });
+
+    // SOMMAIRE
+    let summaryPage = mergedPdf.addPage([600, 800]);
+    summaryPage.drawText("SOMMAIRE", {
+        x: 75,
+        y: 720,
+        size: 26,
+        font: helveticaBold,
+        color: rgb(0, 0, 0)
+    });
+    summaryPage.drawRectangle({
+        x: 75,
+        y: 709,
+        width: 85,
+        height: 2,
+        color: rgb(0, 0, 0)
+    });
+    summaryPage.drawText("DOE - " + adresse + ", " + postalCity + " - SOPODEX", {
+        x: 75,
+        y: 37,
+        size: 9,
+        font: helveticaOblique,
+        color: rgb(0.5, 0.5, 0.5)
     });
 
-    const pdfBytes = await pdfDoc.save();
-    return new Blob([pdfBytes], { type: "application/pdf" });
-}
+    let yPosition = 650;
+    const sectionColors = {
+        "FICHES TECHNIQUES": rgb(0.19, 0.56, 0.63),
+        "PROCES VERBAUX": rgb(0.12, 0.21, 0.36),
+        "SCHEMAS": rgb(0.8, 0.42, 0.086)
+    };
 
+    for (const section in sectionFiles) {
+        const result = checkPageOverflow(mergedPdf, summaryPage, yPosition);
+        summaryPage = result.currentPage;
+        yPosition = result.yPosition;
+
+        const color = sectionColors[section];
+        summaryPage.drawRectangle({ x: 75, y: yPosition, width: 452, height: 25, color });
+        summaryPage.drawText(section, {
+            x: 82,
+            y: yPosition + 7,
+            size: 12,
+            font: helveticaBold,
+            color: rgb(1, 1, 1)
+        });
+
+        yPosition -= 35;
+
+        const sectionItems = sectionFiles[section].filter(item => item.file);
+
+        if (sectionItems.length === 0) {
+            summaryPage.drawText("AUCUN DOCUMENT", {
+                x: 90,
+                y: yPosition,
+                size: 10,
+                font: helveticaOblique,
+                color: rgb(0.45, 0.45, 0.45)
+            });
+            yPosition -= 24;
+            continue;
+        }
+
+        for (const item of sectionItems) {
+            const overflowResult = checkPageOverflow(mergedPdf, summaryPage, yPosition);
+            summaryPage = overflowResult.currentPage;
+            yPosition = overflowResult.yPosition;
+
+            summaryPage.drawText("- " + (item.name || "DOCUMENT"), {
+                x: 90,
+                y: yPosition,
+                size: 10,
+                font: helvetica,
+                color: rgb(0, 0, 0)
+            });
+
+            yPosition -= 18;
+        }
+
+        yPosition -= 8;
+    }
+
+    // DOCUMENTS
+    for (const fiche of sectionFiles["FICHES TECHNIQUES"]) {
+        if (fiche.file) {
+            await addFileToMergedPdf(mergedPdf, "FICHES TECHNIQUES", fiche.file, {
+                itemName: fiche.name,
+                fileName: fiche.fileName
+            });
+        }
+    }
+
+    for (const pv of sectionFiles["PROCES VERBAUX"]) {
+        if (pv.file) {
+            await addFileToMergedPdf(mergedPdf, "PROCES VERBAUX", pv.file, {
+                itemName: pv.name,
+                fileName: pv.fileName
+            });
+        }
+    }
+
+    for (const schema of sectionFiles["SCHEMAS"]) {
+        if (schema.file) {
+            await addFileToMergedPdf(mergedPdf, "SCHEMAS", schema.file, {
+                itemName: schema.name,
+                fileName: schema.fileName
+            });
+        }
+    }
+
+    const mergedPdfBytes = await mergedPdf.save();
+    return new Blob([mergedPdfBytes], { type: "application/pdf" });
+}
 /* ========================
    AUTOSAVE
 ======================== */
