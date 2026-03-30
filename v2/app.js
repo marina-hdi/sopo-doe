@@ -648,8 +648,6 @@ async function buildRealDoePdfBlob() {
 
     const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique);
 
     const COLORS = {
         ink: rgb(0.11, 0.12, 0.09),
@@ -720,8 +718,16 @@ async function buildRealDoePdfBlob() {
             color: COLORS.line
         });
 
-        page.drawText("SOPODEX // DOE", {
+        page.drawText("SOPODEX", {
             x: 36,
+            y: 15,
+            size: 9,
+            font: fontBold,
+            color: COLORS.blue
+        });
+
+        page.drawText("DOE", {
+            x: 92,
             y: 15,
             size: 9,
             font: fontBold,
@@ -730,7 +736,7 @@ async function buildRealDoePdfBlob() {
 
         const footerAddress = fullAddress.length > 65 ? `${fullAddress.slice(0, 62)}...` : fullAddress;
         page.drawText(footerAddress, {
-            x: 117,
+            x: 122,
             y: 15,
             size: 8.5,
             font: fontRegular,
@@ -759,64 +765,131 @@ async function buildRealDoePdfBlob() {
             color: COLORS.softBg
         });
 
+        /* reduced top blue block */
         page.drawRectangle({
-            x: 36,
-            y: height - 65,
-            width : width - 36,
-            height: 65,
+            x: 0,
+            y: height - 78,
+            width,
+            height: 78,
             color: COLORS.blue
         });
 
         page.drawRectangle({
-            x: 150,
-            y: height - 65,
-            width : width - 150,
-            height: 65,
-            color: COLORS.cyan
-        });
-       
-        page.drawRectangle({
-            x: 138,
-            y: height - 65,
-            width : width - 138,
-            height: 65,
-            color: COLORS.red
+            x: width - 135,
+            y: height - 78,
+            width: 135,
+            height: 78,
+            color: COLORS.cyan,
+            opacity: 0.12
         });
 
-        page.drawText("DOSSIER DES OUVRAGES EXÉCUTÉS", {
-            x: 70,
-            y: height - 65,
-            size: 12,
+        page.drawRectangle({
+            x: 0,
+            y: 0,
+            width: 30,
+            height,
+            color: COLORS.red,
+            opacity: 0.06
+        });
+
+        /* removed little white text in blue band */
+
+        page.drawText("DOSSIER DOE", {
+            x: 50,
+            y: height - 132,
+            size: 26,
             font: fontBold,
+            color: COLORS.ink
+        });
+
+        /* subtitle uppercase */
+        page.drawText("DOSSIER DES OUVRAGES EXÉCUTÉS", {
+            x: 50,
+            y: height - 156,
+            size: 10.5,
+            font: fontRegular,
+            color: COLORS.muted
+        });
+
+        page.drawRectangle({
+            x: 50,
+            y: height - 255,
+            width: width - 100,
+            height: 118,
             color: COLORS.white
+        });
+
+        page.drawRectangle({
+            x: 50,
+            y: height - 255,
+            width: width - 100,
+            height: 118,
+            borderColor: COLORS.line,
+            borderWidth: 1
         });
 
         /* removed tiny colored labels above boxes */
 
+        page.drawText("CHANTIER", {
+            x: 68,
+            y: height - 170,
+            size: 10,
+            font: fontBold,
+            color: COLORS.blue
+        });
+
         drawWrappedText(
             page,
             fullAddress,
-            60,
+            68,
             height - 194,
             width - 136,
             fontBold,
-            20,
+            14,
             COLORS.ink,
-            22
+            18
         );
+
+        page.drawText("NATURE DES TRAVAUX", {
+            x: 68,
+            y: height - 230,
+            size: 10,
+            font: fontBold,
+            color: COLORS.blue
+        });
 
         drawWrappedText(
             page,
             workType,
-            60,
+            68,
             height - 252,
             width - 136,
             fontRegular,
-            17,
+            11.5,
             COLORS.ink,
             16
         );
 
+        /* added DATE DOE */
+        page.drawText("DATE DOE", {
+            x: 50,
+            y: height - 320,
+            size: 10,
+            font: fontBold,
+            color: COLORS.blue
+        });
+
+        page.drawText(doeDate, {
+            x: 50,
+            y: height - 338,
+            size: 11,
+            font: fontRegular,
+            color: COLORS.ink
+        });
+
+        /* removed export date block from lower left */
+
+        drawFooter(page, "PAGE DE GARDE");
     }
 
     function addSummaryPage() {
