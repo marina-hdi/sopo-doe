@@ -728,7 +728,7 @@ async function buildRealDoePdfBlob() {
 
         const footerAddress = fullAddress.length > 65 ? `${fullAddress.slice(0, 62)}...` : fullAddress;
         page.drawText(footerAddress, {
-            x: 110,
+            x: 117,
             y: 15,
             size: 8.5,
             font: fontRegular,
@@ -767,28 +767,26 @@ async function buildRealDoePdfBlob() {
         });
 
         page.drawRectangle({
+            x: width - 250,
+            y: height - 7,
+            width: 250,
+            height: 7,
+            color: COLORS.cyan
+        });
+
+        page.drawRectangle({
             x: width - 135,
             y: height - 7,
             width: 135,
             height: 7,
-            color: COLORS.cyan,
-            opacity: 0.25
-        });
-
-        page.drawRectangle({
-            x: 0,
-            y: 0,
-            width: 4,
-            height,
             color: COLORS.red
         });
-
         /* removed little white text in blue band */
 
         page.drawText("DOSSIER DES OUVRAGES EXÉCUTÉS", {
             x: 50,
             y: height - 132,
-            size: 26,
+            size: 18,
             font: fontBold,
             color: COLORS.ink
         });
@@ -798,45 +796,27 @@ async function buildRealDoePdfBlob() {
         drawWrappedText(
             page,
             fullAddress,
-            68,
+            60,
             height - 194,
             width - 136,
             fontBold,
-            14,
+            20,
             COLORS.ink,
-            18
+            22
         );
 
         drawWrappedText(
             page,
             workType,
-            68,
+            60,
             height - 252,
             width - 136,
             fontRegular,
-            11.5,
+            17,
             COLORS.ink,
             16
         );
 
-        /* added DATE DOE */
-        page.drawText("DATE", {
-            x: 50,
-            y: height - 320,
-            size: 10,
-            font: fontBold,
-            color: COLORS.blue
-        });
-
-        page.drawText(doeDate, {
-            x: 50,
-            y: height - 338,
-            size: 11,
-            font: fontRegular,
-            color: COLORS.ink
-        });
-
-        /* removed export date block from lower left */
     }
 
     function addSummaryPage() {
