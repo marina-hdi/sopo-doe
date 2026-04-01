@@ -638,288 +638,234 @@ function getSectionDisplayLabel(sectionKey) {
 }
 
 async function buildRealDoePdfBlob() {
-    if (typeof PDFLib === "undefined") {
-        throw new Error("PDF-lib n’est pas chargé");
-    }
-
     const { PDFDocument, StandardFonts, rgb } = PDFLib;
 
-    const mergedPdf = await PDFDocument.create();
+    const pdf = await PDFDocument.create();
 
-    const helveticaBold = await mergedPdf.embedFont(StandardFonts.HelveticaBold);
-    const helveticaOblique = await mergedPdf.embedFont(StandardFonts.HelveticaOblique);
-    const helvetica = await mergedPdf.embedFont(StandardFonts.Helvetica);
+    const fontRegular = await pdf.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+    const fontItalic = await pdf.embedFont(StandardFonts.HelveticaOblique);
 
-    const adresse = (state.data.infos.adresse || "").trim().toUpperCase();
-    const postalCity = [state.data.infos.code_postal, state.data.infos.ville]
-        .filter(Boolean)
-        .join(" ")
-        .trim()
-        .toUpperCase();
-    const objet = (state.data.infos.nature_travaux || "").trim().toUpperCase();
-    const formattedDate = state.data.infos.date_doe
+    const PAGE = { width: 595, height: 842 }; // A4
+    const MARGIN = 60;
+
+    const COLORS = {
+        primary: rgb(0.12, 0.21, 0.36),
+        accent: rgb(0.19, 0.56, 0.63),
+        highlight: rgb(0.8, 0.42, 0.086),
+        text: rgb(0, 0, 0),
+        muted: rgb(0.5, 0.5, 0.5)
+    };
+
+    const adresse = (state.data.infos.adresse || "").toUpperCase();
+    const ville = (state.data.infos.ville || "").toUpperCase();
+    const cp = state.data.infos.code_postal || "";
+    const objet = (state.data.infos.nature_travaux || "").toUpperCase();
+    const date = state.data.infos.date_doe
         ? formatDateDisplay(state.data.infos.date_doe)
         : "";
 
-    const sectionFiles = {
-        "FICHES TECHNIQUES": state.data.fiches.map(item => ({
-            name: [item.type, item.marque, item.modele].filter(Boolean).join(" "),
-            file: item.file || null,
-            fileName: item.fileName || ""
-        })),
-        "PROCES VERBAUX": state.data.pv.map(item => ({
-            name: item.type || "",
-            file: item.file || null,
-            fileName: item.fileName || ""
-        })),
-        "SCHEMAS": state.data.schemas.map(item => ({
-            name: item.type || "",
-            file: item.file || null,
-            fileName: item.fileName || ""
-        }))
-    };
+    const fullAddress = `${adresse} ${cp} ${ville}`.trim();
 
-    function dataUrlToBytes(dataUrl) {
-        const base64 = dataUrl.split(",")[1];
-        const binary = atob(base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) {
-            bytes[i] = binary.charCodeAt(i);
-        }
-        return bytes;
+    // --------------------------
+    // HELPERS
+    // --------------------------
+    function addFooter(page) {
+        page.drawText(`DOE - ${fullAddress} - SOPODEX`, {
+            x: MARGIN,
+            y: 25,
+            size: 9,
+            font: fontItalic,
+            color: COLORS.muted
+        });
     }
 
-    async function addFileToMergedPdf(pdfDoc, sectionName, fileDataUrl, meta = {}) {
-        if (!fileDataUrl) return;
+    function addPageNumber(page, index) {
+        page.drawText(`${index + 1}`, {
+            x: PAGE.width - MARGIN,
+            y: 25,
+            size: 9,
+            font: fontRegular,
+            color: COLORS.muted
+        });
+    }
 
-        const bytes = dataUrlToBytes(fileDataUrl);
-        const fileName = meta.fileName || "";
-        const lowerName = fileName.toLowerCase();
-
-        const isPdf = lowerName.endsWith(".pdf") || fileDataUrl.startsWith("data:application/pdf");
-        const isPng = lowerName.endsWith(".png") || fileDataUrl.startsWith("data:image/png");
-        const isJpg =
-            lowerName.endsWith(".jpg") ||
-            lowerName.endsWith(".jpeg") ||
-            fileDataUrl.startsWith("data:image/jpeg");
-
-        if (isPdf) {
-            const srcPdf = await PDFDocument.load(bytes);
-            const copiedPages = await pdfDoc.copyPages(srcPdf, srcPdf.getPageIndices());
-            copiedPages.forEach(page => pdfDoc.addPage(page));
-            return;
-        }
-
-        if (isPng || isJpg) {
-            const page = pdfDoc.addPage([600, 800]);
-            const { width, height } = page.getSize();
-
-            let image;
-            if (isPng) {
-                image = await pdfDoc.embedPng(bytes);
-            } else {
-                image = await pdfDoc.embedJpg(bytes);
-            }
-
-            const maxWidth = 500;
-            const maxHeight = 680;
-            const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
-
-            const drawWidth = image.width * scale;
-            const drawHeight = image.height * scale;
-
-            page.drawImage(image, {
-                x: (width - drawWidth) / 2,
-                y: (height - drawHeight) / 2,
-                width: drawWidth,
-                height: drawHeight
-            });
-            return;
-        }
-
-        const fallbackPage = pdfDoc.addPage([600, 800]);
-        fallbackPage.drawText("DOCUMENT NON INTEGRE", {
-            x: 75,
-            y: 720,
+    function drawTitle(page, text, y) {
+        page.drawText(text, {
+            x: MARGIN,
+            y,
             size: 22,
-            font: helveticaBold,
-            color: rgb(0.8, 0, 0)
+            font: fontBold,
+            color: COLORS.primary
         });
-        fallbackPage.drawText(meta.itemName || "FICHIER", {
-            x: 75,
-            y: 680,
-            size: 14,
-            font: helvetica,
-            color: rgb(0, 0, 0)
+
+        page.drawRectangle({
+            x: MARGIN,
+            y: y - 8,
+            width: 80,
+            height: 2,
+            color: COLORS.primary
         });
     }
 
-    function checkPageOverflow(pdfDoc, currentPage, yPosition) {
-        if (yPosition < 100) {
-            currentPage = pdfDoc.addPage([600, 800]);
-            currentPage.drawText("SOMMAIRE", {
-                x: 75,
-                y: 720,
-                size: 26,
-                font: helveticaBold,
-                color: rgb(0, 0, 0)
-            });
-            currentPage.drawRectangle({
-                x: 75,
-                y: 709,
-                width: 85,
-                height: 2,
-                color: rgb(0, 0, 0)
-            });
-            currentPage.drawText("DOE - " + adresse + ", " + postalCity + " - SOPODEX", {
-                x: 75,
-                y: 37,
-                size: 9,
-                font: helveticaOblique,
-                color: rgb(0.5, 0.5, 0.5)
-            });
-
-            return { currentPage, yPosition: 650 };
-        }
-        return { currentPage, yPosition };
-    }
-
+    // --------------------------
     // COVER
-    const coverPage = mergedPdf.addPage([600, 800]);
+    // --------------------------
+    const cover = pdf.addPage([PAGE.width, PAGE.height]);
 
-    const coverPageTitleA = "DOSSIER DES";
-    const coverPageTitleB = "OUVRAGES EXECUTES";
-    const coverPageAdress = adresse;
-    const coverPageCode = postalCity;
-    const coverPageObjet = objet;
-    const coverPageDate = formattedDate;
-    const coverPageFooter = "SOPODEX - 82 rue Alexandre Dumas,75020 PARIS";
+    cover.drawText("DOSSIER DES", { x: MARGIN, y: 720, size: 28, font: fontBold });
+    cover.drawText("OUVRAGES EXECUTES", { x: MARGIN, y: 680, size: 28, font: fontBold });
 
-    coverPage.drawText(coverPageTitleA, { x: 75, y: 720, size: 26, font: helveticaBold });
-    coverPage.drawText(coverPageTitleB, { x: 75, y: 690, size: 26, font: helveticaBold });
-    coverPage.drawText(coverPageAdress, { x: 75, y: 450, size: 26, font: helveticaBold });
-    coverPage.drawText(coverPageCode, { x: 75, y: 420, size: 26, font: helveticaBold });
-    coverPage.drawText(coverPageObjet, { x: 75, y: 390, size: 18, font: helveticaOblique });
-    coverPage.drawText(coverPageDate, { x: 75, y: 371, size: 16, font: helveticaOblique });
-    coverPage.drawText(coverPageFooter, { x: 75, y: 50, size: 12, font: helvetica });
+    cover.drawText(fullAddress, { x: MARGIN, y: 500, size: 20, font: fontBold });
 
-    coverPage.drawRectangle({ x: 75, y: 678, width: 85, height: 2, color: rgb(0, 0, 0) });
-    coverPage.drawRectangle({ x: 75, y: 0, width: 150, height: 10, color: rgb(0.19, 0.56, 0.63) });
-    coverPage.drawRectangle({ x: 225, y: 0, width: 150, height: 10, color: rgb(0.12, 0.21, 0.36) });
-    coverPage.drawRectangle({ x: 375, y: 0, width: 150, height: 10, color: rgb(0.8, 0.42, 0.086) });
+    cover.drawText(objet, { x: MARGIN, y: 460, size: 16, font: fontItalic });
+    cover.drawText(date, { x: MARGIN, y: 435, size: 14, font: fontItalic });
 
+    cover.drawRectangle({ x: 0, y: 0, width: 200, height: 10, color: COLORS.accent });
+    cover.drawRectangle({ x: 200, y: 0, width: 200, height: 10, color: COLORS.primary });
+    cover.drawRectangle({ x: 400, y: 0, width: 200, height: 10, color: COLORS.highlight });
+
+    addFooter(cover);
+
+    // --------------------------
     // SOMMAIRE
-    let summaryPage = mergedPdf.addPage([600, 800]);
-    summaryPage.drawText("SOMMAIRE", {
-        x: 75,
-        y: 720,
-        size: 26,
-        font: helveticaBold,
-        color: rgb(0, 0, 0)
-    });
-    summaryPage.drawRectangle({
-        x: 75,
-        y: 709,
-        width: 85,
-        height: 2,
-        color: rgb(0, 0, 0)
-    });
-    summaryPage.drawText("DOE - " + adresse + ", " + postalCity + " - SOPODEX", {
-        x: 75,
-        y: 37,
-        size: 9,
-        font: helveticaOblique,
-        color: rgb(0.5, 0.5, 0.5)
+    // --------------------------
+    let summary = pdf.addPage([PAGE.width, PAGE.height]);
+    drawTitle(summary, "SOMMAIRE", 750);
+    addFooter(summary);
+
+    let y = 700;
+
+    const sections = [
+        { key: "fiches", label: "FICHES TECHNIQUES" },
+        { key: "pv", label: "PROCES VERBAUX" },
+        { key: "schemas", label: "SCHEMAS" }
+    ];
+
+    sections.forEach(section => {
+        const items = state.data[section.key].filter(i => i.file);
+
+        summary.drawText(section.label, {
+            x: MARGIN,
+            y,
+            size: 14,
+            font: fontBold,
+            color: COLORS.primary
+        });
+
+        y -= 20;
+
+        if (!items.length) {
+            summary.drawText("AUCUN DOCUMENT", {
+                x: MARGIN + 10,
+                y,
+                size: 10,
+                font: fontItalic,
+                color: COLORS.muted
+            });
+            y -= 20;
+            return;
+        }
+
+        items.forEach(item => {
+            const label =
+                section.key === "fiches"
+                    ? [item.type, item.marque, item.modele].filter(Boolean).join(" - ")
+                    : item.type || item.fileName;
+
+            summary.drawText(`• ${label}`, {
+                x: MARGIN + 10,
+                y,
+                size: 10,
+                font: fontRegular
+            });
+
+            y -= 16;
+        });
+
+        y -= 10;
     });
 
-    let yPosition = 650;
-    const sectionColors = {
-        "FICHES TECHNIQUES": rgb(0.19, 0.56, 0.63),
-        "PROCES VERBAUX": rgb(0.12, 0.21, 0.36),
-        "SCHEMAS": rgb(0.8, 0.42, 0.086)
-    };
+    // --------------------------
+    // SECTION DIVIDERS
+    // --------------------------
+    function addSectionDivider(title, color) {
+        const page = pdf.addPage([PAGE.width, PAGE.height]);
 
-    for (const section in sectionFiles) {
-        const result = checkPageOverflow(mergedPdf, summaryPage, yPosition);
-        summaryPage = result.currentPage;
-        yPosition = result.yPosition;
+        page.drawRectangle({
+            x: 0,
+            y: PAGE.height / 2 - 40,
+            width: PAGE.width,
+            height: 80,
+            color
+        });
 
-        const color = sectionColors[section];
-        summaryPage.drawRectangle({ x: 75, y: yPosition, width: 452, height: 25, color });
-        summaryPage.drawText(section, {
-            x: 82,
-            y: yPosition + 7,
-            size: 12,
-            font: helveticaBold,
+        page.drawText(title, {
+            x: MARGIN,
+            y: PAGE.height / 2 - 5,
+            size: 24,
+            font: fontBold,
             color: rgb(1, 1, 1)
         });
 
-        yPosition -= 35;
-
-        const sectionItems = sectionFiles[section].filter(item => item.file);
-
-        if (sectionItems.length === 0) {
-            summaryPage.drawText("AUCUN DOCUMENT", {
-                x: 90,
-                y: yPosition,
-                size: 10,
-                font: helveticaOblique,
-                color: rgb(0.45, 0.45, 0.45)
-            });
-            yPosition -= 24;
-            continue;
-        }
-
-        for (const item of sectionItems) {
-            const overflowResult = checkPageOverflow(mergedPdf, summaryPage, yPosition);
-            summaryPage = overflowResult.currentPage;
-            yPosition = overflowResult.yPosition;
-
-            summaryPage.drawText("- " + (item.name || "DOCUMENT"), {
-                x: 90,
-                y: yPosition,
-                size: 10,
-                font: helvetica,
-                color: rgb(0, 0, 0)
-            });
-
-            yPosition -= 18;
-        }
-
-        yPosition -= 8;
+        addFooter(page);
     }
 
-    // DOCUMENTS
-    for (const fiche of sectionFiles["FICHES TECHNIQUES"]) {
-        if (fiche.file) {
-            await addFileToMergedPdf(mergedPdf, "FICHES TECHNIQUES", fiche.file, {
-                itemName: fiche.name,
-                fileName: fiche.fileName
+    // --------------------------
+    // ADD FILES
+    // --------------------------
+    async function addFile(fileDataUrl) {
+        const bytes = dataURLToUint8Array(fileDataUrl);
+
+        try {
+            const srcPdf = await PDFDocument.load(bytes);
+            const pages = await pdf.copyPages(srcPdf, srcPdf.getPageIndices());
+            pages.forEach(p => pdf.addPage(p));
+        } catch {
+            const page = pdf.addPage([PAGE.width, PAGE.height]);
+
+            const img = await pdf.embedJpg(bytes).catch(() => pdf.embedPng(bytes));
+
+            const scale = Math.min(
+                (PAGE.width - 2 * MARGIN) / img.width,
+                (PAGE.height - 2 * MARGIN) / img.height
+            );
+
+            page.drawImage(img, {
+                x: (PAGE.width - img.width * scale) / 2,
+                y: (PAGE.height - img.height * scale) / 2,
+                width: img.width * scale,
+                height: img.height * scale
             });
+
+            addFooter(page);
         }
     }
 
-    for (const pv of sectionFiles["PROCES VERBAUX"]) {
-        if (pv.file) {
-            await addFileToMergedPdf(mergedPdf, "PROCES VERBAUX", pv.file, {
-                itemName: pv.name,
-                fileName: pv.fileName
-            });
-        }
-    }
+    // --------------------------
+    // CONTENT
+    // --------------------------
+    addSectionDivider("FICHES TECHNIQUES", COLORS.accent);
+    for (const f of state.data.fiches) if (f.file) await addFile(f.file);
 
-    for (const schema of sectionFiles["SCHEMAS"]) {
-        if (schema.file) {
-            await addFileToMergedPdf(mergedPdf, "SCHEMAS", schema.file, {
-                itemName: schema.name,
-                fileName: schema.fileName
-            });
-        }
-    }
+    addSectionDivider("PROCES VERBAUX", COLORS.primary);
+    for (const p of state.data.pv) if (p.file) await addFile(p.file);
 
-    const mergedPdfBytes = await mergedPdf.save();
-    return new Blob([mergedPdfBytes], { type: "application/pdf" });
+    addSectionDivider("SCHEMAS", COLORS.highlight);
+    for (const s of state.data.schemas) if (s.file) await addFile(s.file);
+
+    // --------------------------
+    // PAGE NUMBERS
+    // --------------------------
+    pdf.getPages().forEach((page, i) => addPageNumber(page, i));
+
+    // --------------------------
+    // EXPORT
+    // --------------------------
+    const bytes = await pdf.save();
+    return new Blob([bytes], { type: "application/pdf" });
 }
+
 /* ========================
    AUTOSAVE
 ======================== */
