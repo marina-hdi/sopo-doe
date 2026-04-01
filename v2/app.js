@@ -667,9 +667,9 @@ async function buildRealDoePdfBlob() {
 
     const fullAddress = `${adresse} ${cp} ${ville}`.trim();
 
-    // --------------------------
-    // HELPERS
-    // --------------------------
+    /* =========================
+       HELPERS
+    ========================= */
     function addFooter(page) {
         page.drawText(`DOE - ${fullAddress} - SOPODEX`, {
             x: MARGIN,
@@ -694,43 +694,133 @@ async function buildRealDoePdfBlob() {
         page.drawText(text, {
             x: MARGIN,
             y,
-            size: 22,
+            size: 20,
             font: fontBold,
             color: COLORS.primary
         });
 
         page.drawRectangle({
             x: MARGIN,
-            y: y - 8,
-            width: 80,
+            y: y - 6,
+            width: 60,
             height: 2,
-            color: COLORS.primary
+            color: COLORS.accent
         });
     }
 
-    // --------------------------
-    // COVER
-    // --------------------------
+    /* =========================
+       COVER (🔥 UPGRADED)
+    ========================= */
     const cover = pdf.addPage([PAGE.width, PAGE.height]);
 
-    cover.drawText("DOSSIER DES", { x: MARGIN, y: 720, size: 28, font: fontBold });
-    cover.drawText("OUVRAGES EXECUTES", { x: MARGIN, y: 680, size: 28, font: fontBold });
+    // Left bar
+    cover.drawRectangle({
+        x: 0,
+        y: 0,
+        width: 80,
+        height: PAGE.height,
+        color: COLORS.primary
+    });
 
-    cover.drawText(fullAddress, { x: MARGIN, y: 500, size: 20, font: fontBold });
+    cover.drawText("DOE", {
+        x: 110,
+        y: 700,
+        size: 64,
+        font: fontBold,
+        color: COLORS.primary
+    });
 
-    cover.drawText(objet, { x: MARGIN, y: 460, size: 16, font: fontItalic });
-    cover.drawText(date, { x: MARGIN, y: 435, size: 14, font: fontItalic });
+    cover.drawText("Dossier des Ouvrages Exécutés", {
+        x: 110,
+        y: 660,
+        size: 18,
+        font: fontRegular,
+        color: COLORS.muted
+    });
 
-    cover.drawRectangle({ x: 0, y: 0, width: 200, height: 10, color: COLORS.accent });
-    cover.drawRectangle({ x: 200, y: 0, width: 200, height: 10, color: COLORS.primary });
-    cover.drawRectangle({ x: 400, y: 0, width: 200, height: 10, color: COLORS.highlight });
+    cover.drawRectangle({
+        x: 110,
+        y: 640,
+        width: 300,
+        height: 2,
+        color: COLORS.accent
+    });
+
+    let infoY = 560;
+
+    cover.drawText("CHANTIER", {
+        x: 110,
+        y: infoY,
+        size: 10,
+        font: fontBold,
+        color: COLORS.muted
+    });
+
+    infoY -= 20;
+
+    cover.drawText(fullAddress || "Adresse non renseignée", {
+        x: 110,
+        y: infoY,
+        size: 18,
+        font: fontBold,
+        color: COLORS.text
+    });
+
+    infoY -= 40;
+
+    cover.drawText("NATURE DES TRAVAUX", {
+        x: 110,
+        y: infoY,
+        size: 10,
+        font: fontBold,
+        color: COLORS.muted
+    });
+
+    infoY -= 20;
+
+    cover.drawText(objet || "Non renseigné", {
+        x: 110,
+        y: infoY,
+        size: 14,
+        font: fontRegular,
+        color: COLORS.text
+    });
+
+    infoY -= 40;
+
+    cover.drawText("DATE DOE", {
+        x: 110,
+        y: infoY,
+        size: 10,
+        font: fontBold,
+        color: COLORS.muted
+    });
+
+    infoY -= 20;
+
+    cover.drawText(date || "—", {
+        x: 110,
+        y: infoY,
+        size: 14,
+        font: fontRegular,
+        color: COLORS.text
+    });
+
+    cover.drawText("SOPODEX", {
+        x: PAGE.width - 150,
+        y: 40,
+        size: 12,
+        font: fontBold,
+        color: COLORS.primary
+    });
 
     addFooter(cover);
 
-    // --------------------------
-    // SOMMAIRE
-    // --------------------------
+    /* =========================
+       SUMMARY
+    ========================= */
     let summary = pdf.addPage([PAGE.width, PAGE.height]);
+
     drawTitle(summary, "SOMMAIRE", 750);
     addFooter(summary);
 
@@ -786,15 +876,15 @@ async function buildRealDoePdfBlob() {
         y -= 10;
     });
 
-    // --------------------------
-    // SECTION DIVIDERS
-    // --------------------------
+    /* =========================
+       SECTION DIVIDERS
+    ========================= */
     function addSectionDivider(title, color) {
         const page = pdf.addPage([PAGE.width, PAGE.height]);
 
         page.drawRectangle({
             x: 0,
-            y: PAGE.height / 2 - 40,
+            y: PAGE.height - 140,
             width: PAGE.width,
             height: 80,
             color
@@ -802,8 +892,8 @@ async function buildRealDoePdfBlob() {
 
         page.drawText(title, {
             x: MARGIN,
-            y: PAGE.height / 2 - 5,
-            size: 24,
+            y: PAGE.height - 100,
+            size: 20,
             font: fontBold,
             color: rgb(1, 1, 1)
         });
@@ -811,9 +901,9 @@ async function buildRealDoePdfBlob() {
         addFooter(page);
     }
 
-    // --------------------------
-    // ADD FILES
-    // --------------------------
+    /* =========================
+       FILE MERGE
+    ========================= */
     async function addFile(fileDataUrl) {
         const bytes = dataURLToUint8Array(fileDataUrl);
 
@@ -842,9 +932,9 @@ async function buildRealDoePdfBlob() {
         }
     }
 
-    // --------------------------
-    // CONTENT
-    // --------------------------
+    /* =========================
+       CONTENT
+    ========================= */
     addSectionDivider("FICHES TECHNIQUES", COLORS.accent);
     for (const f of state.data.fiches) if (f.file) await addFile(f.file);
 
@@ -854,14 +944,11 @@ async function buildRealDoePdfBlob() {
     addSectionDivider("SCHEMAS", COLORS.highlight);
     for (const s of state.data.schemas) if (s.file) await addFile(s.file);
 
-    // --------------------------
-    // PAGE NUMBERS
-    // --------------------------
+    /* =========================
+       PAGE NUMBERS
+    ========================= */
     pdf.getPages().forEach((page, i) => addPageNumber(page, i));
 
-    // --------------------------
-    // EXPORT
-    // --------------------------
     const bytes = await pdf.save();
     return new Blob([bytes], { type: "application/pdf" });
 }
