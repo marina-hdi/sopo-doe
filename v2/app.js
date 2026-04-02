@@ -647,258 +647,300 @@ async function buildRealDoePdfBlob() {
     const fontItalic = await pdf.embedFont(StandardFonts.HelveticaOblique);
 
     const PAGE = { width: 595, height: 842 };
-    const MARGIN = 60;
 
     const COLORS = {
         primary: rgb(0.07, 0.15, 0.35),
         accent: rgb(0.15, 0.35, 0.65),
-        highlight: rgb(0.8, 0.2, 0.2),
-        text: rgb(0, 0, 0),
-        muted: rgb(0.5, 0.5, 0.5)
+        highlight: rgb(0.86, 0.16, 0.19),
+        text: rgb(0.08, 0.08, 0.08),
+        muted: rgb(0.45, 0.45, 0.45),
+        black: rgb(0.1, 0.1, 0.1),
+        white: rgb(1, 1, 1)
     };
 
-    const adresse = (state.data.infos.adresse || "").toUpperCase();
-    const ville = (state.data.infos.ville || "").toUpperCase();
-    const cp = state.data.infos.code_postal || "";
-    const objet = (state.data.infos.nature_travaux || "").toUpperCase();
-    const date = state.data.infos.date_doe
-        ? formatDateDisplay(state.data.infos.date_doe)
-        : "";
+    const infos = state.data.infos || {};
+    const adresse = (infos.adresse || "").toUpperCase().trim();
+    const ville = (infos.ville || "").toUpperCase().trim();
+    const cp = (infos.code_postal || "").trim();
+    const objet = (infos.nature_travaux || "").toUpperCase().trim();
+    const date = infos.date_doe ? formatDateDisplay(infos.date_doe) : "";
 
-    const fullAddress = `${adresse} ${cp} ${ville}`.trim();
+    const fullAddress = [adresse, cp, ville].filter(Boolean).join(" ").trim();
 
-    function addFooter(page) {
-        page.drawText(`SOPODEX | DOE | ${objet}`, {
-            x: 80,
-            y: 25,
-            size: 9,
-            font: fontItalic,
-            color: COLORS.muted
-        });
+    const headerContact = "82 RUE ALEXANDRE DUMAS 75020 PARIS | 01 43 56 62 43 | services@sopodex.fr";
+
+    const renderedPages = [];
+
+    function addTrackedPage(role, meta = {}) {
+        const page = pdf.addPage([PAGE.width, PAGE.height]);
+        renderedPages.push({ page, role, ...meta });
+        return page;
     }
 
-    function addPageNumber(page, index) {
-        page.drawText(`${index + 1}`, {
-            x: PAGE.width - 80,
-            y: 25,
-            size: 9,
-            font: fontRegular,
-            color: COLORS.muted
-        });
+    function pageNumberLabel(pageIndexZeroBased, totalNumberedPages) {
+        if (pageIndexZeroBased === 0) return "";
+        return `${pageIndexZeroBased}/${totalNumberedPages}`;
     }
 
     function drawCenteredText(page, text, y, font, size, color) {
-        const width = font.widthOfTextAtSize(text, size);
-        page.drawText(text, {
-            x: (PAGE.width - width) / 2,
-            y,
-            size,
-            font,
-            color
+        const safeText = String(text || "");
+        const width = font.widthOfTextAtSize(safeText, size);
+        const x = (PAGE.width - width) / 2;
+        page.drawText(safeText, { x, y, size, font, color });
+    }
+
+    function drawWrappedText(page, text, x, y, maxWidth, font, size, color, lineHeight = 16) {
+        const words = String(text || "").split(/\s+/).filter(Boolean);
+        let line = "";
+        let currentY = y;
+
+        for (const word of words) {
+            const candidate = line ? `${line} ${word}` : word;
+            const candidateWidth = font.widthOfTextAtSize(candidate, size);
+
+            if (candidateWidth <= maxWidth) {
+                line = candidate;
+            } else {
+                if (line) {
+                    page.drawText(line, { x, y: currentY, size, font, color });
+                    currentY -= lineHeight;
+                }
+                line = word;
+            }
+        }
+
+        if (line) {
+            page.drawText(line, { x, y: currentY, size, font, color });
+            currentY -= lineHeight;
+        }
+
+        return currentY;
+    }
+
+    function drawDottedLeader(page, startX, endX, y) {
+        const dotSpacing = 5;
+        const dotRadius = 0.8;
+
+        for (let x = startX; x <= endX; x += dotSpacing) {
+            page.drawCircle({
+                x,
+                y,
+                size: dotRadius,
+                color: COLORS.text
+            });
+        }
+    }
+
+    function drawFooter(page, currentNumber, totalNumberedPages) {
+        page.drawRectangle({
+            x: 80,
+            y: 57,
+            width: PAGE.width - 160,
+            height: 1,
+            color: COLORS.text
+        });
+
+        page.drawText(`SOPODEX | DOE | ${objet || "SANS OBJET"}`, {
+            x: 80,
+            y: 34,
+            size: 9,
+            font: fontBold,
+            color: COLORS.text
+        });
+
+        const label = `${currentNumber}/${totalNumberedPages}`;
+        const labelWidth = fontRegular.widthOfTextAtSize(label, 9);
+
+        page.drawText(label, {
+            x: PAGE.width - 80 - labelWidth,
+            y: 34,
+            size: 9,
+            font: fontRegular,
+            color: COLORS.text
         });
     }
 
     function dataURLToUint8Array(dataURL) {
-        const base64 = dataURL.split(",")[1];
-        const binary = atob(base64);
-        const len = binary.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+        const parts = String(dataURL || "").split(",");
+        if (parts.length < 2) return new Uint8Array();
+
+        const binary = atob(parts[1]);
+        const bytes = new Uint8Array(binary.length);
+
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+
         return bytes;
     }
 
-    /* ================= COVER ================= */
-    const cover = pdf.addPage([PAGE.width, PAGE.height]);
-
-    cover.drawRectangle({
-        x: 0,
-        y: PAGE.height - 80,
-        width: 120,
-        height: 80,
-        color: COLORS.primary
-    });
-
-    cover.drawText("SOPODEX", {
-        x: 20,
-        y: PAGE.height - 45,
-        size: 12,
-        font: fontBold,
-        color: rgb(1,1,1)
-    });
-
-    cover.drawText("82 RUE ALEXANDRE DUMAS 75020 PARIS | 01 43 56 62 43 | services@sopodex.fr", {
-        x: 140,
-        y: PAGE.height - 45,
-        size: 10,
-        font: fontRegular,
-        color: COLORS.primary
-    });
-
-    cover.drawRectangle({
-        x: 0,
-        y: PAGE.height - 82,
-        width: PAGE.width,
-        height: 1,
-        color: COLORS.primary
-    });
-
-    cover.drawText("DOSSIER DES", { x: 80, y: 520, size: 28, font: fontBold });
-    cover.drawText("OUVRAGES", { x: 80, y: 480, size: 28, font: fontBold });
-    cover.drawText("EXECUTES", { x: 80, y: 440, size: 28, font: fontBold });
-
-    cover.drawRectangle({
-        x: 80,
-        y: 260,
-        width: PAGE.width - 160,
-        height: 80,
-        color: rgb(0.03, 0.05, 0.2)
-    });
-
-    drawCenteredText(cover, fullAddress || "—", 300, fontBold, 18, rgb(1,1,1));
-
-    cover.drawText(objet, {
-        x: 80,
-        y: 220,
-        size: 14,
-        font: fontRegular,
-        color: COLORS.primary
-    });
-
-    cover.drawText(date, {
-        x: PAGE.width - 120,
-        y: 220,
-        size: 14,
-        font: fontRegular
-    });
-
-    cover.drawRectangle({
-        x: 80,
-        y: 200,
-        width: PAGE.width - 160,
-        height: 1,
-        color: COLORS.primary
-    });
-
-    /* ================= SUMMARY ================= */
-    const summary = pdf.addPage([PAGE.width, PAGE.height]);
-
-    summary.drawRectangle({
-        x: 80,
-        y: PAGE.height - 120,
-        width: 140,
-        height: 50,
-        color: rgb(0.1,0.1,0.1)
-    });
-
-    summary.drawText("SOMMAIRE", {
-        x: 95,
-        y: PAGE.height - 95,
-        size: 14,
-        font: fontBold,
-        color: rgb(1,1,1)
-    });
-
-    summary.drawText(fullAddress, {
-        x: PAGE.width - 250,
-        y: PAGE.height - 95,
-        size: 10,
-        font: fontRegular
-    });
-
-    summary.drawRectangle({
-        x: 80,
-        y: PAGE.height - 130,
-        width: PAGE.width - 160,
-        height: 1,
-        color: COLORS.text
-    });
-
-    let y = 640;
-
-    function drawSection(title, color, items) {
-        summary.drawRectangle({
-            x: 80,
-            y: y + 5,
-            width: 12,
-            height: 12,
-            color
-        });
-
-        summary.drawText(title, {
-            x: 100,
-            y,
-            size: 16,
-            font: fontBold,
-            color
-        });
-
-        y -= 30;
-
-        items.forEach((item, i) => {
-            const label = item.type || item.fileName || "DOC";
-
-            summary.drawText(label, {
-                x: 100,
-                y,
-                size: 12,
-                font: fontBold
-            });
-
-            summary.drawLine({
-                start: { x: 200, y: y + 5 },
-                end: { x: PAGE.width - 120, y: y + 5 },
-                thickness: 1,
-                color: COLORS.muted,
-                dashArray: [2, 2]
-            });
-
-            summary.drawText(String((i+1)*10), {
-                x: PAGE.width - 100,
-                y,
-                size: 12,
-                font: fontBold
-            });
-
-            y -= 25;
-        });
-
-        y -= 20;
+    function getDisplayType(item) {
+        return String(item?.type || "DOCUMENT").toUpperCase();
     }
 
-    drawSection("FICHES TECHNIQUES", COLORS.primary, state.data.fiches.filter(i=>i.file));
-    drawSection("PROCES VERBAUX", COLORS.accent, state.data.pv.filter(i=>i.file));
-    drawSection("SCHEMAS", COLORS.highlight, state.data.schemas.filter(i=>i.file));
+    function getDisplayBrand(item) {
+        return String(item?.marque || "").toUpperCase();
+    }
 
-    addFooter(summary);
+    function getDisplayModel(item) {
+        return String(item?.modele || "").toUpperCase();
+    }
 
-    /* ================= DIVIDER ================= */
-    function addSectionDivider(title, color) {
-        const page = pdf.addPage([PAGE.width, PAGE.height]);
+    function getFicheSubLabel(item) {
+        return [getDisplayBrand(item), getDisplayModel(item)].filter(Boolean).join(" - ");
+    }
 
-        page.drawRectangle({
-            x: 80,
-            y: PAGE.height - 120,
-            width: 260,
-            height: 50,
-            color
+    function getDividerInfoLines(sectionKey, item) {
+        if (sectionKey === "fiches") {
+            return [
+                { text: getDisplayType(item), font: fontBold, size: 24, color: COLORS.primary },
+                { text: getDisplayBrand(item), font: fontItalic, size: 20, color: COLORS.primary },
+                { text: getDisplayModel(item), font: fontItalic, size: 16, color: COLORS.primary }
+            ].filter(line => line.text);
+        }
+
+        return [
+            { text: getDisplayType(item), font: fontBold, size: 24, color: COLORS.primary }
+        ];
+    }
+
+    function addCover() {
+        const cover = addTrackedPage("cover");
+
+        cover.drawRectangle({
+            x: 0,
+            y: PAGE.height - 80,
+            width: 120,
+            height: 80,
+            color: COLORS.primary
         });
 
-        page.drawText(title, {
-            x: 95,
+        cover.drawText("SOPODEX", {
+            x: 18,
+            y: PAGE.height - 45,
+            size: 12,
+            font: fontBold,
+            color: COLORS.white
+        });
+
+        cover.drawText(headerContact, {
+            x: 140,
+            y: PAGE.height - 45,
+            size: 10,
+            font: fontRegular,
+            color: COLORS.primary
+        });
+
+        cover.drawRectangle({
+            x: 0,
+            y: PAGE.height - 82,
+            width: PAGE.width,
+            height: 1,
+            color: COLORS.primary
+        });
+
+        cover.drawText("DOSSIER DES", {
+            x: 80,
+            y: 520,
+            size: 28,
+            font: fontBold,
+            color: COLORS.text
+        });
+
+        cover.drawText("OUVRAGES", {
+            x: 80,
+            y: 480,
+            size: 28,
+            font: fontBold,
+            color: COLORS.text
+        });
+
+        cover.drawText("EXECUTES", {
+            x: 80,
+            y: 440,
+            size: 28,
+            font: fontBold,
+            color: COLORS.text
+        });
+
+        cover.drawRectangle({
+            x: 80,
+            y: 260,
+            width: PAGE.width - 160,
+            height: 80,
+            color: rgb(0.03, 0.05, 0.20)
+        });
+
+        drawCenteredText(
+            cover,
+            fullAddress || "ADRESSE NON RENSEIGNEE",
+            300,
+            fontBold,
+            18,
+            COLORS.white
+        );
+
+        cover.drawText(objet || "SANS OBJET", {
+            x: 80,
+            y: 220,
+            size: 14,
+            font: fontRegular,
+            color: COLORS.primary
+        });
+
+        if (date) {
+            const dateWidth = fontRegular.widthOfTextAtSize(date, 14);
+            cover.drawText(date, {
+                x: PAGE.width - 80 - dateWidth,
+                y: 220,
+                size: 14,
+                font: fontRegular,
+                color: COLORS.text
+            });
+        }
+
+        cover.drawRectangle({
+            x: 80,
+            y: 200,
+            width: PAGE.width - 160,
+            height: 1,
+            color: COLORS.primary
+        });
+    }
+
+    const summaryEntries = [];
+
+    function addSummary() {
+        const summary = addTrackedPage("summary");
+
+        summary.drawRectangle({
+            x: 80,
+            y: PAGE.height - 120,
+            width: 140,
+            height: 50,
+            color: COLORS.black
+        });
+
+        summary.drawText("SOMMAIRE", {
+            x: 98,
             y: PAGE.height - 95,
             size: 14,
             font: fontBold,
-            color: rgb(1,1,1)
+            color: COLORS.white
         });
 
-        page.drawText(fullAddress, {
-            x: PAGE.width - 250,
-            y: PAGE.height - 95,
-            size: 10,
-            font: fontRegular
-        });
+        if (fullAddress) {
+            const addressWidth = fontRegular.widthOfTextAtSize(fullAddress, 10);
+            summary.drawText(fullAddress, {
+                x: PAGE.width - 80 - addressWidth,
+                y: PAGE.height - 95,
+                size: 10,
+                font: fontRegular,
+                color: COLORS.text
+            });
+        }
 
-        page.drawRectangle({
+        summary.drawRectangle({
             x: 80,
             y: PAGE.height - 130,
             width: PAGE.width - 160,
@@ -906,48 +948,269 @@ async function buildRealDoePdfBlob() {
             color: COLORS.text
         });
 
-        addFooter(page);
+        let y = 640;
+
+        function drawSummarySection(title, color, items, sectionKey) {
+            summary.drawRectangle({
+                x: 80,
+                y: y + 5,
+                width: 12,
+                height: 12,
+                color
+            });
+
+            summary.drawText(title, {
+                x: 104,
+                y,
+                size: 16,
+                font: fontBold,
+                color
+            });
+
+            y -= 34;
+
+            if (!items.length) {
+                summary.drawText("AUCUN DOCUMENT", {
+                    x: 104,
+                    y,
+                    size: 12,
+                    font: fontItalic,
+                    color: COLORS.muted
+                });
+                y -= 38;
+                return;
+            }
+
+            items.forEach((item) => {
+                const entry = {
+                    item,
+                    sectionKey,
+                    summaryPage: summary,
+                    topY: y
+                };
+                summaryEntries.push(entry);
+
+                const mainLabel =
+                    sectionKey === "fiches"
+                        ? getDisplayType(item)
+                        : getDisplayType(item);
+
+                summary.drawText(mainLabel, {
+                    x: 104,
+                    y,
+                    size: 12,
+                    font: fontBold,
+                    color: COLORS.text
+                });
+
+                drawDottedLeader(summary, 200, PAGE.width - 100, y + 5);
+
+                y -= 18;
+
+                if (sectionKey === "fiches") {
+                    const subLabel = getFicheSubLabel(item);
+
+                    if (subLabel) {
+                        summary.drawText(subLabel, {
+                            x: 104,
+                            y,
+                            size: 11,
+                            font: fontItalic,
+                            color: COLORS.muted
+                        });
+
+                        y -= 26;
+                    } else {
+                        y -= 8;
+                    }
+                } else {
+                    y -= 10;
+                }
+            });
+
+            y -= 18;
+        }
+
+        drawSummarySection(
+            "FICHES TECHNIQUES",
+            COLORS.primary,
+            state.data.fiches.filter(item => item.file),
+            "fiches"
+        );
+
+        drawSummarySection(
+            "PROCES VERBAUX",
+            COLORS.accent,
+            state.data.pv.filter(item => item.file),
+            "pv"
+        );
+
+        drawSummarySection(
+            "SCHEMAS",
+            COLORS.highlight,
+            state.data.schemas.filter(item => item.file),
+            "schemas"
+        );
     }
 
-    /* ================= FILE MERGE ================= */
-    async function addFile(fileDataUrl) {
+    function addSectionDivider(sectionTitle, color, sectionKey, item) {
+        const page = addTrackedPage("divider", { sectionKey, item });
+
+        page.drawRectangle({
+            x: 80,
+            y: PAGE.height - 120,
+            width: 180,
+            height: 50,
+            color
+        });
+
+        page.drawText(sectionTitle, {
+            x: 98,
+            y: PAGE.height - 95,
+            size: 14,
+            font: fontBold,
+            color: COLORS.white
+        });
+
+        if (fullAddress) {
+            const addressWidth = fontRegular.widthOfTextAtSize(fullAddress, 10);
+            page.drawText(fullAddress, {
+                x: PAGE.width - 80 - addressWidth,
+                y: PAGE.height - 95,
+                size: 10,
+                font: fontRegular,
+                color: COLORS.text
+            });
+        }
+
+        page.drawRectangle({
+            x: 80,
+            y: PAGE.height - 130,
+            width: PAGE.width - 160,
+            height: 1,
+            color: COLORS.primary
+        });
+
+        const lines = getDividerInfoLines(sectionKey, item);
+        let contentY = 470;
+
+        lines.forEach((line, index) => {
+            page.drawText(line.text, {
+                x: 104,
+                y: contentY,
+                size: line.size,
+                font: line.font,
+                color: line.color
+            });
+
+            if (index === 0) contentY -= 28;
+            else if (index === 1) contentY -= 24;
+            else contentY -= 18;
+        });
+
+        return page;
+    }
+
+    async function addMergedFile(fileDataUrl) {
         const bytes = dataURLToUint8Array(fileDataUrl);
 
         try {
             const srcPdf = await PDFDocument.load(bytes);
-            const pages = await pdf.copyPages(srcPdf, srcPdf.getPageIndices());
-            pages.forEach(p => pdf.addPage(p));
-        } catch {
-            const page = pdf.addPage([PAGE.width, PAGE.height]);
-            const img = await pdf.embedJpg(bytes).catch(()=>pdf.embedPng(bytes));
+            const copiedPages = await pdf.copyPages(srcPdf, srcPdf.getPageIndices());
 
+            copiedPages.forEach((copiedPage) => {
+                pdf.addPage(copiedPage);
+                renderedPages.push({ page: copiedPage, role: "content" });
+            });
+        } catch {
+            const page = addTrackedPage("content");
+
+            const image = await pdf.embedJpg(bytes).catch(() => pdf.embedPng(bytes));
+
+            const maxWidth = PAGE.width - 120;
+            const maxHeight = PAGE.height - 160;
             const scale = Math.min(
-                (PAGE.width-120)/img.width,
-                (PAGE.height-120)/img.height
+                maxWidth / image.width,
+                maxHeight / image.height
             );
 
-            page.drawImage(img,{
-                x:(PAGE.width-img.width*scale)/2,
-                y:(PAGE.height-img.height*scale)/2,
-                width:img.width*scale,
-                height:img.height*scale
+            page.drawImage(image, {
+                x: (PAGE.width - image.width * scale) / 2,
+                y: (PAGE.height - image.height * scale) / 2,
+                width: image.width * scale,
+                height: image.height * scale
             });
-
-            addFooter(page);
         }
     }
 
-    /* ================= CONTENT ================= */
-    addSectionDivider("FICHES TECHNIQUES", COLORS.primary);
-    for (const f of state.data.fiches) if (f.file) await addFile(f.file);
+    addCover();
+    addSummary();
 
-    addSectionDivider("PROCES VERBAUX", COLORS.accent);
-    for (const p of state.data.pv) if (p.file) await addFile(p.file);
+    const ficheItems = state.data.fiches.filter(item => item.file);
+    const pvItems = state.data.pv.filter(item => item.file);
+    const schemaItems = state.data.schemas.filter(item => item.file);
 
-    addSectionDivider("SCHEMAS", COLORS.highlight);
-    for (const s of state.data.schemas) if (s.file) await addFile(s.file);
+    ficheItems.forEach((item) => {
+        item.__sectionStartPage = renderedPages.length; // physical page index, 0-based, before adding divider
+        addSectionDivider("FICHES TECHNIQUES", COLORS.primary, "fiches", item);
+    });
 
-    pdf.getPages().forEach((page,i)=>addPageNumber(page,i));
+    for (const item of ficheItems) {
+        item.__sectionStartPage = renderedPages.length;
+        addSectionDivider("FICHES TECHNIQUES", COLORS.primary, "fiches", item);
+        await addMergedFile(item.file);
+    }
+
+    for (const item of pvItems) {
+        item.__sectionStartPage = renderedPages.length;
+        addSectionDivider("PROCES VERBAUX", COLORS.accent, "pv", item);
+        await addMergedFile(item.file);
+    }
+
+    for (const item of schemaItems) {
+        item.__sectionStartPage = renderedPages.length;
+        addSectionDivider("SCHEMAS", COLORS.highlight, "schemas", item);
+        await addMergedFile(item.file);
+    }
+
+    const totalPhysicalPages = renderedPages.length;
+    const totalNumberedPages = Math.max(totalPhysicalPages - 1, 1);
+
+    function numberedPageFromPhysicalIndex(physicalIndex) {
+        return Math.max(physicalIndex, 1);
+    }
+
+    // Inject real page numbers in summary
+    summaryEntries.forEach((entry) => {
+        const item = entry.item;
+        const summaryPage = entry.summaryPage;
+        const topY = entry.topY;
+
+        const targetNumber = numberedPageFromPhysicalIndex(item.__sectionStartPage);
+        const numberText = String(targetNumber);
+        const numberWidth = fontBold.widthOfTextAtSize(numberText, 12);
+
+        summaryPage.drawText(numberText, {
+            x: PAGE.width - 80 - numberWidth,
+            y: topY,
+            size: 12,
+            font: fontBold,
+            color: COLORS.text
+        });
+    });
+
+    // Footer + pagination on every page except cover
+    renderedPages.forEach((entry, index) => {
+        if (index === 0) return;
+
+        const currentNumber = numberedPageFromPhysicalIndex(index);
+        drawFooter(entry.page, currentNumber, totalNumberedPages);
+    });
+
+    // Cleanup temp props
+    [...ficheItems, ...pvItems, ...schemaItems].forEach((item) => {
+        delete item.__sectionStartPage;
+    });
 
     const bytes = await pdf.save();
     return new Blob([bytes], { type: "application/pdf" });
