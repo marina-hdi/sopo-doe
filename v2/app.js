@@ -1194,12 +1194,17 @@ async function buildRealDoePdfBlob() {
         });
     });
 
-    renderedPages.forEach((entry, index) => {
-        if (index === 0) return;
-
-        const currentNumber = numberedPageFromPhysicalIndex(index);
-        drawFooter(entry.page, currentNumber, totalNumberedPages);
-    });
+   renderedPages.forEach((entry, index) => {
+       if (index === 0) return; // cover
+   
+       const currentNumber = numberedPageFromPhysicalIndex(index);
+   
+       if (entry.role === "content") {
+           return; // keep counted in pagination, but do not draw footer
+       }
+   
+       drawFooter(entry.page, currentNumber, totalNumberedPages);
+   });
 
     [...ficheItems, ...pvItems, ...schemaItems].forEach((item) => {
         delete item.__sectionStartPage;
