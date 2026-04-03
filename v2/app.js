@@ -666,7 +666,6 @@ async function buildRealDoePdfBlob() {
     const date = infos.date_doe ? formatDateDisplay(infos.date_doe) : "";
 
     const fullAddress = [adresse, cp, ville].filter(Boolean).join(" ").trim();
-
     const headerContact = "82 RUE ALEXANDRE DUMAS 75020 PARIS | 01 43 56 62 43 | services@sopodex.fr";
 
     const renderedPages = [];
@@ -675,11 +674,6 @@ async function buildRealDoePdfBlob() {
         const page = pdf.addPage([PAGE.width, PAGE.height]);
         renderedPages.push({ page, role, ...meta });
         return page;
-    }
-
-    function pageNumberLabel(pageIndexZeroBased, totalNumberedPages) {
-        if (pageIndexZeroBased === 0) return "";
-        return `${pageIndexZeroBased}/${totalNumberedPages}`;
     }
 
     function drawCenteredText(page, text, y, font, size, color) {
@@ -990,10 +984,7 @@ async function buildRealDoePdfBlob() {
                 };
                 summaryEntries.push(entry);
 
-                const mainLabel =
-                    sectionKey === "fiches"
-                        ? getDisplayType(item)
-                        : getDisplayType(item);
+                const mainLabel = getDisplayType(item);
 
                 summary.drawText(mainLabel, {
                     x: 104,
@@ -1123,23 +1114,33 @@ async function buildRealDoePdfBlob() {
                 renderedPages.push({ page: copiedPage, role: "content" });
             });
         } catch {
-            const page = addTrackedPage("content");
+            try {
+                const page = addTrackedPage("content");
+                const image = await pdf.embedJpg(bytes).catch(() => pdf.embedPng(bytes));
 
-            const image = await pdf.embedJpg(bytes).catch(() => pdf.embedPng(bytes));
+                const maxWidth = PAGE.width - 120;
+                const maxHeight = PAGE.height - 160;
+                const scale = Math.min(
+                    maxWidth / image.width,
+                    maxHeight / image.height
+                );
 
-            const maxWidth = PAGE.width - 120;
-            const maxHeight = PAGE.height - 160;
-            const scale = Math.min(
-                maxWidth / image.width,
-                maxHeight / image.height
-            );
-
-            page.drawImage(image, {
-                x: (PAGE.width - image.width * scale) / 2,
-                y: (PAGE.height - image.height * scale) / 2,
-                width: image.width * scale,
-                height: image.height * scale
-            });
+                page.drawImage(image, {
+                    x: (PAGE.width - image.width * scale) / 2,
+                    y: (PAGE.height - image.height * scale) / 2,
+                    width: image.width * scale,
+                    height: image.height * scale
+                });
+            } catch {
+                const page = addTrackedPage("content");
+                page.drawText("DOCUMENT NON INTEGRE", {
+                    x: 80,
+                    y: 420,
+                    size: 18,
+                    font: fontBold,
+                    color: COLORS.highlight
+                });
+            }
         }
     }
 
@@ -1149,11 +1150,6 @@ async function buildRealDoePdfBlob() {
     const ficheItems = state.data.fiches.filter(item => item.file);
     const pvItems = state.data.pv.filter(item => item.file);
     const schemaItems = state.data.schemas.filter(item => item.file);
-
-    ficheItems.forEach((item) => {
-        item.__sectionStartPage = renderedPages.length; // physical page index, 0-based, before adding divider
-        addSectionDivider("FICHES TECHNIQUES", COLORS.primary, "fiches", item);
-    });
 
     for (const item of ficheItems) {
         item.__sectionStartPage = renderedPages.length;
@@ -1180,7 +1176,6 @@ async function buildRealDoePdfBlob() {
         return Math.max(physicalIndex, 1);
     }
 
-    // Inject real page numbers in summary
     summaryEntries.forEach((entry) => {
         const item = entry.item;
         const summaryPage = entry.summaryPage;
@@ -1199,7 +1194,6 @@ async function buildRealDoePdfBlob() {
         });
     });
 
-    // Footer + pagination on every page except cover
     renderedPages.forEach((entry, index) => {
         if (index === 0) return;
 
@@ -1207,7 +1201,6 @@ async function buildRealDoePdfBlob() {
         drawFooter(entry.page, currentNumber, totalNumberedPages);
     });
 
-    // Cleanup temp props
     [...ficheItems, ...pvItems, ...schemaItems].forEach((item) => {
         delete item.__sectionStartPage;
     });
