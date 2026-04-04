@@ -444,8 +444,18 @@ async function startFakeExportPrep() {
         text.textContent = "Génération du DOE.pdf...";
         fill.style.width = "12%";
 
-        const pdfBlob = await buildRealDoePdfBlob();
-        root.file("DOE.pdf", pdfBlob);
+const pdfResult = await buildRealDoePdfBlob();
+
+if (pdfResult.failedFiles.length) {
+    fill.style.width = "0%";
+    text.textContent = "Export bloqué";
+
+    showFailedFilesAlert(pdfResult.failedFiles);
+    showToast("Certains fichiers doivent être remplacés.", "error");
+    return;
+}
+
+root.file("DOE.pdf", pdfResult.blob);
 
         fill.style.width = "28%";
 
@@ -1102,45 +1112,134 @@ async function buildRealDoePdfBlob() {
         return page;
     }
 
-    async function addMergedFile(fileDataUrl) {
-        const bytes = dataURLToUint8Array(fileDataUrl);
-
-        try {
-            const srcPdf = await PDFDocument.load(bytes);
-            const copiedPages = await pdf.copyPages(srcPdf, srcPdf.getPageIndices());
-
-            copiedPages.forEach((copiedPage) => {
-                pdf.addPage(copiedPage);
-                renderedPages.push({ page: copiedPage, role: "content" });
-            });
-        } catch {
-            try {
-                const page = addTrackedPage("content");
-                const image = await pdf.embedJpg(bytes).catch(() => pdf.embedPng(bytes));
-
-                const maxWidth = PAGE.width - 120;
-                const maxHeight = PAGE.height - 160;
-                const scale = Math.min(
-                    maxWidth / image.width,
-                    maxHeight / image.height
-                );
-
-                page.drawImage(image, {
-                    x: (PAGE.width - image.width * scale) / 2,
-                    y: (PAGE.height - image.height * scale) / 2,
-                    width: image.width * scale,
-                    height: image.height * scale
-                });
-            } catch {
-                const page = addTrackedPage("content");
-                page.drawText("DOCUMENT NON INTEGRE", {
-                    x: 80,
-                    y: 420,
-                    size: 18,
-                    font: fontBold,
-                    color: COLORS.highlight
-                });
-            }
+       async function addMergedFile(sectionKey, item) {
+       const fileDataUrl = item?.file;
+       if (!fileDataUrl) return;
+   
+       const bytes = dataURLToUint8Array(fileDataUrl);
+       const fileName = item?.fileName || "FICHIER SANS NOM";
+       const fileType = item?.fileType || "";
+   
+       function pushFailure(reason = "") {
+           failedFiles.push({
+               sectionKey,
+               label: getFailureLabel(sectionKey, item),
+               fileName,
+               reason
+           });
+       }
+   
+       const looksLikePdf =
+           fileType === "application/pdf" ||
+           fileName.toLowerCase().endsWith(".pdf") ||
+           fileDataUrl.startsWith("data:application/pdf");
+   
+       const looksLikeJpg =
+           fileType.startsWith("image/jpeg") ||
+           /\.(jpe?g)$/i.test(fileName) ||
+           fileDataUrl.startsWith("data:image/jpeg");
+   
+       const looksLikePng =
+           fileType.startsWith("image/png") ||
+           /\.png$/i.test(fileName) ||
+           fileDataUrl.startsWith("data:image/png");
+   
+       // ===== PDF =====
+       if (looksLikePdf) {
+           try {
+               const srcPdf = await PDFDocument.load(bytes);
+               const copiedPages = await pdf.copyPages(srcPdf, srcPdf.getPageIndices());
+   
+               copiedPages.forEach((copiedPage) => {
+                   pdf.addPage(copiedPage);
+                   renderedPages.push({ page: copiedPage, role: "content" });
+               });
+   
+               return;
+           } catch (error) {
+               console.error("❌ PDF merge failed:", fileName, error);
+               pushFailure("PDF invalide ou corrompu");
+               return;
+           }
+       }
+   
+       // ===== IMAGE =====
+       if (looksLikeJpg || looksLikePng) {
+           try {
+               const page = addTrackedPage("content");
+               let image = null;
+   
+               if (looksLikeJpg) {
+                   image = await pdf.embedJpg(bytes);
+               } else {
+                   image = await pdf.embedPng(bytes);
+               }
+   
+               const maxWidth = PAGE.width - 120;
+               const maxHeight = PAGE.height - 160;
+               const scale = Math.min(
+                   maxWidth / image.width,
+                   maxHeight / image.height
+               );
+   
+               page.drawImage(image, {
+                   x: (PAGE.width - image.width * scale) / 2,
+                   y: (PAGE.height - image.height * scale) / 2,
+                   width: image.width * scale,
+                   height: image.height * scale
+               });
+   
+               return;
+           } catch (error) {
+               console.error("❌ Image embed failed:", fileName, error);
+               pushFailure("Image invalide ou illisible");
+               return;
+           }
+       }
+   
+       // ===== FALLBACK =====
+       try {
+           const srcPdf = await PDFDocument.load(bytes);
+           const copiedPages = await pdf.copyPages(srcPdf, srcPdf.getPageIndices());
+   
+           copiedPages.forEach((copiedPage) => {
+               pdf.addPage(copiedPage);
+               renderedPages.push({ page: copiedPage, role: "content" });
+           });
+   
+           return;
+       } catch {}
+   
+       try {
+           const page = addTrackedPage("content");
+   
+           let image = null;
+           try {
+               image = await pdf.embedJpg(bytes);
+           } catch {
+               image = await pdf.embedPng(bytes);
+           }
+   
+           const maxWidth = PAGE.width - 120;
+           const maxHeight = PAGE.height - 160;
+           const scale = Math.min(
+               maxWidth / image.width,
+               maxHeight / image.height
+           );
+   
+           page.drawImage(image, {
+               x: (PAGE.width - image.width * scale) / 2,
+               y: (PAGE.height - image.height * scale) / 2,
+               width: image.width * scale,
+               height: image.height * scale
+           });
+   
+           return;
+       } catch {}
+   
+       // ===== FINAL FAILURE =====
+       pushFailure("Format non pris en charge ou fichier illisible");
+   }
         }
     }
 
@@ -2000,6 +2099,18 @@ function handlePostalCodeChange(value) {
     saveAutosave();
     renderChantierBanner();
     updateVilleSelectUI();
+}
+
+function showFailedFilesAlert(failedFiles) {
+    const lines = failedFiles.map(item => {
+        const suffix = item.reason ? ` (${item.reason})` : "";
+        return `• ${item.label} : ${item.fileName}${suffix}`;
+    });
+
+    alert(
+        "Ces fichiers n'ont pas pu être ajoutés, merci de les remplacer.\n\n" +
+        lines.join("\n")
+    );
 }
 
 /* ========================
