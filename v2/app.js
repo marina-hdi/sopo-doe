@@ -194,9 +194,57 @@ const createValueSaveBtn = document.getElementById("create-value-save-btn");
 const createValueCancelBtn = document.getElementById("create-value-cancel-btn");
 const closeCreateValueBtn = document.getElementById("close-create-value-btn");
 
+// ===== FILE VALIDATION =====
+function validateFile(file) {
+    const allowedTypes = [
+        "application/pdf",
+        "image/jpeg",
+        "image/png"
+    ];
+
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    if (!allowedTypes.includes(file.type)) {
+        return { valid: false, reason: "Format non supporté" };
+    }
+
+    if (file.size > maxSize) {
+        return { valid: false, reason: "Fichier trop volumineux" };
+    }
+
+    return { valid: true };
+}
+
+function getInvalidFiles() {
+    const all = [
+        ...(state.data.fiches || []),
+        ...(state.data.pv || []),
+        ...(state.data.schemas || [])
+    ];
+
+    return all.filter(item => item.invalid);
+}
+
 /* ========================
    HELPERS
 ======================== */
+function getFileDisplay(item) {
+    if (!item.fileName) return "AUCUN FICHIER";
+
+    if (item.invalid) {
+        return `
+            <span style="color:#A02411; font-weight:600;">
+                ⚠ ${item.fileName}
+            </span>
+            <div style="font-size:11px; color:#A02411; opacity:0.8;">
+                ${item.error || "Fichier invalide"}
+            </div>
+        `;
+    }
+
+    return item.fileName;
+}
+
 function escapeHtml(value) {
     return String(value ?? "")
         .replaceAll("&", "&amp;")
@@ -410,6 +458,21 @@ async function startFakeExportPrep() {
     const fill = document.getElementById("export-progress-fill");
     const text = document.getElementById("export-progress-text");
 
+   const invalidFiles = getInvalidFiles();
+
+if (invalidFiles.length) {
+    showFailedFilesAlert(
+        invalidFiles.map(item => ({
+            label: (item.type || "DOCUMENT").toUpperCase(),
+            fileName: item.fileName || "FICHIER",
+            reason: item.error || "Fichier invalide"
+        }))
+    );
+
+    showToast("Corrige les fichiers avant export", "error");
+    return;
+}
+   
     if (!fill || !text) return;
 
     if (typeof JSZip === "undefined") {
@@ -1452,30 +1515,21 @@ function formatDraftDate(value) {
    TOASTS
 ======================== */
 function showToast(message, type = "info") {
-    if (!toastContainer) return;
+    console.log(`[${type.toUpperCase()}]`, message);
 
     const toast = document.createElement("div");
     toast.className = `toast ${type}`;
+    toast.textContent = message;
 
-    const iconMap = {
-        success: "check_circle",
-        error: "error",
-        info: "info"
-    };
-
-    toast.innerHTML = `
-        <span class="material-symbols-outlined toast-icon">${iconMap[type] || "info"}</span>
-        <div class="toast-message">${escapeHtml(message)}</div>
-    `;
-
-    toastContainer.appendChild(toast);
+    document.body.appendChild(toast);
 
     setTimeout(() => {
-        toast.classList.add("is-hiding");
-        toast.addEventListener("animationend", () => {
-            toast.remove();
-        }, { once: true });
-    }, 2600);
+        toast.classList.add("show");
+    }, 10);
+
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
 }
 
 /* ========================
@@ -2330,32 +2384,38 @@ function setDocTypeField(section, index, value) {
 /* ========================
    FILES
 ======================== */
-function handleFileUpload(section, index, input) {
-    const file = input.files?.[0];
-    if (!file) return;
+function handleFileUpload(file, item) {
+    const validation = validateFile(file);
+
+    if (!validation.valid) {
+        item.invalid = true;
+        item.error = validation.reason;
+        item.file = null;
+
+        showToast(validation.reason, "error");
+        renderAll();
+        return;
+    }
 
     const reader = new FileReader();
 
     reader.onload = function (e) {
-        const base64 = e.target.result;
-        const item = state.data[section]?.[index];
-        if (!item) return;
-
-        item.file = base64;
+        item.file = e.target.result;
         item.fileName = file.name;
-        item.fileType = file.type || "application/octet-stream";
-        item.fileSize = file.size || 0;
-        item.fileLastModified = file.lastModified || null;
-        item.fileSource = "upload";
-        delete item.autoMatched;
+        item.fileType = file.type;
 
-        if (section === "fiches") {
-            upsertTechnicalSheetLibraryEntry(item);
-        }
+        item.invalid = false;
+        item.error = null;
 
-        saveAutosave();
-        renderStep();
-        showToast("Fichier ajouté.", "success");
+        renderAll();
+    };
+
+    reader.onerror = function () {
+        item.invalid = true;
+        item.error = "Impossible de lire le fichier";
+
+        showToast("Erreur lecture fichier", "error");
+        renderAll();
     };
 
     reader.readAsDataURL(file);
