@@ -1931,3 +1931,20 @@ button {
         grid-template-columns: 1fr;
     }
 }
+
+/* ========================
+   ENREGISTRES
+======================== */
+.enregistres-layout {
+    display: block;
+}
+
+.enregistres-toolbar {
+    margin-bottom: 18px;
+}
+
+.enregistres-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
