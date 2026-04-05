@@ -191,6 +191,10 @@ const draftsList = document.getElementById("drafts-list");
 const openDraftsBtn = document.getElementById("open-drafts-btn");
 const closeDraftsBtn = document.getElementById("close-drafts-btn");
 
+const navAccueilBtn = document.getElementById("nav-accueil-btn");
+const navNewBtn = document.getElementById("nav-new-btn");
+const navSavedBtn = document.getElementById("nav-saved-btn");
+
 const toastContainer = document.getElementById("toast-container");
 
 const confirmModal = document.getElementById("confirm-modal");
@@ -242,6 +246,56 @@ function getInvalidFiles() {
 /* ========================
    HELPERS
 ======================== */
+function deepClone(value) {
+    return JSON.parse(JSON.stringify(value));
+}
+
+function getSavedDrafts() {
+    return getAllDrafts();
+}
+
+const DRAFTS_STORAGE_KEY = DRAFTS_KEY;
+
+function getEmptyDoeState() {
+    return getEmptyState().data;
+}
+
+function handleSaveDraft() {
+    const existingIndex = findExistingDraftIndexByKey();
+
+    if (existingIndex >= 0) {
+        openDraftOverwriteModal();
+        return;
+    }
+
+    saveDraftByMode("normal");
+}
+
+function handleLeaveToAccueil() {
+    openLeaveConfirmModal(() => {
+        resetCurrentDoe();
+        // future accueil screen here
+    });
+}
+
+function handleNewDoe() {
+    openLeaveConfirmModal(() => {
+        resetCurrentDoe();
+    });
+}
+
+function wireSidebarNavigation() {
+    navAccueilBtn?.addEventListener("click", handleLeaveToAccueil);
+    navNewBtn?.addEventListener("click", handleNewDoe);
+
+    navSavedBtn?.addEventListener("click", () => {
+        openLeaveConfirmModal(() => {
+            resetCurrentDoe();
+            // future enregistrés screen here
+        });
+    });
+}
+
 function moveRow(section, index, direction) {
     const list = state.data?.[section];
     if (!Array.isArray(list)) return;
@@ -426,12 +480,12 @@ function executePendingLeave() {
 }
 
 function resetCurrentDoe() {
-    state.data = getEmptyDoeState();
-    state.currentStep = 0;
+    state = getEmptyState();
+    state.data.infos.date_doe = getTodayDate();
     state.currentDraftId = null;
     resetExportValidationState();
     saveAutosave();
-    renderApp();
+    goToStep(0);
 }
 
 function wireLeaveConfirmModal() {
@@ -476,7 +530,7 @@ function findExistingDraftIndexByKey() {
     if (!current.adresse || !current.nature) return -1;
 
     return drafts.findIndex(draft => {
-        const infos = draft?.data?.infos || {};
+        const infos = draft?.state?.data?.infos || {};
         return (
             normalizeDraftKey(infos.adresse) === current.adresse &&
             normalizeDraftKey(infos.nature_travaux) === current.nature
@@ -486,9 +540,10 @@ function findExistingDraftIndexByKey() {
 
 function buildDraftPayload() {
     return {
-        id: state.currentDraftId || crypto.randomUUID(),
+        id: state.currentDraftId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
+        title: getDraftDisplayTitle(),
         updatedAt: new Date().toISOString(),
-        data: deepClone(state.data)
+        state: deepClone(state)
     };
 }
 
@@ -1752,21 +1807,8 @@ function setAllDrafts(drafts) {
     localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
 }
 
-function buildDraftPayload() {
-    return {
-        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-        title: getDraftDisplayTitle(),
-        updatedAt: new Date().toISOString(),
-        state: JSON.parse(JSON.stringify(state))
-    };
-}
-
 function saveDraft() {
-    const drafts = getAllDrafts();
-    drafts.unshift(buildDraftPayload());
-    setAllDrafts(drafts);
-    saveAutosave();
-    showToast("Brouillon enregistré.", "success");
+    handleSaveDraft();
 }
 
 function openDraftsModal() {
@@ -2916,7 +2958,7 @@ function renderChantierBanner() {
             </div>
 
             <div class="banner-actions">
-                <button type="button" class="banner-btn" onclick="saveDraft()">Enregistrer</button>
+                <button type="button" class="banner-btn" onclick="handleSaveDraft()">Enregistrer</button>
                 <button type="button" class="footer-btn secondary-action" onclick="clearAutosave()">Effacer</button>
             </div>
         </div>
@@ -3059,20 +3101,20 @@ function renderFicheRow(item, index) {
     return `
         <div class="dynamic-card${getCardErrorClass(isRowCardMissing("fiches", index))}">
             <div class="dynamic-card-header">
-                <span class="dynamic-card-title">Fiche technique ${index + 1}</span>
-                <button class="remove-row-btn" onclick="removeRow('fiches', ${index})">Supprimer</button>
-                <div style="display:flex; gap:8px; align-items:center;">
-    <button class="icon-btn-inline preview" type="button" aria-label="Monter" onclick="moveRow('fiches', ${index}, -1)">
-        <span class="material-symbols-outlined icon-default">keyboard_arrow_up</span>
-    </button>
-
-    <button class="icon-btn-inline preview" type="button" aria-label="Descendre" onclick="moveRow('fiches', ${index}, 1)">
-        <span class="material-symbols-outlined icon-default">keyboard_arrow_down</span>
-    </button>
-
-    <button class="remove-row-btn" onclick="removeRow('fiches', ${index})">Supprimer</button>
-</div>
-            </div>
+             <span class="dynamic-card-title">Fiche technique ${index + 1}</span>
+         
+             <div class="row-order-actions">
+                 <button class="icon-btn-inline preview" type="button" aria-label="Monter" onclick="moveRow('fiches', ${index}, -1)">
+                     <span class="material-symbols-outlined icon-default">keyboard_arrow_up</span>
+                 </button>
+         
+                 <button class="icon-btn-inline preview" type="button" aria-label="Descendre" onclick="moveRow('fiches', ${index}, 1)">
+                     <span class="material-symbols-outlined icon-default">keyboard_arrow_down</span>
+                 </button>
+         
+                 <button class="remove-row-btn" onclick="removeRow('fiches', ${index})">Supprimer</button>
+             </div>
+         </div>
 
             <div class="fiche-grid">
                 <div class="${getFieldErrorClass(isRowFieldMissing("fiches", index, "type"))}">
@@ -3245,21 +3287,21 @@ function renderSchemasStep() {
 function renderDocRow(section, item, index, typeOptions) {
     return `
         <div class="dynamic-card${getCardErrorClass(isRowCardMissing(section, index))}">
-            <div class="dynamic-card-header">
-                <span class="dynamic-card-title">${getSectionTitle(section)} ${index + 1}</span>
-                <button class="remove-row-btn" onclick="removeRow('${section}', ${index})">Supprimer</button>
-                <div style="display:flex; gap:8px; align-items:center;">
-    <button class="icon-btn-inline preview" type="button" aria-label="Monter" onclick="moveRow('${section}', ${index}, -1)">
-        <span class="material-symbols-outlined icon-default">keyboard_arrow_up</span>
-    </button>
-
-    <button class="icon-btn-inline preview" type="button" aria-label="Descendre" onclick="moveRow('${section}', ${index}, 1)">
-        <span class="material-symbols-outlined icon-default">keyboard_arrow_down</span>
-    </button>
-
-    <button class="remove-row-btn" onclick="removeRow('${section}', ${index})">Supprimer</button>
-</div>
-            </div>
+         <div class="dynamic-card-header">
+             <span class="dynamic-card-title">${getSectionTitle(section)} ${index + 1}</span>
+         
+             <div class="row-order-actions">
+                 <button class="icon-btn-inline preview" type="button" aria-label="Monter" onclick="moveRow('${section}', ${index}, -1)">
+                     <span class="material-symbols-outlined icon-default">keyboard_arrow_up</span>
+                 </button>
+         
+                 <button class="icon-btn-inline preview" type="button" aria-label="Descendre" onclick="moveRow('${section}', ${index}, 1)">
+                     <span class="material-symbols-outlined icon-default">keyboard_arrow_down</span>
+                 </button>
+         
+                 <button class="remove-row-btn" onclick="removeRow('${section}', ${index})">Supprimer</button>
+             </div>
+         </div>
 
             <div class="doc-grid">
                 <div class="${getFieldErrorClass(isRowFieldMissing(section, index, "type"))}">
@@ -3541,8 +3583,6 @@ if (createValueSaveBtn) {
     createValueSaveBtn.onclick = submitCreateValueModal;
 }
 
-if (createValueInput)
-
 if (createValueModal) {
     createValueModal.addEventListener("click", (event) => {
         if (event.target === createValueModal) {
@@ -3554,6 +3594,9 @@ if (createValueModal) {
 /* ========================
    INIT
 ======================== */
+wireDraftOverwriteModal();
+wireLeaveConfirmModal();
+wireSidebarNavigation();
 renderStep();
 
 /* ========================
@@ -3577,6 +3620,7 @@ window.clearDateValue = clearDateValue;
 window.addRow = addRow;
 window.removeRow = removeRow;
 window.updateRow = updateRow;
+window.moveRow = moveRow;
 
 window.setFicheField = setFicheField;
 window.setDocTypeField = setDocTypeField;
@@ -3587,9 +3631,13 @@ window.closeCreateValueModal = closeCreateValueModal;
 window.submitCreateValueModal = submitCreateValueModal;
 
 window.saveDraft = saveDraft;
+window.handleSaveDraft = handleSaveDraft;
 window.clearAutosave = clearAutosave;
 window.loadDraft = loadDraft;
 window.deleteDraft = deleteDraft;
+window.closeDraftOverwriteModal = closeDraftOverwriteModal;
+window.closeLeaveConfirmModal = closeLeaveConfirmModal;
+window.closeErrorModal = closeErrorModal;
 
 window.openFile = openFile;
 window.handleFileUpload = handleFileUpload;
