@@ -1869,3 +1869,9 @@ button {
 #export-zip-btn.is-loading {
     position: relative;
 }
+
+.row-order-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
