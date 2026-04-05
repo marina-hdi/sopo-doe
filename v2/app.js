@@ -391,6 +391,93 @@ function triggerReplaceFile(section, index) {
     input.click();
 }
 
+function normalizeDraftKey(value) {
+    return String(value || "")
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, " ");
+}
+
+function getCurrentDraftMatchKey() {
+    return {
+        adresse: normalizeDraftKey(state.data?.infos?.adresse),
+        nature: normalizeDraftKey(state.data?.infos?.nature_travaux)
+    };
+}
+
+function findExistingDraftIndexByKey() {
+    const drafts = getSavedDrafts();
+    const current = getCurrentDraftMatchKey();
+
+    if (!current.adresse || !current.nature) return -1;
+
+    return drafts.findIndex(draft => {
+        const infos = draft?.data?.infos || {};
+        return (
+            normalizeDraftKey(infos.adresse) === current.adresse &&
+            normalizeDraftKey(infos.nature_travaux) === current.nature
+        );
+    });
+}
+
+function buildDraftPayload() {
+    return {
+        id: state.currentDraftId || crypto.randomUUID(),
+        updatedAt: new Date().toISOString(),
+        data: deepClone(state.data)
+    };
+}
+
+function saveDraftByMode(mode = "normal") {
+    const drafts = getSavedDrafts();
+    const existingIndex = findExistingDraftIndexByKey();
+    const payload = buildDraftPayload();
+
+    if (mode === "overwrite" && existingIndex >= 0) {
+        payload.id = drafts[existingIndex].id;
+        drafts[existingIndex] = payload;
+        state.currentDraftId = payload.id;
+    } else {
+        const sameIdIndex = drafts.findIndex(d => d.id === payload.id);
+
+        if (sameIdIndex >= 0) {
+            drafts[sameIdIndex] = payload;
+        } else {
+            drafts.unshift(payload);
+        }
+
+        state.currentDraftId = payload.id;
+    }
+
+    localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
+    saveAutosave();
+    showToast("Brouillon enregistré.", "success");
+}
+
+function openDraftOverwriteModal() {
+    document.getElementById("draft-overwrite-modal")?.classList.remove("hidden");
+}
+
+function closeDraftOverwriteModal() {
+    document.getElementById("draft-overwrite-modal")?.classList.add("hidden");
+}
+
+function wireDraftOverwriteModal() {
+    document.getElementById("close-draft-overwrite-btn")?.addEventListener("click", closeDraftOverwriteModal);
+    document.getElementById("draft-overwrite-cancel-btn")?.addEventListener("click", closeDraftOverwriteModal);
+
+    document.getElementById("draft-overwrite-ok-btn")?.addEventListener("click", () => {
+        saveDraftByMode("overwrite");
+        closeDraftOverwriteModal();
+    });
+
+    document.getElementById("draft-overwrite-copy-btn")?.addEventListener("click", () => {
+        state.currentDraftId = null;
+        saveDraftByMode("normal");
+        closeDraftOverwriteModal();
+    });
+}
+
 function getEstimatedZipSize() {
     const sections = ["fiches", "pv", "schemas"];
     let total = 0;
