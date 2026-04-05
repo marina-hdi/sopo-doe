@@ -149,6 +149,8 @@ function getEmptyState() {
 ======================== */
 let state = loadAutosave() || getEmptyState();
 
+let currentScreen = "builder";
+
 if (!state.data.infos.date_doe) {
     state.data.infos.date_doe = getTodayDate();
 }
@@ -246,6 +248,213 @@ function getInvalidFiles() {
 /* ========================
    HELPERS
 ======================== */
+function setWorkspaceChromeVisibility(showBuilderChrome) {
+    const stickyTop = document.querySelector(".workspace-top-sticky");
+    const footer = document.querySelector(".main-panel-footer");
+
+    if (stickyTop) {
+        stickyTop.style.display = showBuilderChrome ? "" : "none";
+    }
+
+    if (footer) {
+        footer.style.display = showBuilderChrome ? "" : "none";
+    }
+}
+
+function setActiveSidebarLink(activeId) {
+    document.querySelectorAll(".sidebar-link").forEach(btn => {
+        btn.classList.remove("active");
+    });
+
+    if (activeId) {
+        document.getElementById(activeId)?.classList.add("active");
+    }
+}
+
+function goToAccueil() {
+    currentScreen = "accueil";
+    renderApp();
+}
+
+function goToBuilder() {
+    currentScreen = "builder";
+    renderApp();
+}
+
+function renderAccueilScreen() {
+    setWorkspaceChromeVisibility(false);
+    setActiveSidebarLink("nav-accueil-btn");
+
+    const drafts = getAllDrafts().slice(0, 5);
+
+    const technicalSheetsCount = Array.isArray(referenceData.technicalSheetsLibrary)
+        ? referenceData.technicalSheetsLibrary.length
+        : 0;
+
+    const pvTypesCount = Array.isArray(referenceData.pvTypes)
+        ? referenceData.pvTypes.length
+        : 0;
+
+    const schemaTypesCount = Array.isArray(referenceData.schemaTypes)
+        ? referenceData.schemaTypes.length
+        : 0;
+
+    const postalCodesCount = referenceData.postalCodes
+        ? Object.keys(referenceData.postalCodes).length
+        : 0;
+
+    content.innerHTML = `
+        <div class="single-panel-layout accueil-layout">
+            <div class="accueil-grid">
+                <div class="accueil-main-column">
+                    <div class="panel">
+                        <div class="section-toolbar">
+                            <div>
+                                <h3>Accueil</h3>
+                                <p class="panel-muted">
+                                    Centre de pilotage du DOE builder.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="accueil-quick-actions">
+                            <button type="button" class="banner-btn" onclick="handleNewDoeFromAccueil()">
+                                Nouveau DOE
+                            </button>
+
+                            <button type="button" class="footer-btn secondary-action" onclick="openDraftsModal()">
+                                Ouvrir un brouillon
+                            </button>
+
+                            <button type="button" class="footer-btn secondary-action" onclick="showSavedPlaceholder()">
+                                Voir les DOE enregistrés
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="section-toolbar">
+                            <div>
+                                <h3>Brouillons récents</h3>
+                                <p class="panel-muted">
+                                    Les derniers brouillons enregistrés localement.
+                                </p>
+                            </div>
+                        </div>
+
+                        ${
+                            drafts.length
+                                ? `
+                                <div class="accueil-drafts-list">
+                                    ${drafts.map(draft => `
+                                        <div class="draft-item">
+                                            <div class="draft-main">
+                                                <div class="draft-title">${escapeHtml(draft.title || "Brouillon")}</div>
+                                                <div class="draft-meta">Dernière mise à jour : ${formatDraftDate(draft.updatedAt)}</div>
+                                            </div>
+                                            <div class="draft-actions">
+                                                <button class="draft-btn load" onclick="loadDraft('${draft.id}'); goToBuilder();">Ouvrir</button>
+                                                <button class="draft-btn delete" onclick="deleteDraft('${draft.id}')">Supprimer</button>
+                                            </div>
+                                        </div>
+                                    `).join("")}
+                                </div>
+                                `
+                                : `
+                                <div class="empty-state">
+                                    <p>Aucun brouillon récent.</p>
+                                </div>
+                                `
+                        }
+                    </div>
+                </div>
+
+                <div class="accueil-side-column">
+                    <div class="panel">
+                        <div class="section-toolbar">
+                            <div>
+                                <h3>Bibliothèque</h3>
+                                <p class="panel-muted">
+                                    État actuel des données de référence.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="summary-list">
+                            <div class="summary-item">
+                                <span>Fiches techniques en base</span>
+                                <strong>${technicalSheetsCount}</strong>
+                            </div>
+
+                            <div class="summary-item">
+                                <span>Types de PV</span>
+                                <strong>${pvTypesCount}</strong>
+                            </div>
+
+                            <div class="summary-item">
+                                <span>Types de schémas</span>
+                                <strong>${schemaTypesCount}</strong>
+                            </div>
+
+                            <div class="summary-item">
+                                <span>Codes postaux connus</span>
+                                <strong>${postalCodesCount}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="section-toolbar">
+                            <div>
+                                <h3>Rappels utiles</h3>
+                            </div>
+                        </div>
+
+                        <div class="accueil-helper-list">
+                            <div class="accueil-helper-card">
+                                Les champs obligatoires sont vérifiés au moment de l’export.
+                            </div>
+
+                            <div class="accueil-helper-card">
+                                L’ordre des lignes dans l’app détermine l’ordre du DOE PDF.
+                            </div>
+
+                            <div class="accueil-helper-card">
+                                Deux brouillons avec la même adresse et la même nature peuvent être écrasés.
+                            </div>
+
+                            <div class="accueil-helper-card">
+                                Les fichiers invalides bloquent l’export pour éviter les DOE cassés.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderApp() {
+    if (currentScreen === "accueil") {
+        renderAccueilScreen();
+        return;
+    }
+
+    setWorkspaceChromeVisibility(true);
+    setActiveSidebarLink("nav-new-btn");
+    renderStep();
+}
+
+function handleNewDoeFromAccueil() {
+    resetCurrentDoe();
+    currentScreen = "builder";
+    renderApp();
+}
+
+function showSavedPlaceholder() {
+    showToast("La page Enregistrés arrive bientôt.", "info");
+}
+
 function deepClone(value) {
     return JSON.parse(JSON.stringify(value));
 }
@@ -274,25 +483,35 @@ function handleSaveDraft() {
 function handleLeaveToAccueil() {
     openLeaveConfirmModal(() => {
         resetCurrentDoe();
-        // future accueil screen here
+        currentScreen = "accueil";
+        renderApp();
     });
 }
 
 function handleNewDoe() {
     openLeaveConfirmModal(() => {
         resetCurrentDoe();
+        currentScreen = "builder";
+        goToStep(0);
     });
 }
 
 function wireSidebarNavigation() {
-    navAccueilBtn?.addEventListener("click", handleLeaveToAccueil);
-    navNewBtn?.addEventListener("click", handleNewDoe);
+    navAccueilBtn?.addEventListener("click", () => {
+        if (currentScreen === "accueil") return;
+        handleLeaveToAccueil();
+    });
+
+    navNewBtn?.addEventListener("click", () => {
+        if (currentScreen === "accueil") {
+            handleNewDoeFromAccueil();
+            return;
+        }
+        handleNewDoe();
+    });
 
     navSavedBtn?.addEventListener("click", () => {
-        openLeaveConfirmModal(() => {
-            resetCurrentDoe();
-            // future enregistrés screen here
-        });
+        showSavedPlaceholder();
     });
 }
 
@@ -485,7 +704,6 @@ function resetCurrentDoe() {
     state.currentDraftId = null;
     resetExportValidationState();
     saveAutosave();
-    goToStep(0);
 }
 
 function wireLeaveConfirmModal() {
@@ -3597,7 +3815,7 @@ if (createValueModal) {
 wireDraftOverwriteModal();
 wireLeaveConfirmModal();
 wireSidebarNavigation();
-renderStep();
+renderApp();
 
 /* ========================
    WINDOW EXPORTS
@@ -3650,3 +3868,8 @@ window.triggerReplaceFile = triggerReplaceFile;
 
 window.toggleExportDocList = toggleExportDocList;
 window.startFakeExportPrep = startFakeExportPrep;
+
+window.goToBuilder = goToBuilder;
+window.goToAccueil = goToAccueil;
+window.handleNewDoeFromAccueil = handleNewDoeFromAccueil;
+window.showSavedPlaceholder = showSavedPlaceholder;
