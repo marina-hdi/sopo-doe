@@ -2143,14 +2143,15 @@ function showFailedFilesAlert(failedFiles) {
     const modal = document.getElementById("errorModal");
     const list = document.getElementById("errorList");
 
+    if (!modal || !list) return;
+
     list.innerHTML = "";
 
     failedFiles.forEach(item => {
         const div = document.createElement("div");
-        div.className = "modal-list-item";
+        div.className = "error-modal-list-item";
 
         const suffix = item.reason ? ` (${item.reason})` : "";
-
         div.textContent = `${item.label} : ${item.fileName}${suffix}`;
 
         list.appendChild(div);
@@ -2160,7 +2161,9 @@ function showFailedFilesAlert(failedFiles) {
 }
 
 function closeErrorModal() {
-    document.getElementById("errorModal").classList.add("hidden");
+    const modal = document.getElementById("errorModal");
+    if (!modal) return;
+    modal.classList.add("hidden");
 }
 
 /* ========================
