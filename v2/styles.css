@@ -123,7 +123,6 @@ button {
     overflow: visible;
 }
 
-/* sticky stack = chantier + tabs together */
 .workspace-top-sticky {
     position: sticky;
     top: 22px;
@@ -158,27 +157,11 @@ button {
 }
 
 /* ========================
-   WORKSPACE
-======================== */
-.workspace {
-    min-width: 0;
-}
-
-.workspace-inner {
-    min-height: calc(100vh - 44px);
-    border-radius: 26px;
-    padding: 22px;
-    display: grid;
-    grid-template-rows: auto auto 1fr;
-    gap: 16px;
-}
-
-/* ========================
    GLASS
 ======================== */
 .glass {
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     backdrop-filter: blur(22px);
     -webkit-backdrop-filter: blur(22px);
     background: linear-gradient(
