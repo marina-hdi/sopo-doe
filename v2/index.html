@@ -151,6 +151,25 @@
   </div>
 </div>
 
+  <div id="leave-confirm-modal" class="modal-backdrop hidden">
+  <div class="modal-card confirm-card">
+    <div class="modal-header">
+      <h3>Quitter ce DOE ?</h3>
+      <button class="icon-btn" id="close-leave-confirm-btn">✕</button>
+    </div>
+
+    <p class="confirm-message">
+      Voulez-vous enregistrer avant de quitter ?
+    </p>
+
+    <div class="confirm-actions">
+      <button type="button" id="leave-stay-btn" class="footer-btn secondary-action">Ne pas quitter</button>
+      <button type="button" id="leave-no-save-btn" class="footer-btn secondary-action">Quitter sans enregistrer</button>
+      <button type="button" id="leave-save-btn" class="footer-btn">Enregistrer et quitter</button>
+    </div>
+  </div>
+</div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
   <script src="app.js"></script>
