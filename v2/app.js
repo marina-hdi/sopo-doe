@@ -3248,6 +3248,17 @@ function renderDocRow(section, item, index, typeOptions) {
             <div class="dynamic-card-header">
                 <span class="dynamic-card-title">${getSectionTitle(section)} ${index + 1}</span>
                 <button class="remove-row-btn" onclick="removeRow('${section}', ${index})">Supprimer</button>
+                <div style="display:flex; gap:8px; align-items:center;">
+    <button class="icon-btn-inline preview" type="button" aria-label="Monter" onclick="moveRow('${section}', ${index}, -1)">
+        <span class="material-symbols-outlined icon-default">keyboard_arrow_up</span>
+    </button>
+
+    <button class="icon-btn-inline preview" type="button" aria-label="Descendre" onclick="moveRow('${section}', ${index}, 1)">
+        <span class="material-symbols-outlined icon-default">keyboard_arrow_down</span>
+    </button>
+
+    <button class="remove-row-btn" onclick="removeRow('${section}', ${index})">Supprimer</button>
+</div>
             </div>
 
             <div class="doc-grid">
