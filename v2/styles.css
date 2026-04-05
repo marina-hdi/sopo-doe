@@ -1063,12 +1063,13 @@ button {
 }
 
 /* ========================
-   MODAL / DRAFTS / CREATE
+   MODAL SYSTEM
 ======================== */
 .hidden {
     display: none !important;
 }
 
+/* old modals that use .modal-backdrop directly */
 .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -1081,33 +1082,111 @@ button {
     padding: 24px;
 }
 
+/* new custom modal wrapper */
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.modal.hidden {
+    display: none !important;
+}
+
+.modal > .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    display: block;
+    padding: 0;
+    background: rgba(29, 30, 24, 0.28);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
 .modal-card {
+    position: relative;
+    z-index: 1;
     width: min(520px, 100%);
     max-height: 80vh;
     overflow: auto;
-
     border-radius: 24px;
-    background: rgba(255,255,255,0.92); /* more readable */
+    background: rgba(255,255,255,0.92);
     border: 1px solid rgba(255,255,255,0.7);
-
     box-shadow: 0 18px 50px rgba(0,0,0,0.14);
     padding: 22px;
 }
 
-.create-value-card {
+.create-value-card,
+.confirm-card {
     max-width: 520px;
 }
 
 .modal-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     gap: 16px;
     margin-bottom: 18px;
 }
 
+.modal-header h2,
 .modal-header h3 {
     margin: 0;
+    color: #1D1E18;
+}
+
+.modal-icon {
+    color: #CE232A;
+    font-size: 28px;
+}
+
+.modal-subtitle {
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+
+.modal-list {
+    max-height: 220px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.modal-list-item {
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(0,0,0,0.05);
+    color: #1D1E18;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.modal-actions .btn.primary {
+    background: #00448C;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.18s ease;
+}
+
+.modal-actions .btn.primary:hover {
+    background: #00346d;
 }
 
 .icon-btn {
@@ -1186,75 +1265,9 @@ button {
     border-radius: 18px;
 }
 
-/* header */
-.modal-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.modal-icon {
-  color: #CE232A;
-  font-size: 28px;
-}
-
-.modal-header h2 {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1D1E18;
-}
-
-/* subtitle */
-.modal-subtitle {
-  font-size: 13px;
-  color: #555;
-  margin-bottom: 16px;
-}
-
-/* list */
-.modal-list {
-  max-height: 200px;
-  overflow-y: auto;
-  margin-bottom: 20px;
-}
-
-.modal-list-item {
-  font-size: 13px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  margin-bottom: 6px;
-
-  background: rgba(255,255,255,0.6);
-  border: 1px solid rgba(0,0,0,0.05);
-}
-
-/* button */
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.modal-actions .btn.primary {
-  background: #00448C;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.modal-actions .btn.primary:hover {
-  background: #00346d;
-}
-
 /* ========================
    CONFIRM MODAL
 ======================== */
-.confirm-card {
-    max-width: 520px;
-}
-
 .confirm-message {
     margin: 0 0 22px;
     color: #3d4451;
@@ -1288,7 +1301,7 @@ button {
     position: fixed;
     top: 24px;
     right: 24px;
-    z-index: 1200;
+    z-index: 1300;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -1638,9 +1651,7 @@ button {
     .draft-item {
         grid-template-columns: 1fr;
     }
-}
 
-@media (max-width: 900px) {
     .export-final-top {
         flex-direction: column;
         align-items: stretch;
@@ -1672,4 +1683,3 @@ button {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
