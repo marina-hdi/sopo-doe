@@ -1184,6 +1184,103 @@ button {
     border-radius: 18px;
 }
 
+/* ===== MODAL ===== */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+/* backdrop blur */
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(8px);
+  background: rgba(0,0,0,0.3);
+}
+
+/* card */
+.modal-card {
+  position: relative;
+  width: 420px;
+  max-width: 90%;
+  margin: 10vh auto;
+  padding: 24px;
+
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(12px);
+
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+}
+
+/* header */
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.modal-icon {
+  color: #CE232A;
+  font-size: 28px;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1D1E18;
+}
+
+/* subtitle */
+.modal-subtitle {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 16px;
+}
+
+/* list */
+.modal-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
+
+.modal-list-item {
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+
+  background: rgba(255,255,255,0.6);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+/* button */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-actions .btn.primary {
+  background: #00448C;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.modal-actions .btn.primary:hover {
+  background: #00346d;
+}
+
 /* ========================
    CONFIRM MODAL
 ======================== */
