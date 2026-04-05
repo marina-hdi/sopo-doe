@@ -742,6 +742,7 @@ async function buildRealDoePdfBlob() {
     const headerContact = "82 RUE ALEXANDRE DUMAS 75020 PARIS | 01 43 56 62 43 | services@sopodex.fr";
 
     const renderedPages = [];
+    const failedFiles = [];
 
     function addTrackedPage(role, meta = {}) {
         const page = pdf.addPage([PAGE.width, PAGE.height]);
@@ -754,34 +755,6 @@ async function buildRealDoePdfBlob() {
         const width = font.widthOfTextAtSize(safeText, size);
         const x = (PAGE.width - width) / 2;
         page.drawText(safeText, { x, y, size, font, color });
-    }
-
-    function drawWrappedText(page, text, x, y, maxWidth, font, size, color, lineHeight = 16) {
-        const words = String(text || "").split(/\s+/).filter(Boolean);
-        let line = "";
-        let currentY = y;
-
-        for (const word of words) {
-            const candidate = line ? `${line} ${word}` : word;
-            const candidateWidth = font.widthOfTextAtSize(candidate, size);
-
-            if (candidateWidth <= maxWidth) {
-                line = candidate;
-            } else {
-                if (line) {
-                    page.drawText(line, { x, y: currentY, size, font, color });
-                    currentY -= lineHeight;
-                }
-                line = word;
-            }
-        }
-
-        if (line) {
-            page.drawText(line, { x, y: currentY, size, font, color });
-            currentY -= lineHeight;
-        }
-
-        return currentY;
     }
 
     function drawDottedLeader(page, startX, endX, y) {
@@ -827,7 +800,7 @@ async function buildRealDoePdfBlob() {
         });
     }
 
-    function dataURLToUint8Array(dataURL) {
+    function dataURLToUint8ArrayLocal(dataURL) {
         const parts = String(dataURL || "").split(",");
         if (parts.length < 2) return new Uint8Array();
 
@@ -855,6 +828,11 @@ async function buildRealDoePdfBlob() {
 
     function getFicheSubLabel(item) {
         return [getDisplayBrand(item), getDisplayModel(item)].filter(Boolean).join(" - ");
+    }
+
+    function getFailureLabel(sectionKey, item) {
+        if (sectionKey === "fiches") return getDisplayType(item);
+        return getDisplayType(item);
     }
 
     function getDividerInfoLines(sectionKey, item) {
@@ -1175,135 +1153,129 @@ async function buildRealDoePdfBlob() {
         return page;
     }
 
-       async function addMergedFile(sectionKey, item) {
-       const fileDataUrl = item?.file;
-       if (!fileDataUrl) return;
-   
-       const bytes = dataURLToUint8Array(fileDataUrl);
-       const fileName = item?.fileName || "FICHIER SANS NOM";
-       const fileType = item?.fileType || "";
-   
-       function pushFailure(reason = "") {
-           failedFiles.push({
-               sectionKey,
-               label: getFailureLabel(sectionKey, item),
-               fileName,
-               reason
-           });
-       }
-   
-       const looksLikePdf =
-           fileType === "application/pdf" ||
-           fileName.toLowerCase().endsWith(".pdf") ||
-           fileDataUrl.startsWith("data:application/pdf");
-   
-       const looksLikeJpg =
-           fileType.startsWith("image/jpeg") ||
-           /\.(jpe?g)$/i.test(fileName) ||
-           fileDataUrl.startsWith("data:image/jpeg");
-   
-       const looksLikePng =
-           fileType.startsWith("image/png") ||
-           /\.png$/i.test(fileName) ||
-           fileDataUrl.startsWith("data:image/png");
-   
-       // ===== PDF =====
-       if (looksLikePdf) {
-           try {
-               const srcPdf = await PDFDocument.load(bytes);
-               const copiedPages = await pdf.copyPages(srcPdf, srcPdf.getPageIndices());
-   
-               copiedPages.forEach((copiedPage) => {
-                   pdf.addPage(copiedPage);
-                   renderedPages.push({ page: copiedPage, role: "content" });
-               });
-   
-               return;
-           } catch (error) {
-               console.error("❌ PDF merge failed:", fileName, error);
-               pushFailure("PDF invalide ou corrompu");
-               return;
-           }
-       }
-   
-       // ===== IMAGE =====
-       if (looksLikeJpg || looksLikePng) {
-           try {
-               const page = addTrackedPage("content");
-               let image = null;
-   
-               if (looksLikeJpg) {
-                   image = await pdf.embedJpg(bytes);
-               } else {
-                   image = await pdf.embedPng(bytes);
-               }
-   
-               const maxWidth = PAGE.width - 120;
-               const maxHeight = PAGE.height - 160;
-               const scale = Math.min(
-                   maxWidth / image.width,
-                   maxHeight / image.height
-               );
-   
-               page.drawImage(image, {
-                   x: (PAGE.width - image.width * scale) / 2,
-                   y: (PAGE.height - image.height * scale) / 2,
-                   width: image.width * scale,
-                   height: image.height * scale
-               });
-   
-               return;
-           } catch (error) {
-               console.error("❌ Image embed failed:", fileName, error);
-               pushFailure("Image invalide ou illisible");
-               return;
-           }
-       }
-   
-       // ===== FALLBACK =====
-       try {
-           const srcPdf = await PDFDocument.load(bytes);
-           const copiedPages = await pdf.copyPages(srcPdf, srcPdf.getPageIndices());
-   
-           copiedPages.forEach((copiedPage) => {
-               pdf.addPage(copiedPage);
-               renderedPages.push({ page: copiedPage, role: "content" });
-           });
-   
-           return;
-       } catch {}
-   
-       try {
-           const page = addTrackedPage("content");
-   
-           let image = null;
-           try {
-               image = await pdf.embedJpg(bytes);
-           } catch {
-               image = await pdf.embedPng(bytes);
-           }
-   
-           const maxWidth = PAGE.width - 120;
-           const maxHeight = PAGE.height - 160;
-           const scale = Math.min(
-               maxWidth / image.width,
-               maxHeight / image.height
-           );
-   
-           page.drawImage(image, {
-               x: (PAGE.width - image.width * scale) / 2,
-               y: (PAGE.height - image.height * scale) / 2,
-               width: image.width * scale,
-               height: image.height * scale
-           });
-   
-           return;
-       } catch {}
-   
-       // ===== FINAL FAILURE =====
-       pushFailure("Format non pris en charge ou fichier illisible");
-   }
+    async function addMergedFile(sectionKey, item) {
+        const fileDataUrl = item?.file;
+        if (!fileDataUrl) return;
+
+        const bytes = dataURLToUint8ArrayLocal(fileDataUrl);
+        const fileName = item?.fileName || "FICHIER SANS NOM";
+        const fileType = item?.fileType || "";
+
+        function pushFailure(reason = "") {
+            failedFiles.push({
+                sectionKey,
+                label: getFailureLabel(sectionKey, item),
+                fileName,
+                reason
+            });
         }
+
+        const looksLikePdf =
+            fileType === "application/pdf" ||
+            fileName.toLowerCase().endsWith(".pdf") ||
+            fileDataUrl.startsWith("data:application/pdf");
+
+        const looksLikeJpg =
+            fileType.startsWith("image/jpeg") ||
+            /\.(jpe?g)$/i.test(fileName) ||
+            fileDataUrl.startsWith("data:image/jpeg");
+
+        const looksLikePng =
+            fileType.startsWith("image/png") ||
+            /\.png$/i.test(fileName) ||
+            fileDataUrl.startsWith("data:image/png");
+
+        if (looksLikePdf) {
+            try {
+                const srcPdf = await PDFDocument.load(bytes);
+                const copiedPages = await pdf.copyPages(srcPdf, srcPdf.getPageIndices());
+
+                copiedPages.forEach((copiedPage) => {
+                    pdf.addPage(copiedPage);
+                    renderedPages.push({ page: copiedPage, role: "content" });
+                });
+
+                return;
+            } catch (error) {
+                console.error("Erreur fusion PDF :", fileName, error);
+                pushFailure("PDF invalide ou corrompu");
+                return;
+            }
+        }
+
+        if (looksLikeJpg || looksLikePng) {
+            try {
+                const page = addTrackedPage("content");
+                let image = null;
+
+                if (looksLikeJpg) {
+                    image = await pdf.embedJpg(bytes);
+                } else {
+                    image = await pdf.embedPng(bytes);
+                }
+
+                const maxWidth = PAGE.width - 120;
+                const maxHeight = PAGE.height - 160;
+                const scale = Math.min(
+                    maxWidth / image.width,
+                    maxHeight / image.height
+                );
+
+                page.drawImage(image, {
+                    x: (PAGE.width - image.width * scale) / 2,
+                    y: (PAGE.height - image.height * scale) / 2,
+                    width: image.width * scale,
+                    height: image.height * scale
+                });
+
+                return;
+            } catch (error) {
+                console.error("Erreur intégration image :", fileName, error);
+                pushFailure("Image invalide ou illisible");
+                return;
+            }
+        }
+
+        try {
+            const srcPdf = await PDFDocument.load(bytes);
+            const copiedPages = await pdf.copyPages(srcPdf, srcPdf.getPageIndices());
+
+            copiedPages.forEach((copiedPage) => {
+                pdf.addPage(copiedPage);
+                renderedPages.push({ page: copiedPage, role: "content" });
+            });
+
+            return;
+        } catch {}
+
+        try {
+            const page = addTrackedPage("content");
+            let image = null;
+
+            try {
+                image = await pdf.embedJpg(bytes);
+            } catch {
+                image = await pdf.embedPng(bytes);
+            }
+
+            const maxWidth = PAGE.width - 120;
+            const maxHeight = PAGE.height - 160;
+            const scale = Math.min(
+                maxWidth / image.width,
+                maxHeight / image.height
+            );
+
+            page.drawImage(image, {
+                x: (PAGE.width - image.width * scale) / 2,
+                y: (PAGE.height - image.height * scale) / 2,
+                width: image.width * scale,
+                height: image.height * scale
+            });
+
+            return;
+        } catch {}
+
+        pushFailure("Format non pris en charge ou fichier illisible");
     }
 
     addCover();
@@ -1316,19 +1288,19 @@ async function buildRealDoePdfBlob() {
     for (const item of ficheItems) {
         item.__sectionStartPage = renderedPages.length;
         addSectionDivider("FICHES TECHNIQUES", COLORS.primary, "fiches", item);
-        await addMergedFile(item.file);
+        await addMergedFile("fiches", item);
     }
 
     for (const item of pvItems) {
         item.__sectionStartPage = renderedPages.length;
         addSectionDivider("PROCES VERBAUX", COLORS.accent, "pv", item);
-        await addMergedFile(item.file);
+        await addMergedFile("pv", item);
     }
 
     for (const item of schemaItems) {
         item.__sectionStartPage = renderedPages.length;
         addSectionDivider("SCHEMAS", COLORS.highlight, "schemas", item);
-        await addMergedFile(item.file);
+        await addMergedFile("schemas", item);
     }
 
     const totalPhysicalPages = renderedPages.length;
@@ -1356,24 +1328,27 @@ async function buildRealDoePdfBlob() {
         });
     });
 
-   renderedPages.forEach((entry, index) => {
-       if (index === 0) return; // cover
-   
-       const currentNumber = numberedPageFromPhysicalIndex(index);
-   
-       if (entry.role === "content") {
-           return; // keep counted in pagination, but do not draw footer
-       }
-   
-       drawFooter(entry.page, currentNumber, totalNumberedPages);
-   });
+    renderedPages.forEach((entry, index) => {
+        if (index === 0) return;
+
+        const currentNumber = numberedPageFromPhysicalIndex(index);
+
+        if (entry.role === "content") {
+            return;
+        }
+
+        drawFooter(entry.page, currentNumber, totalNumberedPages);
+    });
 
     [...ficheItems, ...pvItems, ...schemaItems].forEach((item) => {
         delete item.__sectionStartPage;
     });
 
     const bytes = await pdf.save();
-    return new Blob([bytes], { type: "application/pdf" });
+    return {
+        blob: new Blob([bytes], { type: "application/pdf" }),
+        failedFiles
+    };
 }
 
 /* ========================
@@ -1515,21 +1490,30 @@ function formatDraftDate(value) {
    TOASTS
 ======================== */
 function showToast(message, type = "info") {
-    console.log(`[${type.toUpperCase()}]`, message);
+    if (!toastContainer) return;
 
     const toast = document.createElement("div");
     toast.className = `toast ${type}`;
-    toast.textContent = message;
 
-    document.body.appendChild(toast);
+    const iconMap = {
+        success: "check_circle",
+        error: "error",
+        info: "info"
+    };
+
+    toast.innerHTML = `
+        <span class="material-symbols-outlined toast-icon">${iconMap[type] || "info"}</span>
+        <div class="toast-message">${escapeHtml(message)}</div>
+    `;
+
+    toastContainer.appendChild(toast);
 
     setTimeout(() => {
-        toast.classList.add("show");
-    }, 10);
-
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
+        toast.classList.add("is-hiding");
+        toast.addEventListener("animationend", () => {
+            toast.remove();
+        }, { once: true });
+    }, 2600);
 }
 
 /* ========================
@@ -2384,16 +2368,28 @@ function setDocTypeField(section, index, value) {
 /* ========================
    FILES
 ======================== */
-function handleFileUpload(file, item) {
+function handleFileUpload(section, index, input) {
+    const file = input?.files?.[0];
+    if (!file) return;
+
+    const item = state.data?.[section]?.[index];
+    if (!item) return;
+
     const validation = validateFile(file);
 
     if (!validation.valid) {
         item.invalid = true;
         item.error = validation.reason;
         item.file = null;
+        item.fileName = file.name;
+        item.fileType = file.type || "";
+        item.fileSize = file.size || 0;
+        item.fileLastModified = file.lastModified || null;
+        item.fileSource = "upload";
 
+        saveAutosave();
+        renderStep();
         showToast(validation.reason, "error");
-        renderAll();
         return;
     }
 
@@ -2402,20 +2398,31 @@ function handleFileUpload(file, item) {
     reader.onload = function (e) {
         item.file = e.target.result;
         item.fileName = file.name;
-        item.fileType = file.type;
-
+        item.fileType = file.type || "application/octet-stream";
+        item.fileSize = file.size || 0;
+        item.fileLastModified = file.lastModified || null;
+        item.fileSource = "upload";
         item.invalid = false;
         item.error = null;
+        delete item.autoMatched;
 
-        renderAll();
+        if (section === "fiches") {
+            upsertTechnicalSheetLibraryEntry(item);
+        }
+
+        saveAutosave();
+        renderStep();
+        showToast("Fichier ajouté.", "success");
     };
 
     reader.onerror = function () {
         item.invalid = true;
         item.error = "Impossible de lire le fichier";
+        item.file = null;
 
+        saveAutosave();
+        renderStep();
         showToast("Erreur lecture fichier", "error");
-        renderAll();
     };
 
     reader.readAsDataURL(file);
