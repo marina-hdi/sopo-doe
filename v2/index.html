@@ -100,6 +100,29 @@
   </div>
 
   <div id="toast-container" class="toast-container"></div>
+  <div id="errorModal" class="modal hidden">
+  <div class="modal-backdrop"></div>
+
+  <div class="modal-card">
+    <div class="modal-header">
+      <span class="material-symbols-outlined modal-icon">error</span>
+      <h2>Fichiers non valides</h2>
+    </div>
+
+    <p class="modal-subtitle">
+      Ces fichiers n'ont pas pu être ajoutés.<br>
+      Merci de les remplacer avant export.
+    </p>
+
+    <div id="errorList" class="modal-list"></div>
+
+    <div class="modal-actions">
+      <button onclick="closeErrorModal()" class="btn primary">
+        OK
+      </button>
+    </div>
+  </div>
+</div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
