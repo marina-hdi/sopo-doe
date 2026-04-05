@@ -99,6 +99,41 @@ button {
 }
 
 /* ========================
+   STICKY NAV / HEADER
+======================== */
+.sidebar {
+    position: sticky;
+    top: 22px;
+    align-self: start;
+    height: calc(100vh - 44px);
+}
+
+.workspace-inner {
+    overflow: visible;
+}
+
+#chantier-banner-zone {
+    position: sticky;
+    top: 22px;
+    z-index: 40;
+}
+
+.top-steps {
+    position: sticky;
+    top: 122px;
+    z-index: 39;
+    padding-top: 4px;
+}
+
+.main-panel {
+    overflow: visible;
+}
+
+#step-content {
+    overflow: visible;
+}
+
+/* ========================
    WORKSPACE
 ======================== */
 .workspace {
@@ -1787,4 +1822,46 @@ button {
 
 .error-modal-btn:hover {
     background: #00346d;
+}
+
+/* ========================
+   EXPORT VALIDATION + LOADING
+======================== */
+.field-error .custom-select-trigger,
+.field.field-error input,
+.field.field-error textarea,
+.field-error .custom-date-button,
+.field-error .upload-inline,
+.field-error .file-name-inline,
+.field-error .dropzone-inline {
+    border-color: rgba(206, 35, 42, 0.55) !important;
+    box-shadow: 0 0 0 4px rgba(206, 35, 42, 0.10) !important;
+}
+
+.field-error .custom-select-trigger,
+.field-error .custom-date-button,
+.field.field-error input,
+.field.field-error textarea {
+    background: rgba(255, 248, 248, 0.96) !important;
+}
+
+.card-error {
+    border-color: rgba(206, 35, 42, 0.28) !important;
+    box-shadow: 0 10px 25px rgba(206, 35, 42, 0.08) !important;
+}
+
+.card-error .dynamic-card-title::before {
+    background: #CE232A;
+    box-shadow: 0 0 0 6px rgba(206, 35, 42, 0.12);
+}
+
+#export-zip-btn[disabled] {
+    cursor: not-allowed;
+    opacity: 0.8;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+#export-zip-btn.is-loading {
+    position: relative;
 }
