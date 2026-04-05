@@ -2140,15 +2140,27 @@ function handlePostalCodeChange(value) {
 }
 
 function showFailedFilesAlert(failedFiles) {
-    const lines = failedFiles.map(item => {
+    const modal = document.getElementById("errorModal");
+    const list = document.getElementById("errorList");
+
+    list.innerHTML = "";
+
+    failedFiles.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "modal-list-item";
+
         const suffix = item.reason ? ` (${item.reason})` : "";
-        return `• ${item.label} : ${item.fileName}${suffix}`;
+
+        div.textContent = `${item.label} : ${item.fileName}${suffix}`;
+
+        list.appendChild(div);
     });
 
-    alert(
-        "Ces fichiers n'ont pas pu être ajoutés, merci de les remplacer.\n\n" +
-        lines.join("\n")
-    );
+    modal.classList.remove("hidden");
+}
+
+function closeErrorModal() {
+    document.getElementById("errorModal").classList.add("hidden");
 }
 
 /* ========================
