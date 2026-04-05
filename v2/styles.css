@@ -114,46 +114,51 @@ button {
 }
 
 .workspace-inner {
+    height: calc(100vh - 44px);
     min-height: calc(100vh - 44px);
     border-radius: 26px;
     padding: 22px;
     display: grid;
     grid-template-rows: auto 1fr;
     gap: 16px;
-    overflow: visible;
+    overflow: hidden;
 }
 
 .workspace-top-sticky {
-    position: sticky;
-    top: 22px;
-    z-index: 50;
+    position: relative;
+    z-index: 20;
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding-bottom: 4px;
-    background: linear-gradient(
-        180deg,
-        rgba(245, 247, 250, 0.92),
-        rgba(245, 247, 250, 0.72)
-    );
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 20px;
+    flex-shrink: 0;
 }
 
+/* make only the content area scroll */
 .main-panel {
     position: relative;
     z-index: 1;
     min-height: 0;
+    height: 100%;
     display: grid;
     grid-template-rows: 1fr auto;
     padding: 24px;
-    overflow: visible;
+    overflow: hidden;
 }
 
 #step-content {
     min-width: 0;
-    overflow: visible;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 6px;
+}
+
+.main-panel-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 22px;
+    flex-shrink: 0;
 }
 
 /* ========================
@@ -161,7 +166,7 @@ button {
 ======================== */
 .glass {
     position: relative;
-    overflow: visible;
+    overflow: hidden;
     backdrop-filter: blur(22px);
     -webkit-backdrop-filter: blur(22px);
     background: linear-gradient(
