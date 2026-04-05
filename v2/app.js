@@ -3061,6 +3061,17 @@ function renderFicheRow(item, index) {
             <div class="dynamic-card-header">
                 <span class="dynamic-card-title">Fiche technique ${index + 1}</span>
                 <button class="remove-row-btn" onclick="removeRow('fiches', ${index})">Supprimer</button>
+                <div style="display:flex; gap:8px; align-items:center;">
+    <button class="icon-btn-inline preview" type="button" aria-label="Monter" onclick="moveRow('fiches', ${index}, -1)">
+        <span class="material-symbols-outlined icon-default">keyboard_arrow_up</span>
+    </button>
+
+    <button class="icon-btn-inline preview" type="button" aria-label="Descendre" onclick="moveRow('fiches', ${index}, 1)">
+        <span class="material-symbols-outlined icon-default">keyboard_arrow_down</span>
+    </button>
+
+    <button class="remove-row-btn" onclick="removeRow('fiches', ${index})">Supprimer</button>
+</div>
             </div>
 
             <div class="fiche-grid">
