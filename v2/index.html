@@ -15,10 +15,10 @@
           <div class="sidebar-brand">DOE</div>
 
           <nav class="sidebar-nav">
-            <button class="sidebar-link">Accueil</button>
-            <button class="sidebar-link active">Nouveau</button>
+            <button class="sidebar-link" id="nav-accueil-btn">Accueil</button>
+            <button class="sidebar-link active" id="nav-new-btn">Nouveau</button>
             <button class="sidebar-link" id="open-drafts-btn">Brouillons</button>
-            <button class="sidebar-link">Enregistrés</button>
+            <button class="sidebar-link" id="nav-saved-btn">Enregistrés</button>
           </nav>
         </div>
       </div>
@@ -101,6 +101,46 @@
     </div>
   </div>
 
+
+  <div id="draft-overwrite-modal" class="modal-backdrop hidden">
+    <div class="modal-card confirm-card">
+      <div class="modal-header">
+        <h3>Un brouillon existe déjà</h3>
+        <button class="icon-btn" id="close-draft-overwrite-btn">✕</button>
+      </div>
+
+      <p class="confirm-message">
+        Un brouillon avec la même adresse et la même nature des travaux existe déjà.
+        Que voulez-vous faire ?
+      </p>
+
+      <div class="confirm-actions">
+        <button type="button" id="draft-overwrite-cancel-btn" class="footer-btn secondary-action">Annuler</button>
+        <button type="button" id="draft-overwrite-copy-btn" class="footer-btn secondary-action">Créer une copie</button>
+        <button type="button" id="draft-overwrite-ok-btn" class="footer-btn">Écraser</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="leave-confirm-modal" class="modal-backdrop hidden">
+    <div class="modal-card confirm-card">
+      <div class="modal-header">
+        <h3>Quitter ce DOE ?</h3>
+        <button class="icon-btn" id="close-leave-confirm-btn">✕</button>
+      </div>
+
+      <p class="confirm-message">
+        Voulez-vous enregistrer avant de quitter ?
+      </p>
+
+      <div class="confirm-actions">
+        <button type="button" id="leave-stay-btn" class="footer-btn secondary-action">Ne pas quitter</button>
+        <button type="button" id="leave-no-save-btn" class="footer-btn secondary-action">Quitter sans enregistrer</button>
+        <button type="button" id="leave-save-btn" class="footer-btn">Enregistrer et quitter</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast-container" class="toast-container"></div>
 
   <div id="errorModal" class="error-modal hidden">
@@ -130,45 +170,6 @@
       </div>
     </div>
   </div>
-
-  <div id="draft-overwrite-modal" class="modal-backdrop hidden">
-  <div class="modal-card confirm-card">
-    <div class="modal-header">
-      <h3>Un brouillon existe déjà</h3>
-      <button class="icon-btn" id="close-draft-overwrite-btn">✕</button>
-    </div>
-
-    <p class="confirm-message">
-      Un brouillon avec la même adresse et la même nature des travaux existe déjà.
-      Que voulez-vous faire ?
-    </p>
-
-    <div class="confirm-actions">
-      <button type="button" id="draft-overwrite-cancel-btn" class="footer-btn secondary-action">Annuler</button>
-      <button type="button" id="draft-overwrite-copy-btn" class="footer-btn secondary-action">Créer une copie</button>
-      <button type="button" id="draft-overwrite-ok-btn" class="footer-btn">Écraser</button>
-    </div>
-  </div>
-</div>
-
-  <div id="leave-confirm-modal" class="modal-backdrop hidden">
-  <div class="modal-card confirm-card">
-    <div class="modal-header">
-      <h3>Quitter ce DOE ?</h3>
-      <button class="icon-btn" id="close-leave-confirm-btn">✕</button>
-    </div>
-
-    <p class="confirm-message">
-      Voulez-vous enregistrer avant de quitter ?
-    </p>
-
-    <div class="confirm-actions">
-      <button type="button" id="leave-stay-btn" class="footer-btn secondary-action">Ne pas quitter</button>
-      <button type="button" id="leave-no-save-btn" class="footer-btn secondary-action">Quitter sans enregistrer</button>
-      <button type="button" id="leave-save-btn" class="footer-btn">Enregistrer et quitter</button>
-    </div>
-  </div>
-</div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
