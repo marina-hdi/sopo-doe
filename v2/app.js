@@ -242,6 +242,21 @@ function getInvalidFiles() {
 /* ========================
    HELPERS
 ======================== */
+function moveRow(section, index, direction) {
+    const list = state.data?.[section];
+    if (!Array.isArray(list)) return;
+
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= list.length) return;
+
+    const temp = list[index];
+    list[index] = list[newIndex];
+    list[newIndex] = temp;
+
+    saveAutosave();
+    renderStep();
+}
+
 function getFileDisplay(item) {
     if (!item.fileName) return "AUCUN FICHIER";
 
@@ -389,6 +404,55 @@ function triggerReplaceFile(section, index) {
         return;
     }
     input.click();
+}
+
+let pendingLeaveAction = null;
+
+function openLeaveConfirmModal(onLeave) {
+    pendingLeaveAction = onLeave;
+    document.getElementById("leave-confirm-modal")?.classList.remove("hidden");
+}
+
+function closeLeaveConfirmModal() {
+    pendingLeaveAction = null;
+    document.getElementById("leave-confirm-modal")?.classList.add("hidden");
+}
+
+function executePendingLeave() {
+    if (typeof pendingLeaveAction === "function") {
+        pendingLeaveAction();
+    }
+    closeLeaveConfirmModal();
+}
+
+function resetCurrentDoe() {
+    state.data = getEmptyDoeState();
+    state.currentStep = 0;
+    state.currentDraftId = null;
+    resetExportValidationState();
+    saveAutosave();
+    renderApp();
+}
+
+function wireLeaveConfirmModal() {
+    document.getElementById("close-leave-confirm-btn")?.addEventListener("click", closeLeaveConfirmModal);
+    document.getElementById("leave-stay-btn")?.addEventListener("click", closeLeaveConfirmModal);
+
+    document.getElementById("leave-no-save-btn")?.addEventListener("click", () => {
+        executePendingLeave();
+    });
+
+    document.getElementById("leave-save-btn")?.addEventListener("click", () => {
+        const existingIndex = findExistingDraftIndexByKey();
+
+        if (existingIndex >= 0) {
+            saveDraftByMode("overwrite");
+        } else {
+            saveDraftByMode("normal");
+        }
+
+        executePendingLeave();
+    });
 }
 
 function normalizeDraftKey(value) {
