@@ -1875,3 +1875,59 @@ button {
     gap: 8px;
     align-items: center;
 }
+
+/* ========================
+   ACCUEIL
+======================== */
+.accueil-layout {
+    display: block;
+}
+
+.accueil-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.accueil-main-column,
+.accueil-side-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.accueil-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.accueil-drafts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.accueil-helper-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.accueil-helper-card {
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 16px;
+    padding: 14px 16px;
+    color: #3d4451;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+@media (max-width: 1100px) {
+    .accueil-grid {
+        grid-template-columns: 1fr;
+    }
+}
