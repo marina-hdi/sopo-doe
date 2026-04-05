@@ -108,28 +108,67 @@ button {
     height: calc(100vh - 44px);
 }
 
+.workspace {
+    min-width: 0;
+    min-height: 0;
+}
+
 .workspace-inner {
+    min-height: calc(100vh - 44px);
+    border-radius: 26px;
+    padding: 22px;
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: 16px;
     overflow: visible;
 }
 
+/* reserve normal layout space, only make the actual banner sticky */
 #chantier-banner-zone {
+    position: relative;
+    z-index: 20;
+}
+
+#chantier-banner-zone .chantier-banner {
     position: sticky;
     top: 22px;
     z-index: 40;
 }
 
+/* same idea for step tabs */
 .top-steps {
-    position: sticky;
-    top: 122px;
-    z-index: 39;
-    padding-top: 4px;
+    position: relative;
+    z-index: 19;
+    min-height: 52px; /* keeps layout from collapsing */
 }
 
+.top-steps .step {
+    position: relative;
+    z-index: 1;
+}
+
+#step-tabs {
+    position: sticky;
+    top: 118px; /* banner height + gap */
+    z-index: 39;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    background: transparent;
+}
+
+/* panel stays below sticky blocks */
 .main-panel {
+    position: relative;
+    z-index: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    padding: 24px;
     overflow: visible;
 }
 
 #step-content {
+    min-width: 0;
     overflow: visible;
 }
 
