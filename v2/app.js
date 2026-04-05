@@ -120,6 +120,7 @@ referenceData = {
 };
 
 saveReferenceData();
+
 /* ========================
    EMPTY STATE
 ======================== */
@@ -151,6 +152,19 @@ let state = loadAutosave() || getEmptyState();
 if (!state.data.infos.date_doe) {
     state.data.infos.date_doe = getTodayDate();
 }
+
+let exportUiState = {
+    isExporting: false
+};
+
+let exportValidationState = {
+    infos: {},
+    rows: {
+        fiches: {},
+        pv: {},
+        schemas: {}
+    }
+};
 
 /* ========================
    STEP CONFIG
@@ -455,24 +469,35 @@ function toggleExportDocList(sectionKey) {
 }
 
 async function startFakeExportPrep() {
+    if (exportUiState.isExporting) return;
+
     const fill = document.getElementById("export-progress-fill");
     const text = document.getElementById("export-progress-text");
 
-   const invalidFiles = getInvalidFiles();
+    const validationIssues = collectExportValidation();
 
-if (invalidFiles.length) {
-    showFailedFilesAlert(
-        invalidFiles.map(item => ({
-            label: (item.type || "DOCUMENT").toUpperCase(),
-            fileName: item.fileName || "FICHIER",
-            reason: item.error || "Fichier invalide"
-        }))
-    );
+    if (validationIssues.length) {
+        renderStep();
+        showFailedFilesAlert(validationIssues);
+        showToast("Merci de compléter les champs obligatoires avant export.", "error");
+        return;
+    }
 
-    showToast("Corrige les fichiers avant export", "error");
-    return;
-}
-   
+    const invalidFiles = getInvalidFiles();
+
+    if (invalidFiles.length) {
+        showFailedFilesAlert(
+            invalidFiles.map(item => ({
+                label: (item.type || "DOCUMENT").toUpperCase(),
+                fileName: item.fileName || "FICHIER",
+                reason: item.error || "Fichier invalide"
+            }))
+        );
+
+        showToast("Corrige les fichiers avant export", "error");
+        return;
+    }
+
     if (!fill || !text) return;
 
     if (typeof JSZip === "undefined") {
@@ -485,6 +510,9 @@ if (invalidFiles.length) {
         return;
     }
 
+    exportUiState.isExporting = true;
+    syncExportUiState();
+
     const zip = new JSZip();
 
     const fullAddress = [state.data.infos.adresse, state.data.infos.code_postal, state.data.infos.ville]
@@ -496,6 +524,8 @@ if (invalidFiles.length) {
     const root = zip.folder(safeFolderName);
 
     if (!root) {
+        exportUiState.isExporting = false;
+        syncExportUiState();
         showToast("Impossible de créer le ZIP.", "error");
         return;
     }
@@ -507,20 +537,23 @@ if (invalidFiles.length) {
         text.textContent = "Génération du DOE.pdf...";
         fill.style.width = "12%";
 
-const pdfResult = await buildRealDoePdfBlob();
+        const pdfResult = await buildRealDoePdfBlob();
 
-if (pdfResult.failedFiles.length) {
-    fill.style.width = "0%";
-    text.textContent = "Export bloqué";
+        if (pdfResult.failedFiles.length) {
+            fill.style.width = "0%";
+            text.textContent = "Export bloqué";
+            exportUiState.isExporting = false;
+            syncExportUiState();
 
-    showFailedFilesAlert(pdfResult.failedFiles);
-    showToast("Certains fichiers doivent être remplacés.", "error");
-    return;
-}
+            showFailedFilesAlert(pdfResult.failedFiles);
+            showToast("Certains fichiers doivent être remplacés.", "error");
+            return;
+        }
 
-root.file("DOE.pdf", pdfResult.blob);
+        root.file("DOE.pdf", pdfResult.blob);
 
         fill.style.width = "28%";
+        text.textContent = "Préparation des fichiers originaux...";
 
         const sections = [
             {
@@ -604,6 +637,9 @@ root.file("DOE.pdf", pdfResult.blob);
         text.textContent = "Erreur lors de l’export";
         fill.style.width = "0%";
         showToast("Impossible de générer le ZIP.", "error");
+    } finally {
+        exportUiState.isExporting = false;
+        syncExportUiState();
     }
 }
 
@@ -1349,6 +1385,166 @@ async function buildRealDoePdfBlob() {
         blob: new Blob([bytes], { type: "application/pdf" }),
         failedFiles
     };
+}
+
+function resetExportValidationState() {
+    exportValidationState = {
+        infos: {},
+        rows: {
+            fiches: {},
+            pv: {},
+            schemas: {}
+        }
+    };
+}
+
+function markInfoMissing(field) {
+    exportValidationState.infos[field] = true;
+}
+
+function markRowMissing(section, index, field) {
+    if (!exportValidationState.rows[section][index]) {
+        exportValidationState.rows[section][index] = {};
+    }
+    exportValidationState.rows[section][index][field] = true;
+}
+
+function isInfoMissing(field) {
+    return !!exportValidationState.infos[field];
+}
+
+function isRowFieldMissing(section, index, field) {
+    return !!exportValidationState.rows?.[section]?.[index]?.[field];
+}
+
+function isRowCardMissing(section, index) {
+    return !!exportValidationState.rows?.[section]?.[index];
+}
+
+function hasAnyValue(value) {
+    return value !== undefined && value !== null && String(value).trim() !== "";
+}
+
+function collectExportValidation() {
+    resetExportValidationState();
+
+    const issues = [];
+
+    const infos = state.data.infos || {};
+    const requiredInfos = [
+        ["adresse", "Adresse"],
+        ["nature_travaux", "Nature des travaux"],
+        ["code_postal", "Code postal"],
+        ["ville", "Ville"],
+        ["date_reception", "Date de réception"],
+        ["date_doe", "Date DOE"]
+    ];
+
+    requiredInfos.forEach(([field, label]) => {
+        if (!hasAnyValue(infos[field])) {
+            markInfoMissing(field);
+            issues.push({
+                label,
+                fileName: "Champ obligatoire",
+                reason: "Manquant"
+            });
+        }
+    });
+
+    (state.data.fiches || []).forEach((item, index) => {
+        const missing = [];
+
+        if (!hasAnyValue(item.type)) {
+            markRowMissing("fiches", index, "type");
+            missing.push("Type");
+        }
+        if (!hasAnyValue(item.marque)) {
+            markRowMissing("fiches", index, "marque");
+            missing.push("Marque");
+        }
+        if (!hasAnyValue(item.modele)) {
+            markRowMissing("fiches", index, "modele");
+            missing.push("Modèle");
+        }
+        if (!item.file) {
+            markRowMissing("fiches", index, "file");
+            missing.push("Fichier");
+        }
+
+        if (missing.length) {
+            issues.push({
+                label: `Fiche technique ${index + 1}`,
+                fileName: missing.join(", "),
+                reason: "Champs obligatoires manquants"
+            });
+        }
+    });
+
+    (state.data.pv || []).forEach((item, index) => {
+        const missing = [];
+
+        if (!hasAnyValue(item.type)) {
+            markRowMissing("pv", index, "type");
+            missing.push("Type");
+        }
+        if (!item.file) {
+            markRowMissing("pv", index, "file");
+            missing.push("Fichier");
+        }
+
+        if (missing.length) {
+            issues.push({
+                label: `PV ${index + 1}`,
+                fileName: missing.join(", "),
+                reason: "Champs obligatoires manquants"
+            });
+        }
+    });
+
+    (state.data.schemas || []).forEach((item, index) => {
+        const missing = [];
+
+        if (!hasAnyValue(item.type)) {
+            markRowMissing("schemas", index, "type");
+            missing.push("Type");
+        }
+        if (!item.file) {
+            markRowMissing("schemas", index, "file");
+            missing.push("Fichier");
+        }
+
+        if (missing.length) {
+            issues.push({
+                label: `Schéma ${index + 1}`,
+                fileName: missing.join(", "),
+                reason: "Champs obligatoires manquants"
+            });
+        }
+    });
+
+    return issues;
+}
+
+function getFieldErrorClass(isMissing) {
+    return isMissing ? " field-error" : "";
+}
+
+function getCardErrorClass(isMissing) {
+    return isMissing ? " card-error" : "";
+}
+
+function syncExportUiState() {
+    const button = document.getElementById("export-zip-btn");
+    const buttonLabel = document.getElementById("export-zip-btn-label");
+
+    if (button) {
+        button.disabled = exportUiState.isExporting;
+        button.classList.toggle("is-loading", exportUiState.isExporting);
+    }
+
+    if (buttonLabel) {
+        buttonLabel.textContent = exportUiState.isExporting ? "Export en cours..." : "Télécharger le ZIP";
+    }
 }
 
 /* ========================
@@ -2579,6 +2775,7 @@ function renderChantierBanner() {
 /* ========================
    RENDER — INFOS
 ======================== */
+
 function renderInfos() {
     const infos = state.data.infos;
     const cityOptions = referenceData.postalCodes[infos.code_postal] || [];
@@ -2594,7 +2791,7 @@ function renderInfos() {
 
                 <div class="infos-form-grid">
                     <div class="infos-adresse">
-                        <div class="field">
+                        <div class="field${getFieldErrorClass(isInfoMissing("adresse"))}">
                             <label>Adresse</label>
                             <input
                                 value="${escapeHtml(infos.adresse || "")}"
@@ -2603,7 +2800,7 @@ function renderInfos() {
                         </div>
                     </div>
 
-                    <div class="infos-nature">
+                    <div class="infos-nature${getFieldErrorClass(isInfoMissing("nature_travaux"))}">
                         ${renderCustomSelect({
                             id: "nature-travaux-select",
                             label: "Nature des travaux",
@@ -2614,7 +2811,7 @@ function renderInfos() {
                     </div>
 
                     <div class="infos-left-row">
-                        <div class="field">
+                        <div class="field${getFieldErrorClass(isInfoMissing("code_postal"))}">
                             <label>CP</label>
                             <input
                                 value="${escapeHtml(infos.code_postal || "")}"
@@ -2622,7 +2819,7 @@ function renderInfos() {
                             />
                         </div>
 
-                        <div class="infos-ville-slot">
+                        <div class="infos-ville-slot${getFieldErrorClass(isInfoMissing("ville"))}">
                             ${renderCustomSelect({
                                 id: "ville-select",
                                 label: "Ville",
@@ -2635,17 +2832,21 @@ function renderInfos() {
                     </div>
 
                     <div class="infos-right-row">
-                        ${renderCustomDateField({
-                            label: "Date de réception",
-                            field: "date_reception",
-                            value: infos.date_reception
-                        })}
+                        <div class="${getFieldErrorClass(isInfoMissing("date_reception"))}">
+                            ${renderCustomDateField({
+                                label: "Date de réception",
+                                field: "date_reception",
+                                value: infos.date_reception
+                            })}
+                        </div>
 
-                        ${renderCustomDateField({
-                            label: "Date DOE",
-                            field: "date_doe",
-                            value: infos.date_doe || getTodayDate()
-                        })}
+                        <div class="${getFieldErrorClass(isInfoMissing("date_doe"))}">
+                            ${renderCustomDateField({
+                                label: "Date DOE",
+                                field: "date_doe",
+                                value: infos.date_doe || getTodayDate()
+                            })}
+                        </div>
                     </div>
 
                     <div class="infos-notes">
@@ -2705,14 +2906,14 @@ function renderFicheRow(item, index) {
     const modelOptions = getModelsForTypeAndBrand(item.type, item.marque);
 
     return `
-        <div class="dynamic-card">
+        <div class="dynamic-card${getCardErrorClass(isRowCardMissing("fiches", index))}">
             <div class="dynamic-card-header">
                 <span class="dynamic-card-title">Fiche technique ${index + 1}</span>
                 <button class="remove-row-btn" onclick="removeRow('fiches', ${index})">Supprimer</button>
             </div>
 
             <div class="fiche-grid">
-                <div>
+                <div class="${getFieldErrorClass(isRowFieldMissing("fiches", index, "type"))}">
                     ${renderCustomSelect({
                         id: `fiche-type-${index}`,
                         label: "Type",
@@ -2723,7 +2924,7 @@ function renderFicheRow(item, index) {
                     })}
                 </div>
 
-                <div>
+                <div class="${getFieldErrorClass(isRowFieldMissing("fiches", index, "marque"))}">
                     ${renderCustomSelect({
                         id: `fiche-marque-${index}`,
                         label: "Marque",
@@ -2735,7 +2936,7 @@ function renderFicheRow(item, index) {
                     })}
                 </div>
 
-                <div>
+                <div class="${getFieldErrorClass(isRowFieldMissing("fiches", index, "modele"))}">
                     ${renderCustomSelect({
                         id: `fiche-modele-${index}`,
                         label: "Modèle",
@@ -2747,89 +2948,88 @@ function renderFicheRow(item, index) {
                     })}
                 </div>
 
-               <div class="field fiche-file-block">
-                      <label>Fichier</label>
-                      <div class="upload-inline">
-                          <input
-                              id="file-input-fiches-${index}"
-                              class="hidden-file-input"
-                              type="file"
-                              accept=".pdf,image/*"
-                              onchange="handleFileUpload('fiches', ${index}, this)"
-                          />
-                  
-                          <div
-                              class="dropzone-inline"
-                              data-input-id="file-input-fiches-${index}"
-                              data-section="fiches"
-                              data-index="${index}"
-                          >
-                              ${item.file ? "Remplacer" : "Déposer ou cliquer"}
-                          </div>
-                  
-                          <div class="file-name-inline ${(item.fileName || item.autoMatched) ? "has-file" : ""}">
-                              <div class="file-name-stack">
-                                  <span class="file-primary-name">
-                                      ${
-                                          item.fileName
-                                              ? escapeHtml(item.fileName)
-                                              : item.autoMatched
-                                                  ? "FICHE TROUVÉE EN BASE"
-                                                  : "Aucun fichier"
-                                      }
-                                  </span>
-                                  ${
-                                      item.fileName || item.autoMatched
-                                          ? `<span class="file-secondary-meta">${escapeHtml(getFileMetaLabel(item))}</span>`
-                                          : ""
-                                  }
-                              </div>
-                          </div>
-                  
-                          ${
-                              item.file
-                                  ? `
-                                      <button
-                                          class="icon-btn-inline preview"
-                                          type="button"
-                                          aria-label="Voir le fichier"
-                                          onclick="openFile('fiches', ${index}, this)"
-                                      >
-                                          <span class="material-symbols-outlined icon-default">visibility</span>
-                                          <span class="material-symbols-outlined icon-spinner">progress_activity</span>
-                                      </button>
-                  
-                                      <button
-                                          class="icon-btn-inline preview"
-                                          type="button"
-                                          aria-label="Télécharger le fichier"
-                                          onclick="downloadFile('fiches', ${index})"
-                                      >
-                                          <span class="material-symbols-outlined icon-default">download</span>
-                                      </button>
-                  
-                                      <button
-                                          class="icon-btn-inline preview"
-                                          type="button"
-                                          aria-label="Remplacer le fichier"
-                                          onclick="triggerReplaceFile('fiches', ${index})"
-                                      >
-                                          <span class="material-symbols-outlined icon-default">upload</span>
-                                      </button>
-                  
-                                      <button
-                                          class="icon-btn-inline delete"
-                                          type="button"
-                                          aria-label="Supprimer le fichier"
-                                          onclick="deleteFile('fiches', ${index})"
-                                      >
-                                          <span class="material-symbols-outlined icon-default">delete</span>
-                                      </button>
-                                    `
-                                  : ""
-                          }
-                      </div>
-                  </div>
+                <div class="field fiche-file-block${getFieldErrorClass(isRowFieldMissing("fiches", index, "file"))}">
+                    <label>Fichier</label>
+                    <div class="upload-inline">
+                        <input
+                            id="file-input-fiches-${index}"
+                            class="hidden-file-input"
+                            type="file"
+                            accept=".pdf,image/*"
+                            onchange="handleFileUpload('fiches', ${index}, this)"
+                        />
+
+                        <div
+                            class="dropzone-inline"
+                            data-input-id="file-input-fiches-${index}"
+                            data-section="fiches"
+                            data-index="${index}"
+                        >
+                            ${item.file ? "Remplacer" : "Déposer ou cliquer"}
+                        </div>
+
+                        <div class="file-name-inline ${(item.fileName || item.autoMatched) ? "has-file" : ""}">
+                            <div class="file-name-stack">
+                                <span class="file-primary-name">
+                                    ${
+                                        item.fileName
+                                            ? escapeHtml(item.fileName)
+                                            : item.autoMatched
+                                                ? "FICHE TROUVÉE EN BASE"
+                                                : "Aucun fichier"
+                                    }
+                                </span>
+                                ${
+                                    item.fileName || item.autoMatched
+                                        ? `<span class="file-secondary-meta">${escapeHtml(getFileMetaLabel(item))}</span>`
+                                        : ""
+                                }
+                            </div>
+                        </div>
+
+                        ${
+                            item.file
+                                ? `
+                                    <button
+                                        class="icon-btn-inline preview"
+                                        type="button"
+                                        aria-label="Voir le fichier"
+                                        onclick="openFile('fiches', ${index}, this)"
+                                    >
+                                        <span class="material-symbols-outlined icon-default">visibility</span>
+                                        <span class="material-symbols-outlined icon-spinner">progress_activity</span>
+                                    </button>
+
+                                    <button
+                                        class="icon-btn-inline preview"
+                                        type="button"
+                                        aria-label="Télécharger le fichier"
+                                        onclick="downloadFile('fiches', ${index})"
+                                    >
+                                        <span class="material-symbols-outlined icon-default">download</span>
+                                    </button>
+
+                                    <button
+                                        class="icon-btn-inline preview"
+                                        type="button"
+                                        aria-label="Remplacer le fichier"
+                                        onclick="triggerReplaceFile('fiches', ${index})"
+                                    >
+                                        <span class="material-symbols-outlined icon-default">upload</span>
+                                    </button>
+
+                                    <button
+                                        class="icon-btn-inline delete"
+                                        type="button"
+                                        aria-label="Supprimer le fichier"
+                                        onclick="deleteFile('fiches', ${index})"
+                                    >
+                                        <span class="material-symbols-outlined icon-default">delete</span>
+                                    </button>
+                                  `
+                                : ""
+                        }
+                    </div>
                 </div>
             </div>
         </div>
@@ -2882,14 +3082,14 @@ function renderSchemasStep() {
 
 function renderDocRow(section, item, index, typeOptions) {
     return `
-        <div class="dynamic-card">
+        <div class="dynamic-card${getCardErrorClass(isRowCardMissing(section, index))}">
             <div class="dynamic-card-header">
                 <span class="dynamic-card-title">${getSectionTitle(section)} ${index + 1}</span>
                 <button class="remove-row-btn" onclick="removeRow('${section}', ${index})">Supprimer</button>
             </div>
 
             <div class="doc-grid">
-                <div>
+                <div class="${getFieldErrorClass(isRowFieldMissing(section, index, "type"))}">
                     ${renderCustomSelect({
                         id: `${section}-type-${index}`,
                         label: "Type",
@@ -2900,83 +3100,82 @@ function renderDocRow(section, item, index, typeOptions) {
                     })}
                 </div>
 
-                <div class="field doc-file-block">
-                   <label>Fichier</label>
-                   <div class="upload-inline">
-                       <input
-                           id="file-input-${section}-${index}"
-                           class="hidden-file-input"
-                           type="file"
-                           accept=".pdf,image/*"
-                           onchange="handleFileUpload('${section}', ${index}, this)"
-                       />
-               
-                       <div
-                           class="dropzone-inline"
-                           data-input-id="file-input-${section}-${index}"
-                           data-section="${section}"
-                           data-index="${index}"
-                       >
-                           ${item.file ? "Remplacer" : "Déposer ou cliquer"}
-                       </div>
-               
-                       <div class="file-name-inline ${item.fileName ? "has-file" : ""}">
-                           <div class="file-name-stack">
-                               <span class="file-primary-name">
-                                   ${item.fileName ? escapeHtml(item.fileName) : "Aucun fichier"}
-                               </span>
-                               ${
-                                   item.fileName
-                                       ? `<span class="file-secondary-meta">${escapeHtml(getFileMetaLabel(item))}</span>`
-                                       : ""
-                               }
-                           </div>
-                       </div>
-               
-                       ${
-                           item.file
-                               ? `
-                                   <button
-                                       class="icon-btn-inline preview"
-                                       type="button"
-                                       aria-label="Voir le fichier"
-                                       onclick="openFile('${section}', ${index}, this)"
-                                   >
-                                       <span class="material-symbols-outlined icon-default">visibility</span>
-                                       <span class="material-symbols-outlined icon-spinner">progress_activity</span>
-                                   </button>
-               
-                                   <button
-                                       class="icon-btn-inline preview"
-                                       type="button"
-                                       aria-label="Télécharger le fichier"
-                                       onclick="downloadFile('${section}', ${index})"
-                                   >
-                                       <span class="material-symbols-outlined icon-default">download</span>
-                                   </button>
-               
-                                   <button
-                                       class="icon-btn-inline preview"
-                                       type="button"
-                                       aria-label="Remplacer le fichier"
-                                       onclick="triggerReplaceFile('${section}', ${index})"
-                                   >
-                                       <span class="material-symbols-outlined icon-default">upload</span>
-                                   </button>
-               
-                                   <button
-                                       class="icon-btn-inline delete"
-                                       type="button"
-                                       aria-label="Supprimer le fichier"
-                                       onclick="deleteFile('${section}', ${index})"
-                                   >
-                                       <span class="material-symbols-outlined icon-default">delete</span>
-                                   </button>
-                                 `
-                               : ""
-                       }
-                   </div>
-               </div>
+                <div class="field doc-file-block${getFieldErrorClass(isRowFieldMissing(section, index, "file"))}">
+                    <label>Fichier</label>
+                    <div class="upload-inline">
+                        <input
+                            id="file-input-${section}-${index}"
+                            class="hidden-file-input"
+                            type="file"
+                            accept=".pdf,image/*"
+                            onchange="handleFileUpload('${section}', ${index}, this)"
+                        />
+
+                        <div
+                            class="dropzone-inline"
+                            data-input-id="file-input-${section}-${index}"
+                            data-section="${section}"
+                            data-index="${index}"
+                        >
+                            ${item.file ? "Remplacer" : "Déposer ou cliquer"}
+                        </div>
+
+                        <div class="file-name-inline ${item.fileName ? "has-file" : ""}">
+                            <div class="file-name-stack">
+                                <span class="file-primary-name">
+                                    ${item.fileName ? escapeHtml(item.fileName) : "Aucun fichier"}
+                                </span>
+                                ${
+                                    item.fileName
+                                        ? `<span class="file-secondary-meta">${escapeHtml(getFileMetaLabel(item))}</span>`
+                                        : ""
+                                }
+                            </div>
+                        </div>
+
+                        ${
+                            item.file
+                                ? `
+                                    <button
+                                        class="icon-btn-inline preview"
+                                        type="button"
+                                        aria-label="Voir le fichier"
+                                        onclick="openFile('${section}', ${index}, this)"
+                                    >
+                                        <span class="material-symbols-outlined icon-default">visibility</span>
+                                        <span class="material-symbols-outlined icon-spinner">progress_activity</span>
+                                    </button>
+
+                                    <button
+                                        class="icon-btn-inline preview"
+                                        type="button"
+                                        aria-label="Télécharger le fichier"
+                                        onclick="downloadFile('${section}', ${index})"
+                                    >
+                                        <span class="material-symbols-outlined icon-default">download</span>
+                                    </button>
+
+                                    <button
+                                        class="icon-btn-inline preview"
+                                        type="button"
+                                        aria-label="Remplacer le fichier"
+                                        onclick="triggerReplaceFile('${section}', ${index})"
+                                    >
+                                        <span class="material-symbols-outlined icon-default">upload</span>
+                                    </button>
+
+                                    <button
+                                        class="icon-btn-inline delete"
+                                        type="button"
+                                        aria-label="Supprimer le fichier"
+                                        onclick="deleteFile('${section}', ${index})"
+                                    >
+                                        <span class="material-symbols-outlined icon-default">delete</span>
+                                    </button>
+                                  `
+                                : ""
+                        }
+                    </div>
                 </div>
             </div>
         </div>
@@ -3052,10 +3251,12 @@ function renderSummary() {
 
                             <button
                                 type="button"
+                                id="export-zip-btn"
                                 class="footer-btn"
                                 onclick="startFakeExportPrep()"
+                                ${exportUiState.isExporting ? "disabled" : ""}
                             >
-                                Télécharger le ZIP
+                                <span id="export-zip-btn-label">${exportUiState.isExporting ? "Export en cours..." : "Télécharger le ZIP"}</span>
                             </button>
                         </div>
 
@@ -3070,6 +3271,8 @@ function renderSummary() {
             </div>
         </div>
     `;
+
+    syncExportUiState();
 }
 
 /* ========================
