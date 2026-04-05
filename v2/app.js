@@ -281,6 +281,131 @@ function goToBuilder() {
     renderApp();
 }
 
+function goToSavedScreen() {
+    currentScreen = "saved";
+    renderApp();
+}
+
+function duplicateDraft(draftId) {
+    const drafts = getAllDrafts();
+    const draft = drafts.find(item => item.id === draftId);
+    if (!draft) return;
+
+    const copy = deepClone(draft);
+    copy.id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+    copy.title = `${draft.title || "Brouillon"} (copie)`;
+    copy.updatedAt = new Date().toISOString();
+
+    drafts.unshift(copy);
+    setAllDrafts(drafts);
+
+    showToast("Brouillon dupliqué.", "success");
+    renderApp();
+}
+
+function getSavedSearchValue() {
+    return state.savedSearch || "";
+}
+
+function setSavedSearchValue(value) {
+    state.savedSearch = value;
+    renderApp();
+}
+
+function renderSavedScreen() {
+    setWorkspaceChromeVisibility(false);
+    setActiveSidebarLink("nav-saved-btn");
+
+    const search = getSavedSearchValue().trim().toUpperCase();
+    const drafts = getAllDrafts();
+
+    const filteredDrafts = drafts.filter(draft => {
+        if (!search) return true;
+
+        const title = String(draft.title || "").toUpperCase();
+        const infos = draft?.state?.data?.infos || {};
+        const adresse = String(infos.adresse || "").toUpperCase();
+        const nature = String(infos.nature_travaux || "").toUpperCase();
+        const ville = String(infos.ville || "").toUpperCase();
+
+        return (
+            title.includes(search) ||
+            adresse.includes(search) ||
+            nature.includes(search) ||
+            ville.includes(search)
+        );
+    });
+
+    content.innerHTML = `
+        <div class="single-panel-layout enregistres-layout">
+            <div class="panel">
+                <div class="section-toolbar">
+                    <div>
+                        <h3>Enregistrés</h3>
+                        <p class="panel-muted">
+                            Tous les brouillons enregistrés localement.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="enregistres-toolbar">
+                    <div class="field full">
+                        <label>Rechercher</label>
+                        <input
+                            type="text"
+                            placeholder="Adresse, ville, nature des travaux..."
+                            value="${escapeHtml(getSavedSearchValue())}"
+                            oninput="setSavedSearchValue(this.value)"
+                        />
+                    </div>
+                </div>
+
+                ${
+                    filteredDrafts.length
+                        ? `
+                        <div class="enregistres-list">
+                            ${filteredDrafts.map(draft => {
+                                const infos = draft?.state?.data?.infos || {};
+                                const addressLine = [infos.adresse, infos.code_postal, infos.ville]
+                                    .filter(Boolean)
+                                    .join(" ");
+
+                                return `
+                                    <div class="draft-item">
+                                        <div class="draft-main">
+                                            <div class="draft-title">${escapeHtml(draft.title || "Brouillon")}</div>
+                                            <div class="draft-meta">
+                                                ${addressLine ? escapeHtml(addressLine) : "Adresse non renseignée"}
+                                            </div>
+                                            <div class="draft-meta">
+                                                ${infos.nature_travaux ? escapeHtml(infos.nature_travaux) : "Nature non renseignée"}
+                                            </div>
+                                            <div class="draft-meta">
+                                                Dernière mise à jour : ${formatDraftDate(draft.updatedAt)}
+                                            </div>
+                                        </div>
+
+                                        <div class="draft-actions">
+                                            <button class="draft-btn load" onclick="loadDraft('${draft.id}'); goToBuilder();">Ouvrir</button>
+                                            <button class="draft-btn load" onclick="duplicateDraft('${draft.id}')">Dupliquer</button>
+                                            <button class="draft-btn delete" onclick="deleteDraft('${draft.id}'); setTimeout(renderApp, 50);">Supprimer</button>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join("")}
+                        </div>
+                        `
+                        : `
+                        <div class="empty-state">
+                            <p>Aucun brouillon trouvé.</p>
+                        </div>
+                        `
+                }
+            </div>
+        </div>
+    `;
+}
+
 function renderAccueilScreen() {
     setWorkspaceChromeVisibility(false);
     setActiveSidebarLink("nav-accueil-btn");
@@ -440,6 +565,11 @@ function renderApp() {
         return;
     }
 
+    if (currentScreen === "saved") {
+        renderSavedScreen();
+        return;
+    }
+
     setWorkspaceChromeVisibility(true);
     setActiveSidebarLink("nav-new-btn");
     renderStep();
@@ -452,7 +582,7 @@ function handleNewDoeFromAccueil() {
 }
 
 function showSavedPlaceholder() {
-    showToast("La page Enregistrés arrive bientôt.", "info");
+    goToSavedScreen();
 }
 
 function deepClone(value) {
@@ -499,11 +629,17 @@ function handleNewDoe() {
 function wireSidebarNavigation() {
     navAccueilBtn?.addEventListener("click", () => {
         if (currentScreen === "accueil") return;
+
+        if (currentScreen === "saved") {
+            goToAccueil();
+            return;
+        }
+
         handleLeaveToAccueil();
     });
 
     navNewBtn?.addEventListener("click", () => {
-        if (currentScreen === "accueil") {
+        if (currentScreen === "accueil" || currentScreen === "saved") {
             handleNewDoeFromAccueil();
             return;
         }
@@ -511,7 +647,17 @@ function wireSidebarNavigation() {
     });
 
     navSavedBtn?.addEventListener("click", () => {
-        showSavedPlaceholder();
+        if (currentScreen === "saved") return;
+
+        if (currentScreen === "accueil") {
+            goToSavedScreen();
+            return;
+        }
+
+        openLeaveConfirmModal(() => {
+            resetCurrentDoe();
+            goToSavedScreen();
+        });
     });
 }
 
@@ -3873,3 +4019,6 @@ window.goToBuilder = goToBuilder;
 window.goToAccueil = goToAccueil;
 window.handleNewDoeFromAccueil = handleNewDoeFromAccueil;
 window.showSavedPlaceholder = showSavedPlaceholder;
+window.goToSavedScreen = goToSavedScreen;
+window.duplicateDraft = duplicateDraft;
+window.setSavedSearchValue = setSavedSearchValue;
