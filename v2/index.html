@@ -26,15 +26,17 @@
 
     <main class="workspace">
       <div class="workspace-inner glass">
-        <section id="chantier-banner-zone"></section>
+        <div class="workspace-top-sticky">
+          <section id="chantier-banner-zone"></section>
 
-        <section class="top-steps" id="step-tabs">
-          <button class="step active" data-step="0">1. Infos</button>
-          <button class="step" data-step="1">2. Fiches</button>
-          <button class="step" data-step="2">3. PV</button>
-          <button class="step" data-step="3">4. Schémas</button>
-          <button class="step" data-step="4">5. Export</button>
-        </section>
+          <section class="top-steps" id="step-tabs">
+            <button class="step active" data-step="0">1. Infos</button>
+            <button class="step" data-step="1">2. Fiches</button>
+            <button class="step" data-step="2">3. PV</button>
+            <button class="step" data-step="3">4. Schémas</button>
+            <button class="step" data-step="4">5. Export</button>
+          </section>
+        </div>
 
         <section class="main-panel glass-soft">
           <div id="step-content"></div>
@@ -102,32 +104,32 @@
   <div id="toast-container" class="toast-container"></div>
 
   <div id="errorModal" class="error-modal hidden">
-  <div class="error-modal-overlay" onclick="closeErrorModal()"></div>
+    <div class="error-modal-overlay" onclick="closeErrorModal()"></div>
 
-  <div class="error-modal-card">
-    <div class="error-modal-header">
-      <div class="error-modal-title-wrap">
-        <span class="material-symbols-outlined error-modal-icon">error</span>
-        <h2>Fichiers non valides</h2>
+    <div class="error-modal-card">
+      <div class="error-modal-header">
+        <div class="error-modal-title-wrap">
+          <span class="material-symbols-outlined error-modal-icon">error</span>
+          <h2>Fichiers non valides</h2>
+        </div>
+
+        <button type="button" class="error-modal-close" onclick="closeErrorModal()">✕</button>
       </div>
 
-      <button type="button" class="error-modal-close" onclick="closeErrorModal()">✕</button>
-    </div>
+      <p class="error-modal-subtitle">
+        Ces fichiers n'ont pas pu être ajoutés.<br>
+        Merci de les remplacer avant export.
+      </p>
 
-    <p class="error-modal-subtitle">
-      Ces fichiers n'ont pas pu être ajoutés.<br>
-      Merci de les remplacer avant export.
-    </p>
+      <div id="errorList" class="error-modal-list"></div>
 
-    <div id="errorList" class="error-modal-list"></div>
-
-    <div class="error-modal-actions">
-      <button type="button" onclick="closeErrorModal()" class="error-modal-btn">
-        OK
-      </button>
+      <div class="error-modal-actions">
+        <button type="button" onclick="closeErrorModal()" class="error-modal-btn">
+          OK
+        </button>
+      </div>
     </div>
   </div>
-</div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
