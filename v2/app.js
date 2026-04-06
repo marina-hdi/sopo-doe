@@ -196,6 +196,7 @@ const closeDraftsBtn = document.getElementById("close-drafts-btn");
 const navAccueilBtn = document.getElementById("nav-accueil-btn");
 const navNewBtn = document.getElementById("nav-new-btn");
 const navSavedBtn = document.getElementById("nav-saved-btn");
+const navSettingsBtn = document.getElementById("nav-settings-btn");
 
 const toastContainer = document.getElementById("toast-container");
 
@@ -283,6 +284,11 @@ function goToBuilder() {
 
 function goToSavedScreen() {
     currentScreen = "saved";
+    renderApp();
+}
+
+function goToSettingsScreen() {
+    currentScreen = "settings";
     renderApp();
 }
 
@@ -401,6 +407,195 @@ function renderSavedScreen() {
                         </div>
                         `
                 }
+            </div>
+        </div>
+    `;
+}
+
+function renderSettingsScreen() {
+    setWorkspaceChromeVisibility(false);
+    setActiveSidebarLink("nav-settings-btn");
+
+    const workTypes = Array.isArray(referenceData.workTypes) ? referenceData.workTypes : [];
+    const pvTypes = Array.isArray(referenceData.pvTypes) ? referenceData.pvTypes : [];
+    const schemaTypes = Array.isArray(referenceData.schemaTypes) ? referenceData.schemaTypes : [];
+    const postalEntries = Object.entries(referenceData.postalCodes || {});
+    const technicalSheets = Array.isArray(referenceData.technicalSheetsLibrary)
+        ? referenceData.technicalSheetsLibrary
+        : [];
+
+    content.innerHTML = `
+        <div class="single-panel-layout settings-layout">
+            <div class="settings-grid">
+                <div class="settings-main-column">
+                    <div class="panel">
+                        <div class="section-toolbar">
+                            <div>
+                                <h3>Paramètres</h3>
+                                <p class="panel-muted">
+                                    Gérez les valeurs de référence utilisées dans le DOE builder.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <div class="section-toolbar">
+                                <div>
+                                    <h4>Natures de travaux</h4>
+                                </div>
+                                <button class="add-row-btn" type="button" onclick="promptAddSettingValue('workTypes')">+ Ajouter</button>
+                            </div>
+
+                            ${
+                                workTypes.length
+                                    ? `
+                                    <div class="settings-chip-list">
+                                        ${workTypes.map((item, index) => `
+                                            <div class="settings-chip">
+                                                <span>${escapeHtml(item)}</span>
+                                                <button type="button" onclick="removeSettingValue('workTypes', ${index})">✕</button>
+                                            </div>
+                                        `).join("")}
+                                    </div>
+                                    `
+                                    : `<div class="empty-state"><p>Aucune nature de travaux.</p></div>`
+                            }
+                        </div>
+
+                        <div class="settings-section">
+                            <div class="section-toolbar">
+                                <div>
+                                    <h4>Types de PV</h4>
+                                </div>
+                                <button class="add-row-btn" type="button" onclick="promptAddSettingValue('pvTypes')">+ Ajouter</button>
+                            </div>
+
+                            ${
+                                pvTypes.length
+                                    ? `
+                                    <div class="settings-chip-list">
+                                        ${pvTypes.map((item, index) => `
+                                            <div class="settings-chip">
+                                                <span>${escapeHtml(item)}</span>
+                                                <button type="button" onclick="removeSettingValue('pvTypes', ${index})">✕</button>
+                                            </div>
+                                        `).join("")}
+                                    </div>
+                                    `
+                                    : `<div class="empty-state"><p>Aucun type de PV.</p></div>`
+                            }
+                        </div>
+
+                        <div class="settings-section">
+                            <div class="section-toolbar">
+                                <div>
+                                    <h4>Types de schémas</h4>
+                                </div>
+                                <button class="add-row-btn" type="button" onclick="promptAddSettingValue('schemaTypes')">+ Ajouter</button>
+                            </div>
+
+                            ${
+                                schemaTypes.length
+                                    ? `
+                                    <div class="settings-chip-list">
+                                        ${schemaTypes.map((item, index) => `
+                                            <div class="settings-chip">
+                                                <span>${escapeHtml(item)}</span>
+                                                <button type="button" onclick="removeSettingValue('schemaTypes', ${index})">✕</button>
+                                            </div>
+                                        `).join("")}
+                                    </div>
+                                    `
+                                    : `<div class="empty-state"><p>Aucun type de schéma.</p></div>`
+                            }
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="section-toolbar">
+                            <div>
+                                <h4>Codes postaux / villes</h4>
+                            </div>
+                            <button class="add-row-btn" type="button" onclick="promptAddPostalCity()">+ Ajouter</button>
+                        </div>
+
+                        ${
+                            postalEntries.length
+                                ? `
+                                <div class="settings-postal-list">
+                                    ${postalEntries.map(([cp, villes]) => `
+                                        <div class="settings-postal-card">
+                                            <div class="settings-postal-header">
+                                                <strong>${escapeHtml(cp)}</strong>
+                                            </div>
+                                            <div class="settings-chip-list">
+                                                ${(villes || []).map((ville, cityIndex) => `
+                                                    <div class="settings-chip">
+                                                        <span>${escapeHtml(ville)}</span>
+                                                        <button type="button" onclick="removePostalCity('${escapeJs(cp)}', ${cityIndex})">✕</button>
+                                                    </div>
+                                                `).join("")}
+                                            </div>
+                                        </div>
+                                    `).join("")}
+                                </div>
+                                `
+                                : `<div class="empty-state"><p>Aucun code postal enregistré.</p></div>`
+                        }
+                    </div>
+                </div>
+
+                <div class="settings-side-column">
+                    <div class="panel">
+                        <div class="section-toolbar">
+                            <div>
+                                <h4>Bibliothèque fiches techniques</h4>
+                                <p class="panel-muted">
+                                    Vue d’ensemble des fiches enregistrées.
+                                </p>
+                            </div>
+                        </div>
+
+                        ${
+                            technicalSheets.length
+                                ? `
+                                <div class="settings-library-list">
+                                    ${technicalSheets.map(item => `
+                                        <div class="settings-library-item">
+                                            <strong>${escapeHtml(item.type || "TYPE")}</strong>
+                                            <div>${escapeHtml(item.marque || "—")}</div>
+                                            <div>${escapeHtml(item.modele || "—")}</div>
+                                            <div class="draft-meta">${escapeHtml(item.fileName || "Aucun fichier")}</div>
+                                        </div>
+                                    `).join("")}
+                                </div>
+                                `
+                                : `<div class="empty-state"><p>Aucune fiche en bibliothèque.</p></div>`
+                        }
+                    </div>
+
+                    <div class="panel">
+                        <div class="section-toolbar">
+                            <div>
+                                <h4>Rappels</h4>
+                            </div>
+                        </div>
+
+                        <div class="accueil-helper-list">
+                            <div class="accueil-helper-card">
+                                Ces paramètres alimentent directement les menus déroulants du builder.
+                            </div>
+
+                            <div class="accueil-helper-card">
+                                La bibliothèque des fiches techniques s’alimente automatiquement lors des uploads.
+                            </div>
+
+                            <div class="accueil-helper-card">
+                                Les suppressions prennent effet immédiatement dans l’app.
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -570,6 +765,11 @@ function renderApp() {
         return;
     }
 
+    if (currentScreen === "settings") {
+        renderSettingsScreen();
+        return;
+    }
+
     setWorkspaceChromeVisibility(true);
     setActiveSidebarLink("nav-new-btn");
     renderStep();
@@ -630,7 +830,7 @@ function wireSidebarNavigation() {
     navAccueilBtn?.addEventListener("click", () => {
         if (currentScreen === "accueil") return;
 
-        if (currentScreen === "saved") {
+        if (currentScreen === "saved" || currentScreen === "settings") {
             goToAccueil();
             return;
         }
@@ -639,7 +839,7 @@ function wireSidebarNavigation() {
     });
 
     navNewBtn?.addEventListener("click", () => {
-        if (currentScreen === "accueil" || currentScreen === "saved") {
+        if (currentScreen === "accueil" || currentScreen === "saved" || currentScreen === "settings") {
             handleNewDoeFromAccueil();
             return;
         }
@@ -649,7 +849,7 @@ function wireSidebarNavigation() {
     navSavedBtn?.addEventListener("click", () => {
         if (currentScreen === "saved") return;
 
-        if (currentScreen === "accueil") {
+        if (currentScreen === "accueil" || currentScreen === "settings") {
             goToSavedScreen();
             return;
         }
@@ -657,6 +857,20 @@ function wireSidebarNavigation() {
         openLeaveConfirmModal(() => {
             resetCurrentDoe();
             goToSavedScreen();
+        });
+    });
+
+    navSettingsBtn?.addEventListener("click", () => {
+        if (currentScreen === "settings") return;
+
+        if (currentScreen === "accueil" || currentScreen === "saved") {
+            goToSettingsScreen();
+            return;
+        }
+
+        openLeaveConfirmModal(() => {
+            resetCurrentDoe();
+            goToSettingsScreen();
         });
     });
 }
@@ -2421,18 +2635,28 @@ function closeCreateValueModal() {
 }
 
 function submitCreateValueModal() {
-    if (!pendingCreateValueContext) {
-        showToast("Contexte introuvable.", "error");
-        return;
-    }
-
-    const { kind, index, section } = pendingCreateValueContext;
-    const entered = createValueInput.value.trim();
+   if (!pendingCreateValueContext) {
+       showToast("Contexte introuvable.", "error");
+       return;
+   }
+   
+   const { kind, index, section, mode, settingKey } = pendingCreateValueContext;
+   const entered = createValueInput.value.trim();
 
     if (!entered) {
         showToast("Merci de saisir une valeur.", "error");
         return;
     }
+
+   if (mode === "settings") {
+    const created = addSettingValue(settingKey, entered);
+
+    if (!created) return;
+
+    closeCreateValueModal();
+    renderApp();
+    return;
+}
 
     if (section === "fiches") {
         const row = state.data.fiches[index];
@@ -3124,6 +3348,7 @@ function createNewDocType(section, rawValue) {
 
     return null;
 }
+
 function setDocTypeField(section, index, value) {
     const row = state.data[section][index];
     if (!row) return;
@@ -3131,6 +3356,103 @@ function setDocTypeField(section, index, value) {
     row.type = String(value || "").toUpperCase();
     saveAutosave();
     renderStep();
+}
+
+function promptAddSettingValue(settingKey) {
+    const titles = {
+        workTypes: "Ajouter une nature de travaux",
+        pvTypes: "Ajouter un type de PV",
+        schemaTypes: "Ajouter un type de schéma"
+    };
+
+    const labels = {
+        workTypes: "Nouvelle nature",
+        pvTypes: "Nouveau type de PV",
+        schemaTypes: "Nouveau type de schéma"
+    };
+
+    pendingCreateValueContext = {
+        mode: "settings",
+        settingKey
+    };
+
+    createValueTitle.textContent = titles[settingKey] || "Ajouter une valeur";
+    createValueLabel.textContent = labels[settingKey] || "Nouvelle valeur";
+    createValueInput.placeholder = "Saisir une valeur";
+    createValueInput.value = "";
+
+    createValueModal.classList.remove("hidden");
+
+    setTimeout(() => {
+        createValueInput.focus();
+        createValueInput.select();
+    }, 0);
+}
+
+function addSettingValue(settingKey, rawValue) {
+    const value = String(rawValue || "").trim().toUpperCase();
+    if (!value) return false;
+
+    if (!Array.isArray(referenceData[settingKey])) {
+        referenceData[settingKey] = [];
+    }
+
+    if (referenceData[settingKey].includes(value)) {
+        showToast("Cette valeur existe déjà.", "info");
+        return false;
+    }
+
+    referenceData[settingKey].push(value);
+    saveReferenceData();
+    showToast("Valeur ajoutée.", "success");
+    return true;
+}
+
+function removeSettingValue(settingKey, index) {
+    if (!Array.isArray(referenceData[settingKey])) return;
+
+    referenceData[settingKey].splice(index, 1);
+    saveReferenceData();
+    renderApp();
+    showToast("Valeur supprimée.", "info");
+}
+
+function promptAddPostalCity() {
+    const cp = prompt("Code postal ?");
+    if (!cp) return;
+
+    const ville = prompt("Ville ?");
+    if (!ville) return;
+
+    const normalizedCp = String(cp).trim().toUpperCase();
+    const normalizedVille = String(ville).trim().toUpperCase();
+
+    if (!referenceData.postalCodes[normalizedCp]) {
+        referenceData.postalCodes[normalizedCp] = [];
+    }
+
+    if (!referenceData.postalCodes[normalizedCp].includes(normalizedVille)) {
+        referenceData.postalCodes[normalizedCp].push(normalizedVille);
+        saveReferenceData();
+        renderApp();
+        showToast("Ville ajoutée.", "success");
+    } else {
+        showToast("Cette ville existe déjà pour ce code postal.", "info");
+    }
+}
+
+function removePostalCity(cp, cityIndex) {
+    if (!referenceData.postalCodes[cp]) return;
+
+    referenceData.postalCodes[cp].splice(cityIndex, 1);
+
+    if (!referenceData.postalCodes[cp].length) {
+        delete referenceData.postalCodes[cp];
+    }
+
+    saveReferenceData();
+    renderApp();
+    showToast("Ville supprimée.", "info");
 }
 
 /* ========================
@@ -4022,3 +4344,9 @@ window.showSavedPlaceholder = showSavedPlaceholder;
 window.goToSavedScreen = goToSavedScreen;
 window.duplicateDraft = duplicateDraft;
 window.setSavedSearchValue = setSavedSearchValue;
+
+window.goToSettingsScreen = goToSettingsScreen;
+window.promptAddSettingValue = promptAddSettingValue;
+window.removeSettingValue = removeSettingValue;
+window.promptAddPostalCity = promptAddPostalCity;
+window.removePostalCity = removePostalCity;
