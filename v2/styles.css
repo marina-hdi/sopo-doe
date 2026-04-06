@@ -1948,3 +1948,81 @@ button {
     flex-direction: column;
     gap: 12px;
 }
+
+/* ========================
+   SETTINGS
+======================== */
+.settings-layout {
+    display: block;
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.settings-main-column,
+.settings-side-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.settings-section {
+    margin-top: 18px;
+}
+
+.settings-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.settings-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 999px;
+    background: rgba(0, 68, 140, 0.08);
+    color: #00448C;
+    font-weight: 600;
+}
+
+.settings-chip button {
+    border: none;
+    background: transparent;
+    color: #CE232A;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.settings-postal-list,
+.settings-library-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.settings-postal-card,
+.settings-library-item {
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 16px;
+    padding: 14px 16px;
+}
+
+.settings-postal-header {
+    margin-bottom: 10px;
+    color: #1D1E18;
+}
+
+@media (max-width: 1100px) {
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+}
