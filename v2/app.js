@@ -871,9 +871,14 @@ function renderAccueilScreen() {
             <div class="accueil-grid single-column">
                 <div class="accueil-main-column">
                     <div class="panel">
-                        <div class="section-toolbar">
+                        <div class="section-toolbar accueil-header">
                             <div>
                                 <h3>Accueil</h3>
+                            </div>
+                        
+                            <div class="accueil-user">
+                                <span>Bonjour, ${escapeHtml(state.currentUser?.username || "")}</span>
+                                <button class="logout-btn" onclick="handleLogout()">Déconnexion</button>
                             </div>
                         </div>
 
@@ -927,6 +932,45 @@ function renderAccueilScreen() {
                                 `
                         }
                     </div>
+
+                    <div class="panel">
+    <div class="section-toolbar">
+        <div>
+            <h4>Dernières notes</h4>
+        </div>
+    </div>
+
+    ${
+        getRecentNotes().length
+            ? `
+            <div class="table-shell">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Adresse</th>
+                            <th>Note</th>
+                            <th>Mis à jour le</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${getRecentNotes().map(note => `
+                            <tr>
+                                <td>${escapeHtml(note.adresse || "")}</td>
+                                <td>${escapeHtml(note.note || "")}</td>
+                                <td>${escapeHtml(formatDraftDate(note.updated_at))}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
+            `
+            : `
+            <div class="empty-state">
+                <p>Aucune note récente.</p>
+            </div>
+            `
+    }
+</div>
 
                     <div class="panel">
                         <div class="section-toolbar">
@@ -1099,6 +1143,23 @@ function handleCloseDoe() {
     }
 
     finalizeClose();
+}
+
+function getRecentNotes() {
+    const drafts = getAllDrafts();
+
+    return drafts
+        .map(draft => {
+            const infos = draft?.state?.data?.infos || {};
+            return {
+                adresse: [infos.adresse, infos.code_postal, infos.ville].filter(Boolean).join(" "),
+                note: infos.notes || "",
+                updated_at: draft.updatedAt || draft.savedAt
+            };
+        })
+        .filter(item => item.note && item.note.trim() !== "")
+        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+        .slice(0, 10);
 }
 
 function getClosedDoeById(id) {
@@ -2688,6 +2749,11 @@ function isRowCardMissing(section, index) {
 
 function hasAnyValue(value) {
     return value !== undefined && value !== null && String(value).trim() !== "";
+}
+
+async function handleLogout() {
+    await supabase.auth.signOut();
+    location.reload();
 }
 
 function collectExportValidation() {
