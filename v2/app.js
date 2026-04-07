@@ -437,14 +437,7 @@ function renderClosedScreen() {
     setWorkspaceChromeVisibility(false);
     setActiveSidebarLink("nav-closed-btn");
 
-    const search = (state.closedSearch || "").trim().toUpperCase();
     const items = getClosedItems();
-
-    const filteredItems = items.filter(item => {
-        const infos = item?.state?.data?.infos || {};
-        const adresse = String(infos.adresse || "").toUpperCase();
-        return !search || adresse.includes(search);
-    });
 
     content.innerHTML = `
         <div class="single-panel-layout enregistres-layout">
@@ -460,15 +453,16 @@ function renderClosedScreen() {
                         <label>Rechercher</label>
                         <input
                             type="text"
+                            id="closed-search-input"
                             placeholder="Adresse..."
                             value="${escapeHtml(state.closedSearch || "")}"
-                            oninput="state.closedSearch=this.value; renderApp();"
+                            oninput="filterClosedTable(this.value)"
                         />
                     </div>
                 </div>
 
                 ${
-                    filteredItems.length
+                    items.length
                         ? `
                         <div class="table-shell">
                             <table class="data-table">
@@ -481,15 +475,16 @@ function renderClosedScreen() {
                                         <th>Supprimer</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    ${filteredItems.map(item => {
+                                <tbody id="closed-table-body">
+                                    ${items.map(item => {
                                         const infos = item?.state?.data?.infos || {};
                                         const addressLine = [infos.adresse, infos.code_postal, infos.ville]
                                             .filter(Boolean)
                                             .join(" ");
+                                        const searchText = `${addressLine}`.toUpperCase();
 
                                         return `
-                                            <tr>
+                                            <tr data-search="${escapeHtml(searchText)}">
                                                 <td>${escapeHtml(addressLine || "Adresse non renseignée")}</td>
                                                 <td>${escapeHtml(formatDraftDate(item.savedAt))}</td>
                                                 <td><button class="draft-btn load" onclick="previewClosedDoe('${item.id}')">Aperçu</button></td>
@@ -511,6 +506,20 @@ function renderClosedScreen() {
             </div>
         </div>
     `;
+
+    filterClosedTable(state.closedSearch || "");
+}
+
+function filterClosedTable(value) {
+    state.closedSearch = value;
+
+    const query = String(value || "").trim().toUpperCase();
+    const rows = document.querySelectorAll("#closed-table-body tr");
+
+    rows.forEach(row => {
+        const haystack = row.dataset.search || "";
+        row.style.display = !query || haystack.includes(query) ? "" : "none";
+    });
 }
 
 function renderLibraryScreen() {
@@ -520,6 +529,10 @@ function renderLibraryScreen() {
     const list = Array.isArray(referenceData.technicalSheetsLibrary)
         ? referenceData.technicalSheetsLibrary
         : [];
+
+    const types = [...new Set(list.map(item => item.type).filter(Boolean))].sort();
+    const marques = [...new Set(list.map(item => item.marque).filter(Boolean))].sort();
+    const modeles = [...new Set(list.map(item => item.modele).filter(Boolean))].sort();
 
     content.innerHTML = `
         <div class="single-panel-layout enregistres-layout">
@@ -538,37 +551,43 @@ function renderLibraryScreen() {
                                 <thead>
                                     <tr>
                                         <th>
-                                            Type
-                                            <input
-                                                type="text"
-                                                class="table-filter-input"
-                                                id="library-filter-type"
-                                                placeholder="Filtrer..."
-                                                value="${escapeHtml(state.libraryFilters?.type || "")}"
-                                                oninput="filterLibraryTable()"
-                                            />
+                                            <button type="button" class="table-sort-btn" onclick="sortLibraryTable('type')">
+                                                Type
+                                            </button>
+                                            <select class="table-filter-input" id="library-filter-type" onchange="filterLibraryTable()">
+                                                <option value="">Tous</option>
+                                                ${types.map(value => `
+                                                    <option value="${escapeHtml(value)}" ${(state.libraryFilters?.type || "") === value ? "selected" : ""}>
+                                                        ${escapeHtml(value)}
+                                                    </option>
+                                                `).join("")}
+                                            </select>
                                         </th>
                                         <th>
-                                            Marque
-                                            <input
-                                                type="text"
-                                                class="table-filter-input"
-                                                id="library-filter-marque"
-                                                placeholder="Filtrer..."
-                                                value="${escapeHtml(state.libraryFilters?.marque || "")}"
-                                                oninput="filterLibraryTable()"
-                                            />
+                                            <button type="button" class="table-sort-btn" onclick="sortLibraryTable('marque')">
+                                                Marque
+                                            </button>
+                                            <select class="table-filter-input" id="library-filter-marque" onchange="filterLibraryTable()">
+                                                <option value="">Toutes</option>
+                                                ${marques.map(value => `
+                                                    <option value="${escapeHtml(value)}" ${(state.libraryFilters?.marque || "") === value ? "selected" : ""}>
+                                                        ${escapeHtml(value)}
+                                                    </option>
+                                                `).join("")}
+                                            </select>
                                         </th>
                                         <th>
-                                            Modèle
-                                            <input
-                                                type="text"
-                                                class="table-filter-input"
-                                                id="library-filter-modele"
-                                                placeholder="Filtrer..."
-                                                value="${escapeHtml(state.libraryFilters?.modele || "")}"
-                                                oninput="filterLibraryTable()"
-                                            />
+                                            <button type="button" class="table-sort-btn" onclick="sortLibraryTable('modele')">
+                                                Modèle
+                                            </button>
+                                            <select class="table-filter-input" id="library-filter-modele" onchange="filterLibraryTable()">
+                                                <option value="">Tous</option>
+                                                ${modeles.map(value => `
+                                                    <option value="${escapeHtml(value)}" ${(state.libraryFilters?.modele || "") === value ? "selected" : ""}>
+                                                        ${escapeHtml(value)}
+                                                    </option>
+                                                `).join("")}
+                                            </select>
                                         </th>
                                         <th>Télécharger</th>
                                     </tr>
@@ -576,6 +595,7 @@ function renderLibraryScreen() {
                                 <tbody id="library-table-body">
                                     ${list.map((item, index) => `
                                         <tr
+                                            data-index="${index}"
                                             data-type="${escapeHtml(String(item.type || "").toUpperCase())}"
                                             data-marque="${escapeHtml(String(item.marque || "").toUpperCase())}"
                                             data-modele="${escapeHtml(String(item.modele || "").toUpperCase())}"
@@ -610,18 +630,18 @@ function renderLibraryScreen() {
 }
 
 function filterLibraryTable() {
-    const typeInput = document.getElementById("library-filter-type");
-    const marqueInput = document.getElementById("library-filter-marque");
-    const modeleInput = document.getElementById("library-filter-modele");
+    const typeSelect = document.getElementById("library-filter-type");
+    const marqueSelect = document.getElementById("library-filter-marque");
+    const modeleSelect = document.getElementById("library-filter-modele");
 
-    const typeQuery = String(typeInput?.value || "").trim().toUpperCase();
-    const marqueQuery = String(marqueInput?.value || "").trim().toUpperCase();
-    const modeleQuery = String(modeleInput?.value || "").trim().toUpperCase();
+    const typeQuery = String(typeSelect?.value || "").trim().toUpperCase();
+    const marqueQuery = String(marqueSelect?.value || "").trim().toUpperCase();
+    const modeleQuery = String(modeleSelect?.value || "").trim().toUpperCase();
 
     state.libraryFilters = {
-        type: typeInput?.value || "",
-        marque: marqueInput?.value || "",
-        modele: modeleInput?.value || ""
+        type: typeSelect?.value || "",
+        marque: marqueSelect?.value || "",
+        modele: modeleSelect?.value || ""
     };
 
     const rows = document.querySelectorAll("#library-table-body tr");
@@ -631,12 +651,43 @@ function filterLibraryTable() {
         const rowMarque = row.dataset.marque || "";
         const rowModele = row.dataset.modele || "";
 
-        const matchesType = !typeQuery || rowType.includes(typeQuery);
-        const matchesMarque = !marqueQuery || rowMarque.includes(marqueQuery);
-        const matchesModele = !modeleQuery || rowModele.includes(modeleQuery);
+        const matchesType = !typeQuery || rowType === typeQuery;
+        const matchesMarque = !marqueQuery || rowMarque === marqueQuery;
+        const matchesModele = !modeleQuery || rowModele === modeleQuery;
 
         row.style.display = matchesType && matchesMarque && matchesModele ? "" : "none";
     });
+}
+
+function sortLibraryTable(column) {
+    const tbody = document.getElementById("library-table-body");
+    if (!tbody) return;
+
+    const currentSort = state.librarySort || { column: "", direction: "asc" };
+    const nextDirection =
+        currentSort.column === column && currentSort.direction === "asc"
+            ? "desc"
+            : "asc";
+
+    state.librarySort = {
+        column,
+        direction: nextDirection
+    };
+
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+
+    rows.sort((a, b) => {
+        const aValue = (a.dataset[column] || "").toUpperCase();
+        const bValue = (b.dataset[column] || "").toUpperCase();
+
+        if (aValue < bValue) return nextDirection === "asc" ? -1 : 1;
+        if (aValue > bValue) return nextDirection === "asc" ? 1 : -1;
+        return 0;
+    });
+
+    rows.forEach(row => tbody.appendChild(row));
+
+    filterLibraryTable();
 }
 
 function downloadLibraryItem(index) {
