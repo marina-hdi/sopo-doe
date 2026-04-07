@@ -73,6 +73,11 @@ button {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    flex: 1;
+}
+
+.sidebar-spacer {
+    flex: 1;
 }
 
 .sidebar-link {
@@ -86,6 +91,13 @@ button {
     transition: 0.2s ease;
     text-transform: uppercase;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sidebar-link .material-symbols-outlined {
+    font-size: 20px;
 }
 
 .sidebar-link:hover {
@@ -431,6 +443,50 @@ button {
 
 .remove-row-btn:hover {
     background: rgba(206, 35, 42, 0.18);
+}
+
+.table-shell {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 18px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(255,255,255,0.7);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.data-table th,
+.data-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    text-align: left;
+    vertical-align: top;
+}
+
+.data-table th {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #5f6673;
+    background: rgba(0,68,140,0.06);
+}
+
+.builder-top-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.accueil-quick-actions .material-symbols-outlined,
+.section-toolbar .material-symbols-outlined {
+    font-size: 18px;
+    vertical-align: middle;
+    margin-right: 6px;
 }
 
 /* ========================
