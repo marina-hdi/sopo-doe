@@ -475,6 +475,16 @@ button {
     background: rgba(0,68,140,0.06);
 }
 
+.table-filter-input {
+    width: 100%;
+    margin-top: 8px;
+    border: 1px solid rgba(171,171,171,0.25);
+    background: rgba(255,255,255,0.96);
+    border-radius: 10px;
+    padding: 8px 10px;
+    color: #1D1E18;
+}
+
 .builder-top-actions {
     display: flex;
     flex-wrap: wrap;
