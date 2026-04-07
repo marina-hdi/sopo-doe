@@ -3916,8 +3916,10 @@ function renderChantierBanner() {
             </div>
 
             <div class="banner-actions">
-                <button type="button" class="banner-btn" onclick="handleSaveDraft()">Enregistrer</button>
-                <button type="button" class="footer-btn secondary-action" onclick="clearAutosave()">Effacer</button>
+                <button type="button" class="banner-btn" onclick="handleSaveDraft()">Enregistrer brouillon</button>
+                <button type="button" class="footer-btn secondary-action" onclick="openDraftsModal()">Ouvrir brouillon</button>
+                <button type="button" class="footer-btn secondary-action" onclick="handleClearDoe()">Effacer</button>
+                <button type="button" class="banner-btn" onclick="handleCloseDoe()">Clôturer</button>
             </div>
         </div>
     `;
