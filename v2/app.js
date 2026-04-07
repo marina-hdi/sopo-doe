@@ -727,22 +727,11 @@ function renderAccueilScreen() {
     setActiveSidebarLink("nav-accueil-btn");
 
     const drafts = getAllDrafts().slice(0, 5);
-
-    const technicalSheetsCount = Array.isArray(referenceData.technicalSheetsLibrary)
-        ? referenceData.technicalSheetsLibrary.length
-        : 0;
-
-    const pvTypesCount = Array.isArray(referenceData.pvTypes)
-        ? referenceData.pvTypes.length
-        : 0;
-
-    const schemaTypesCount = Array.isArray(referenceData.schemaTypes)
-        ? referenceData.schemaTypes.length
-        : 0;
+    const closedItems = getClosedItems().slice(0, 5);
 
     content.innerHTML = `
         <div class="single-panel-layout accueil-layout">
-            <div class="accueil-grid">
+            <div class="accueil-grid single-column">
                 <div class="accueil-main-column">
                     <div class="panel">
                         <div class="section-toolbar">
@@ -801,36 +790,45 @@ function renderAccueilScreen() {
                                 `
                         }
                     </div>
-                </div>
 
-                <div class="accueil-side-column">
                     <div class="panel">
                         <div class="section-toolbar">
                             <div>
-                                <h3>Bibliothèque</h3>
-                            </div>
-                            <button type="button" class="footer-btn secondary-action" onclick="goToLibraryScreen()">
-                                <span class="material-symbols-outlined">library_books</span>
-                                Bibliothèque
-                            </button>
-                        </div>
-
-                        <div class="summary-list">
-                            <div class="summary-item">
-                                <span>Fiches techniques en base</span>
-                                <strong>${technicalSheetsCount}</strong>
-                            </div>
-
-                            <div class="summary-item">
-                                <span>Types de PV</span>
-                                <strong>${pvTypesCount}</strong>
-                            </div>
-
-                            <div class="summary-item">
-                                <span>Types de schémas</span>
-                                <strong>${schemaTypesCount}</strong>
+                                <h3>Derniers DOE</h3>
                             </div>
                         </div>
+
+                        ${
+                            closedItems.length
+                                ? `
+                                <div class="accueil-drafts-list">
+                                    ${closedItems.map(item => {
+                                        const infos = item?.state?.data?.infos || {};
+                                        const addressLine = [infos.adresse, infos.code_postal, infos.ville]
+                                            .filter(Boolean)
+                                            .join(" ");
+
+                                        return `
+                                            <div class="draft-item">
+                                                <div class="draft-main">
+                                                    <div class="draft-title">${escapeHtml(addressLine || "Adresse non renseignée")}</div>
+                                                    <div class="draft-meta">Clôturé le : ${formatDraftDate(item.savedAt)}</div>
+                                                </div>
+                                                <div class="draft-actions">
+                                                    <button class="draft-btn load" onclick="previewClosedDoe('${item.id}')">Aperçu</button>
+                                                    <button class="draft-btn load" onclick="downloadClosedDoe('${item.id}')">Télécharger</button>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join("")}
+                                </div>
+                                `
+                                : `
+                                <div class="empty-state">
+                                    <p>Aucun DOE clôturé.</p>
+                                </div>
+                                `
+                        }
                     </div>
                 </div>
             </div>
