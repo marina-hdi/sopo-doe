@@ -3286,7 +3286,20 @@ function rerenderOpenCustomSelect(id) {
     if (!selectEl) return;
 
     const wasOpen = selectEl.classList.contains("is-open");
-    renderStep();
+
+    if (currentScreen === "library") {
+        renderLibraryScreen();
+    } else if (currentScreen === "drafts") {
+        renderDraftsScreen();
+    } else if (currentScreen === "closed") {
+        renderClosedScreen();
+    } else if (currentScreen === "accueil") {
+        renderAccueilScreen();
+    } else if (currentScreen === "settings") {
+        renderSettingsScreen();
+    } else {
+        renderStep();
+    }
 
     if (wasOpen) {
         const next = document.querySelector(`.custom-select[data-select-id="${id}"]`);
