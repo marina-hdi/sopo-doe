@@ -699,47 +699,58 @@ function renderSettingsScreen() {
 
                 <div class="settings-section">
                     <div class="section-toolbar">
-                        <div><h4>Types équipement</h4></div>
+                        <div><h4>Équipements, marques et modèles</h4></div>
+                        <button class="add-row-btn" type="button" onclick="promptAddEquipmentType()">+ Ajouter un équipement</button>
                     </div>
+
                     ${
                         equipmentEntries.length
-                            ? `<div class="settings-chip-list">
-                                ${equipmentEntries.map(([key]) => `
-                                    <div class="settings-chip">
-                                        <span>${escapeHtml(key)}</span>
+                            ? `
+                            <div class="settings-equipment-list">
+                                ${equipmentEntries.map(([typeKey, typeValue]) => `
+                                    <div class="settings-equipment-card">
+                                        <div class="section-toolbar">
+                                            <div><h4>${escapeHtml(typeKey)}</h4></div>
+                                            <div class="draft-actions">
+                                                <button class="footer-btn secondary-action" type="button" onclick="promptAddBrand('${escapeJs(typeKey)}')">+ Marque</button>
+                                                <button class="draft-btn delete" type="button" onclick="removeEquipmentType('${escapeJs(typeKey)}')">Supprimer</button>
+                                            </div>
+                                        </div>
+
+                                        ${
+                                            Object.entries(typeValue?.brands || {}).length
+                                                ? Object.entries(typeValue.brands).map(([brandKey, models]) => `
+                                                    <div class="settings-brand-block">
+                                                        <div class="section-toolbar">
+                                                            <div><strong>${escapeHtml(brandKey)}</strong></div>
+                                                            <div class="draft-actions">
+                                                                <button class="footer-btn secondary-action" type="button" onclick="promptAddModel('${escapeJs(typeKey)}', '${escapeJs(brandKey)}')">+ Modèle</button>
+                                                                <button class="draft-btn delete" type="button" onclick="removeBrand('${escapeJs(typeKey)}', '${escapeJs(brandKey)}')">Supprimer</button>
+                                                            </div>
+                                                        </div>
+
+                                                        ${
+                                                            models.length
+                                                                ? `<div class="settings-chip-list">
+                                                                    ${models.map((model, modelIndex) => `
+                                                                        <div class="settings-chip">
+                                                                            <span>${escapeHtml(model)}</span>
+                                                                            <button type="button" onclick="removeModel('${escapeJs(typeKey)}', '${escapeJs(brandKey)}', ${modelIndex})">✕</button>
+                                                                        </div>
+                                                                    `).join("")}
+                                                                </div>`
+                                                                : `<div class="empty-state"><p>Aucun modèle.</p></div>`
+                                                        }
+                                                    </div>
+                                                `).join("")
+                                                : `<div class="empty-state"><p>Aucune marque.</p></div>`
+                                        }
                                     </div>
                                 `).join("")}
-                            </div>`
+                            </div>
+                            `
                             : `<div class="empty-state"><p>Aucun type équipement.</p></div>`
                     }
-                </div>
-
-                <div class="settings-section">
-                    <div class="section-toolbar">
-                        <div><h4>Marques</h4></div>
-                    </div>
-                    <div class="settings-chip-list">
-                        ${equipmentEntries.flatMap(([_, value]) =>
-                            Object.keys(value?.brands || {}).map(brand => `
-                                <div class="settings-chip"><span>${escapeHtml(brand)}</span></div>
-                            `)
-                        ).join("")}
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="section-toolbar">
-                        <div><h4>Modèle</h4></div>
-                    </div>
-                    <div class="settings-chip-list">
-                        ${equipmentEntries.flatMap(([_, value]) =>
-                            Object.values(value?.brands || {}).flatMap(models =>
-                                models.map(model => `
-                                    <div class="settings-chip"><span>${escapeHtml(model)}</span></div>
-                                `)
-                            )
-                        ).join("")}
-                    </div>
                 </div>
 
                 <div class="settings-section">
@@ -3837,6 +3848,95 @@ function removeSettingValue(settingKey, index) {
     saveReferenceData();
     renderApp();
     showToast("Valeur supprimée.", "info");
+}
+
+function promptAddEquipmentType() {
+    const value = prompt("Nouveau type équipement ?");
+    if (!value) return;
+
+    const key = String(value).trim().toUpperCase();
+    if (!key) return;
+
+    if (referenceData.equipment[key]) {
+        showToast("Ce type existe déjà.", "info");
+        return;
+    }
+
+    referenceData.equipment[key] = { brands: {} };
+    saveReferenceData();
+    renderApp();
+    showToast("Type équipement ajouté.", "success");
+}
+
+function removeEquipmentType(typeKey) {
+    if (!referenceData.equipment[typeKey]) return;
+
+    delete referenceData.equipment[typeKey];
+    saveReferenceData();
+    renderApp();
+    showToast("Type équipement supprimé.", "info");
+}
+
+function promptAddBrand(typeKey) {
+    const value = prompt(`Nouvelle marque pour ${typeKey} ?`);
+    if (!value) return;
+
+    const brand = String(value).trim().toUpperCase();
+    if (!brand) return;
+
+    if (!referenceData.equipment[typeKey]) {
+        referenceData.equipment[typeKey] = { brands: {} };
+    }
+
+    if (referenceData.equipment[typeKey].brands[brand]) {
+        showToast("Cette marque existe déjà.", "info");
+        return;
+    }
+
+    referenceData.equipment[typeKey].brands[brand] = [];
+    saveReferenceData();
+    renderApp();
+    showToast("Marque ajoutée.", "success");
+}
+
+function removeBrand(typeKey, brandKey) {
+    if (!referenceData.equipment[typeKey]?.brands?.[brandKey]) return;
+
+    delete referenceData.equipment[typeKey].brands[brandKey];
+    saveReferenceData();
+    renderApp();
+    showToast("Marque supprimée.", "info");
+}
+
+function promptAddModel(typeKey, brandKey) {
+    const value = prompt(`Nouveau modèle pour ${brandKey} ?`);
+    if (!value) return;
+
+    const model = String(value).trim().toUpperCase();
+    if (!model) return;
+
+    const models = referenceData.equipment[typeKey]?.brands?.[brandKey];
+    if (!models) return;
+
+    if (models.includes(model)) {
+        showToast("Ce modèle existe déjà.", "info");
+        return;
+    }
+
+    models.push(model);
+    saveReferenceData();
+    renderApp();
+    showToast("Modèle ajouté.", "success");
+}
+
+function removeModel(typeKey, brandKey, modelIndex) {
+    const models = referenceData.equipment[typeKey]?.brands?.[brandKey];
+    if (!models) return;
+
+    models.splice(modelIndex, 1);
+    saveReferenceData();
+    renderApp();
+    showToast("Modèle supprimé.", "info");
 }
 
 /* ========================
