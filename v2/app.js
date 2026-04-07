@@ -330,16 +330,7 @@ function renderDraftsScreen() {
     setWorkspaceChromeVisibility(false);
     setActiveSidebarLink("nav-drafts-btn");
 
-    const search = (state.draftsSearch || "").trim().toUpperCase();
     const drafts = getAllDrafts();
-
-    const filteredDrafts = drafts.filter(draft => {
-        const infos = draft?.state?.data?.infos || {};
-        const adresse = String(infos.adresse || "").toUpperCase();
-        const notes = String(infos.notes || "").toUpperCase();
-
-        return !search || adresse.includes(search) || notes.includes(search);
-    });
 
     content.innerHTML = `
         <div class="single-panel-layout enregistres-layout">
@@ -355,15 +346,16 @@ function renderDraftsScreen() {
                         <label>Rechercher</label>
                         <input
                             type="text"
+                            id="drafts-search-input"
                             placeholder="Adresse ou notes..."
                             value="${escapeHtml(state.draftsSearch || "")}"
-                            oninput="state.draftsSearch=this.value; renderApp();"
+                            oninput="filterDraftsTable(this.value)"
                         />
                     </div>
                 </div>
 
                 ${
-                    filteredDrafts.length
+                    drafts.length
                         ? `
                         <div class="table-shell">
                             <table class="data-table">
@@ -376,23 +368,25 @@ function renderDraftsScreen() {
                                         <th>Supprimer</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    ${filteredDrafts.map(draft => {
+                                <tbody id="drafts-table-body">
+                                    ${drafts.map(draft => {
                                         const infos = draft?.state?.data?.infos || {};
                                         const addressLine = [infos.adresse, infos.code_postal, infos.ville]
                                             .filter(Boolean)
                                             .join(" ");
+                                        const notes = infos.notes || "";
+                                        const searchText = `${addressLine} ${notes}`.toUpperCase();
 
                                         return `
-                                            <tr>
+                                            <tr data-search="${escapeHtml(searchText)}">
                                                 <td>${escapeHtml(addressLine || "Adresse non renseignée")}</td>
                                                 <td>${escapeHtml(formatDraftDate(draft.updatedAt))}</td>
-                                                <td>${escapeHtml(infos.notes || "")}</td>
+                                                <td>${escapeHtml(notes)}</td>
                                                 <td>
                                                     <button class="draft-btn load" onclick="loadDraft('${draft.id}'); goToBuilder();">Ouvrir</button>
                                                 </td>
                                                 <td>
-                                                    <button class="draft-btn delete" onclick="deleteDraft('${draft.id}'); setTimeout(renderApp, 50);">Supprimer</button>
+                                                    <button class="draft-btn delete" onclick="deleteDraft('${draft.id}'); setTimeout(renderDraftsScreen, 50);">Supprimer</button>
                                                 </td>
                                             </tr>
                                         `;
@@ -410,6 +404,20 @@ function renderDraftsScreen() {
             </div>
         </div>
     `;
+
+    filterDraftsTable(state.draftsSearch || "");
+}
+
+function filterDraftsTable(value) {
+    state.draftsSearch = value;
+
+    const query = String(value || "").trim().toUpperCase();
+    const rows = document.querySelectorAll("#drafts-table-body tr");
+
+    rows.forEach(row => {
+        const haystack = row.dataset.search || "";
+        row.style.display = !query || haystack.includes(query) ? "" : "none";
+    });
 }
 
 function getClosedItems() {
@@ -509,26 +517,9 @@ function renderLibraryScreen() {
     setWorkspaceChromeVisibility(false);
     setActiveSidebarLink("nav-library-btn");
 
-    const search = (state.librarySearch || "").trim().toUpperCase();
-    const typeFilter = state.libraryTypeFilter || "";
-
     const list = Array.isArray(referenceData.technicalSheetsLibrary)
         ? referenceData.technicalSheetsLibrary
         : [];
-
-    const availableTypes = [...new Set(list.map(item => item.type).filter(Boolean))];
-
-    const filtered = list.filter(item => {
-        const matchesSearch =
-            !search ||
-            String(item.type || "").toUpperCase().includes(search) ||
-            String(item.marque || "").toUpperCase().includes(search) ||
-            String(item.modele || "").toUpperCase().includes(search);
-
-        const matchesType = !typeFilter || item.type === typeFilter;
-
-        return matchesSearch && matchesType;
-    });
 
     content.innerHTML = `
         <div class="single-panel-layout enregistres-layout">
@@ -539,48 +530,66 @@ function renderLibraryScreen() {
                     </div>
                 </div>
 
-                <div class="field-grid">
-                    <div class="field span-8">
-                        <label>Rechercher</label>
-                        <input
-                            type="text"
-                            placeholder="Type, marque, modèle..."
-                            value="${escapeHtml(state.librarySearch || "")}"
-                            oninput="state.librarySearch=this.value; renderApp();"
-                        />
-                    </div>
-
-                    <div class="field span-4">
-                        <label>Filtrer par type</label>
-                        <select onchange="state.libraryTypeFilter=this.value; renderApp();">
-                            <option value="">Tous</option>
-                            ${availableTypes.map(type => `
-                                <option value="${escapeHtml(type)}" ${state.libraryTypeFilter === type ? "selected" : ""}>
-                                    ${escapeHtml(type)}
-                                </option>
-                            `).join("")}
-                        </select>
-                    </div>
-                </div>
-
                 ${
-                    filtered.length
+                    list.length
                         ? `
                         <div class="table-shell">
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>Type</th>
-                                        <th>Marque</th>
-                                        <th>Modèle</th>
+                                        <th>
+                                            Type
+                                            <input
+                                                type="text"
+                                                class="table-filter-input"
+                                                id="library-filter-type"
+                                                placeholder="Filtrer..."
+                                                value="${escapeHtml(state.libraryFilters?.type || "")}"
+                                                oninput="filterLibraryTable()"
+                                            />
+                                        </th>
+                                        <th>
+                                            Marque
+                                            <input
+                                                type="text"
+                                                class="table-filter-input"
+                                                id="library-filter-marque"
+                                                placeholder="Filtrer..."
+                                                value="${escapeHtml(state.libraryFilters?.marque || "")}"
+                                                oninput="filterLibraryTable()"
+                                            />
+                                        </th>
+                                        <th>
+                                            Modèle
+                                            <input
+                                                type="text"
+                                                class="table-filter-input"
+                                                id="library-filter-modele"
+                                                placeholder="Filtrer..."
+                                                value="${escapeHtml(state.libraryFilters?.modele || "")}"
+                                                oninput="filterLibraryTable()"
+                                            />
+                                        </th>
+                                        <th>Télécharger</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    ${filtered.map(item => `
-                                        <tr>
+                                <tbody id="library-table-body">
+                                    ${list.map((item, index) => `
+                                        <tr
+                                            data-type="${escapeHtml(String(item.type || "").toUpperCase())}"
+                                            data-marque="${escapeHtml(String(item.marque || "").toUpperCase())}"
+                                            data-modele="${escapeHtml(String(item.modele || "").toUpperCase())}"
+                                        >
                                             <td>${escapeHtml(item.type || "")}</td>
                                             <td>${escapeHtml(item.marque || "")}</td>
                                             <td>${escapeHtml(item.modele || "")}</td>
+                                            <td>
+                                                ${
+                                                    item.file
+                                                        ? `<button class="draft-btn load" onclick="downloadLibraryItem(${index})">Télécharger</button>`
+                                                        : `<span class="draft-meta">—</span>`
+                                                }
+                                            </td>
                                         </tr>
                                     `).join("")}
                                 </tbody>
@@ -589,13 +598,66 @@ function renderLibraryScreen() {
                         `
                         : `
                         <div class="empty-state">
-                            <p>Aucun résultat.</p>
+                            <p>Aucune fiche en bibliothèque.</p>
                         </div>
                         `
                 }
             </div>
         </div>
     `;
+
+    filterLibraryTable();
+}
+
+function filterLibraryTable() {
+    const typeInput = document.getElementById("library-filter-type");
+    const marqueInput = document.getElementById("library-filter-marque");
+    const modeleInput = document.getElementById("library-filter-modele");
+
+    const typeQuery = String(typeInput?.value || "").trim().toUpperCase();
+    const marqueQuery = String(marqueInput?.value || "").trim().toUpperCase();
+    const modeleQuery = String(modeleInput?.value || "").trim().toUpperCase();
+
+    state.libraryFilters = {
+        type: typeInput?.value || "",
+        marque: marqueInput?.value || "",
+        modele: modeleInput?.value || ""
+    };
+
+    const rows = document.querySelectorAll("#library-table-body tr");
+
+    rows.forEach(row => {
+        const rowType = row.dataset.type || "";
+        const rowMarque = row.dataset.marque || "";
+        const rowModele = row.dataset.modele || "";
+
+        const matchesType = !typeQuery || rowType.includes(typeQuery);
+        const matchesMarque = !marqueQuery || rowMarque.includes(marqueQuery);
+        const matchesModele = !modeleQuery || rowModele.includes(modeleQuery);
+
+        row.style.display = matchesType && matchesMarque && matchesModele ? "" : "none";
+    });
+}
+
+function downloadLibraryItem(index) {
+    const list = Array.isArray(referenceData.technicalSheetsLibrary)
+        ? referenceData.technicalSheetsLibrary
+        : [];
+
+    const item = list[index];
+    if (!item?.file) {
+        showToast("Aucun fichier disponible.", "error");
+        return;
+    }
+
+    try {
+        const blob = dataURLToBlob(item.file);
+        const fileName = item.fileName || `${item.type || "fiche"}.pdf`;
+        triggerBlobDownload(blob, fileName);
+    } catch (error) {
+        console.error(error);
+        showToast("Impossible de télécharger ce fichier.", "error");
+    }
 }
 
 function renderSettingsScreen() {
@@ -994,6 +1056,98 @@ async function previewClosedDoe(id) {
     }
 }
 
+async function buildDoeZipBlobFromCurrentState() {
+    if (typeof JSZip === "undefined") {
+        throw new Error("JSZip n’est pas chargé.");
+    }
+
+    if (typeof PDFLib === "undefined") {
+        throw new Error("PDF-lib n’est pas chargé.");
+    }
+
+    const validationIssues = collectExportValidation();
+    if (validationIssues.length) {
+        throw new Error("Merci de compléter les champs obligatoires avant export.");
+    }
+
+    const invalidFiles = getInvalidFiles();
+    if (invalidFiles.length) {
+        throw new Error("Certains fichiers sont invalides.");
+    }
+
+    const zip = new JSZip();
+
+    const fullAddress = [state.data.infos.adresse, state.data.infos.code_postal, state.data.infos.ville]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || "DOE";
+
+    const safeFolderName = sanitizeFileName(fullAddress);
+    const root = zip.folder(safeFolderName);
+
+    if (!root) {
+        throw new Error("Impossible de créer le ZIP.");
+    }
+
+    const pdfResult = await buildRealDoePdfBlob();
+
+    if (pdfResult.failedFiles.length) {
+        throw new Error("Certains fichiers doivent être remplacés.");
+    }
+
+    root.file("DOE.pdf", pdfResult.blob);
+
+    const sections = [
+        {
+            key: "fiches",
+            folderName: "FICHES TECHNIQUES",
+            getFileName: (item, index) => {
+                const base = [item.type, item.marque, item.modele].filter(Boolean).join(" - ");
+                return sanitizeFileName(base || `FICHE-${index + 1}`);
+            }
+        },
+        {
+            key: "pv",
+            folderName: "PROCES-VERBAUX",
+            getFileName: (item, index) => {
+                const base = item.type || `PV-${index + 1}`;
+                return sanitizeFileName(base);
+            }
+        },
+        {
+            key: "schemas",
+            folderName: "SCHEMAS",
+            getFileName: (item, index) => {
+                const base = item.type || `SCHEMA-${index + 1}`;
+                return sanitizeFileName(base);
+            }
+        }
+    ];
+
+    sections.forEach(section => {
+        const sectionFolder = root.folder(section.folderName);
+        if (!sectionFolder) return;
+
+        state.data[section.key].forEach((item, index) => {
+            if (!item.file) return;
+
+            const extension = getFileExtension(item.fileName, item.fileType);
+            const fileBaseName = section.getFileName(item, index);
+            const finalFileName = `${fileBaseName}${extension}`;
+
+            const blob = dataURLToBlob(item.file);
+            sectionFolder.file(finalFileName, blob);
+        });
+    });
+
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+
+    return {
+        blob: zipBlob,
+        fileName: `${safeFolderName}.zip`
+    };
+}
+
 async function downloadClosedDoe(id) {
     const item = getClosedDoeById(id);
     if (!item) {
@@ -1007,10 +1161,12 @@ async function downloadClosedDoe(id) {
     state = deepClone(item.state);
 
     try {
-        await startFakeExportPrep();
+        const result = await buildDoeZipBlobFromCurrentState();
+        triggerBlobDownload(result.blob, result.fileName);
+        showToast("ZIP téléchargé.", "success");
     } catch (error) {
         console.error(error);
-        showToast("Impossible de télécharger le ZIP.", "error");
+        showToast(error.message || "Impossible de télécharger le ZIP.", "error");
     } finally {
         state = previousState;
         currentScreen = previousScreen;
