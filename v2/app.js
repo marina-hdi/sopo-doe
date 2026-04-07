@@ -551,9 +551,10 @@ function renderLibraryScreen() {
                                 <thead>
                                     <tr>
                                         <th>
-                                            <button type="button" class="table-sort-btn" onclick="sortLibraryTable('type')">
-                                                Type
-                                            </button>
+                                          <button type="button" class="table-sort-btn" data-column="type" data-label="Type" onclick="sortLibraryTable('type')">
+                                              <span>Type</span>
+                                              <span class="material-symbols-outlined sort-icon">unfold_more</span>
+                                          </button>
                                             <select class="table-filter-input" id="library-filter-type" onchange="filterLibraryTable()">
                                                 <option value="">Tous</option>
                                                 ${types.map(value => `
@@ -564,9 +565,10 @@ function renderLibraryScreen() {
                                             </select>
                                         </th>
                                         <th>
-                                            <button type="button" class="table-sort-btn" onclick="sortLibraryTable('marque')">
-                                                Marque
-                                            </button>
+                                          <button type="button" class="table-sort-btn" data-column="marque" data-label="Marque" onclick="sortLibraryTable('marque')">
+                                              <span>Marque</span>
+                                              <span class="material-symbols-outlined sort-icon">unfold_more</span>
+                                          </button>
                                             <select class="table-filter-input" id="library-filter-marque" onchange="filterLibraryTable()">
                                                 <option value="">Toutes</option>
                                                 ${marques.map(value => `
@@ -577,9 +579,10 @@ function renderLibraryScreen() {
                                             </select>
                                         </th>
                                         <th>
-                                            <button type="button" class="table-sort-btn" onclick="sortLibraryTable('modele')">
-                                                Modèle
-                                            </button>
+                                          <button type="button" class="table-sort-btn" data-column="modele" data-label="Modèle" onclick="sortLibraryTable('modele')">
+                                              <span>Modèle</span>
+                                              <span class="material-symbols-outlined sort-icon">unfold_more</span>
+                                          </button>
                                             <select class="table-filter-input" id="library-filter-modele" onchange="filterLibraryTable()">
                                                 <option value="">Tous</option>
                                                 ${modeles.map(value => `
@@ -626,7 +629,8 @@ function renderLibraryScreen() {
         </div>
     `;
 
-    filterLibraryTable();
+   updateLibrarySortUi();
+   filterLibraryTable();
 }
 
 function filterLibraryTable() {
@@ -687,7 +691,33 @@ function sortLibraryTable(column) {
 
     rows.forEach(row => tbody.appendChild(row));
 
+    updateLibrarySortUi();
     filterLibraryTable();
+}
+
+function updateLibrarySortUi() {
+    const buttons = document.querySelectorAll(".table-sort-btn");
+    const currentSort = state.librarySort || { column: "", direction: "asc" };
+
+    buttons.forEach(button => {
+        const column = button.dataset.column;
+        const label = button.dataset.label || button.textContent.trim();
+
+        if (column === currentSort.column) {
+            const arrow = currentSort.direction === "asc" ? "arrow_upward" : "arrow_downward";
+            button.innerHTML = `
+                <span>${escapeHtml(label)}</span>
+                <span class="material-symbols-outlined sort-icon is-active">${arrow}</span>
+            `;
+            button.classList.add("is-active");
+        } else {
+            button.innerHTML = `
+                <span>${escapeHtml(label)}</span>
+                <span class="material-symbols-outlined sort-icon">unfold_more</span>
+            `;
+            button.classList.remove("is-active");
+        }
+    });
 }
 
 function downloadLibraryItem(index) {
