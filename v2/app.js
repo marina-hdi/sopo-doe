@@ -551,47 +551,53 @@ function renderLibraryScreen() {
                                 <thead>
                                     <tr>
                                         <th>
-                                          <button type="button" class="table-sort-btn" data-column="type" data-label="Type" onclick="sortLibraryTable('type')">
-                                              <span>Type</span>
-                                              <span class="material-symbols-outlined sort-icon">unfold_more</span>
-                                          </button>
-                                            <select class="table-filter-input" id="library-filter-type" onchange="filterLibraryTable()">
-                                                <option value="">Tous</option>
-                                                ${types.map(value => `
-                                                    <option value="${escapeHtml(value)}" ${(state.libraryFilters?.type || "") === value ? "selected" : ""}>
-                                                        ${escapeHtml(value)}
-                                                    </option>
-                                                `).join("")}
-                                            </select>
+                                            <button type="button" class="table-sort-btn" data-column="type" data-label="Type" onclick="sortLibraryTable('type')">
+                                                <span>Type</span>
+                                                <span class="material-symbols-outlined sort-icon">unfold_more</span>
+                                            </button>
+                                            <div class="library-filter-select">
+                                                ${renderCustomSelect({
+                                                    id: "library-filter-type",
+                                                    label: "",
+                                                    value: state.libraryFilters?.type || "TOUS",
+                                                    placeholder: "TOUS",
+                                                    options: ["TOUS", ...types]
+                                                })}
+                                            </div>
                                         </th>
+
                                         <th>
-                                          <button type="button" class="table-sort-btn" data-column="marque" data-label="Marque" onclick="sortLibraryTable('marque')">
-                                              <span>Marque</span>
-                                              <span class="material-symbols-outlined sort-icon">unfold_more</span>
-                                          </button>
-                                            <select class="table-filter-input" id="library-filter-marque" onchange="filterLibraryTable()">
-                                                <option value="">Toutes</option>
-                                                ${marques.map(value => `
-                                                    <option value="${escapeHtml(value)}" ${(state.libraryFilters?.marque || "") === value ? "selected" : ""}>
-                                                        ${escapeHtml(value)}
-                                                    </option>
-                                                `).join("")}
-                                            </select>
+                                            <button type="button" class="table-sort-btn" data-column="marque" data-label="Marque" onclick="sortLibraryTable('marque')">
+                                                <span>Marque</span>
+                                                <span class="material-symbols-outlined sort-icon">unfold_more</span>
+                                            </button>
+                                            <div class="library-filter-select">
+                                                ${renderCustomSelect({
+                                                    id: "library-filter-marque",
+                                                    label: "",
+                                                    value: state.libraryFilters?.marque || "TOUS",
+                                                    placeholder: "TOUS",
+                                                    options: ["TOUS", ...marques]
+                                                })}
+                                            </div>
                                         </th>
+
                                         <th>
-                                          <button type="button" class="table-sort-btn" data-column="modele" data-label="Modèle" onclick="sortLibraryTable('modele')">
-                                              <span>Modèle</span>
-                                              <span class="material-symbols-outlined sort-icon">unfold_more</span>
-                                          </button>
-                                            <select class="table-filter-input" id="library-filter-modele" onchange="filterLibraryTable()">
-                                                <option value="">Tous</option>
-                                                ${modeles.map(value => `
-                                                    <option value="${escapeHtml(value)}" ${(state.libraryFilters?.modele || "") === value ? "selected" : ""}>
-                                                        ${escapeHtml(value)}
-                                                    </option>
-                                                `).join("")}
-                                            </select>
+                                            <button type="button" class="table-sort-btn" data-column="modele" data-label="Modèle" onclick="sortLibraryTable('modele')">
+                                                <span>Modèle</span>
+                                                <span class="material-symbols-outlined sort-icon">unfold_more</span>
+                                            </button>
+                                            <div class="library-filter-select">
+                                                ${renderCustomSelect({
+                                                    id: "library-filter-modele",
+                                                    label: "",
+                                                    value: state.libraryFilters?.modele || "TOUS",
+                                                    placeholder: "TOUS",
+                                                    options: ["TOUS", ...modeles]
+                                                })}
+                                            </div>
                                         </th>
+
                                         <th>Télécharger</th>
                                     </tr>
                                 </thead>
@@ -629,24 +635,38 @@ function renderLibraryScreen() {
         </div>
     `;
 
-   updateLibrarySortUi();
-   filterLibraryTable();
+    registerCustomSelectHandler("library-filter-type", (value) => setLibraryFilter("type", value));
+    registerCustomSelectHandler("library-filter-marque", (value) => setLibraryFilter("marque", value));
+    registerCustomSelectHandler("library-filter-modele", (value) => setLibraryFilter("modele", value));
+
+    initCustomSelects();
+    updateLibrarySortUi();
+    filterLibraryTable();
+}
+
+function setLibraryFilter(field, value) {
+    if (!state.libraryFilters) {
+        state.libraryFilters = {
+            type: "",
+            marque: "",
+            modele: ""
+        };
+    }
+
+    state.libraryFilters[field] = value === "TOUS" ? "" : value;
+    renderLibraryScreen();
 }
 
 function filterLibraryTable() {
-    const typeSelect = document.getElementById("library-filter-type");
-    const marqueSelect = document.getElementById("library-filter-marque");
-    const modeleSelect = document.getElementById("library-filter-modele");
-
-    const typeQuery = String(typeSelect?.value || "").trim().toUpperCase();
-    const marqueQuery = String(marqueSelect?.value || "").trim().toUpperCase();
-    const modeleQuery = String(modeleSelect?.value || "").trim().toUpperCase();
-
-    state.libraryFilters = {
-        type: typeSelect?.value || "",
-        marque: marqueSelect?.value || "",
-        modele: modeleSelect?.value || ""
+    const filters = state.libraryFilters || {
+        type: "",
+        marque: "",
+        modele: ""
     };
+
+    const typeQuery = String(filters.type || "").trim().toUpperCase();
+    const marqueQuery = String(filters.marque || "").trim().toUpperCase();
+    const modeleQuery = String(filters.modele || "").trim().toUpperCase();
 
     const rows = document.querySelectorAll("#library-table-body tr");
 
