@@ -321,10 +321,6 @@ function duplicateDraft(draftId) {
     renderApp();
 }
 
-function getSavedSearchValue() {
-    return state.savedSearch || "";
-}
-
 function setSavedSearchValue(value) {
     state.savedSearch = value;
     renderApp();
@@ -3689,44 +3685,6 @@ function removeSettingValue(settingKey, index) {
     showToast("Valeur supprimée.", "info");
 }
 
-function promptAddPostalCity() {
-    const cp = prompt("Code postal ?");
-    if (!cp) return;
-
-    const ville = prompt("Ville ?");
-    if (!ville) return;
-
-    const normalizedCp = String(cp).trim().toUpperCase();
-    const normalizedVille = String(ville).trim().toUpperCase();
-
-    if (!referenceData.postalCodes[normalizedCp]) {
-        referenceData.postalCodes[normalizedCp] = [];
-    }
-
-    if (!referenceData.postalCodes[normalizedCp].includes(normalizedVille)) {
-        referenceData.postalCodes[normalizedCp].push(normalizedVille);
-        saveReferenceData();
-        renderApp();
-        showToast("Ville ajoutée.", "success");
-    } else {
-        showToast("Cette ville existe déjà pour ce code postal.", "info");
-    }
-}
-
-function removePostalCity(cp, cityIndex) {
-    if (!referenceData.postalCodes[cp]) return;
-
-    referenceData.postalCodes[cp].splice(cityIndex, 1);
-
-    if (!referenceData.postalCodes[cp].length) {
-        delete referenceData.postalCodes[cp];
-    }
-
-    saveReferenceData();
-    renderApp();
-    showToast("Ville supprimée.", "info");
-}
-
 /* ========================
    FILES
 ======================== */
@@ -4522,7 +4480,6 @@ prevStepBtn.onclick = () => {
     }
 };
 
-if (openDraftsBtn) openDraftsBtn.onclick = openDraftsModal;
 if (closeDraftsBtn) closeDraftsBtn.onclick = closeDraftsModal;
 
 if (draftsModal) {
@@ -4622,14 +4579,14 @@ window.startFakeExportPrep = startFakeExportPrep;
 
 window.goToBuilder = goToBuilder;
 window.goToAccueil = goToAccueil;
+window.goToDraftsScreen = goToDraftsScreen;
+window.goToClosedScreen = goToClosedScreen;
+window.goToLibraryScreen = goToLibraryScreen;
 window.handleNewDoeFromAccueil = handleNewDoeFromAccueil;
 window.showSavedPlaceholder = showSavedPlaceholder;
-window.goToSavedScreen = goToSavedScreen;
 window.duplicateDraft = duplicateDraft;
 window.setSavedSearchValue = setSavedSearchValue;
 
 window.goToSettingsScreen = goToSettingsScreen;
 window.promptAddSettingValue = promptAddSettingValue;
 window.removeSettingValue = removeSettingValue;
-window.promptAddPostalCity = promptAddPostalCity;
-window.removePostalCity = removePostalCity;
