@@ -536,8 +536,36 @@ button {
     color: #00448C;
 }
 
+.library-filter-select .field {
+    grid-column: auto !important;
+    gap: 0;
+}
+
+.library-filter-select .field label {
+    display: none;
+}
+
+.library-filter-select .custom-select {
+    width: 100%;
+}
+
+.library-filter-select .custom-select-trigger {
+    min-height: 42px;
+    padding: 10px 40px 10px 12px;
+    font-size: 13px;
+    border-radius: 12px;
+}
+
+.library-filter-select .custom-select-menu {
+    min-width: 220px;
+}
+
+.library-filter-select {
+    margin-top: 8px;
+}
+
 .sort-icon {
-    font-size: 18px;
+    font-size: 14px;
     opacity: 0.6;
 }
 
