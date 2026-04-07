@@ -4925,3 +4925,5 @@ window.removeModel = removeModel;
 window.previewClosedDoe = previewClosedDoe;
 window.downloadClosedDoe = downloadClosedDoe;
 window.deleteClosedDoe = deleteClosedDoe;
+
+window.setLibraryFilter = setLibraryFilter;
