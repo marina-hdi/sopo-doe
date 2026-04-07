@@ -4844,3 +4844,18 @@ window.setSavedSearchValue = setSavedSearchValue;
 window.goToSettingsScreen = goToSettingsScreen;
 window.promptAddSettingValue = promptAddSettingValue;
 window.removeSettingValue = removeSettingValue;
+
+window.filterDraftsTable = filterDraftsTable;
+window.filterLibraryTable = filterLibraryTable;
+window.downloadLibraryItem = downloadLibraryItem;
+
+window.promptAddEquipmentType = promptAddEquipmentType;
+window.removeEquipmentType = removeEquipmentType;
+window.promptAddBrand = promptAddBrand;
+window.removeBrand = removeBrand;
+window.promptAddModel = promptAddModel;
+window.removeModel = removeModel;
+
+window.previewClosedDoe = previewClosedDoe;
+window.downloadClosedDoe = downloadClosedDoe;
+window.deleteClosedDoe = deleteClosedDoe;
