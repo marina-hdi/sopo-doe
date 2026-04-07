@@ -5,6 +5,7 @@ console.log("DOE v2 clean app loaded ✅");
 ======================== */
 const AUTOSAVE_KEY = "doe_v2_autosave";
 const DRAFTS_KEY = "doe_v2_saved_drafts";
+const CLOSED_KEY = "doe_v2_closed";
 const REFERENCE_DATA_KEY = "doe_v2_reference_data";
 
 /* ========================
@@ -190,12 +191,13 @@ const prevStepBtn = document.getElementById("prev-step");
 
 const draftsModal = document.getElementById("drafts-modal");
 const draftsList = document.getElementById("drafts-list");
-const openDraftsBtn = document.getElementById("open-drafts-btn");
 const closeDraftsBtn = document.getElementById("close-drafts-btn");
 
 const navAccueilBtn = document.getElementById("nav-accueil-btn");
 const navNewBtn = document.getElementById("nav-new-btn");
-const navSavedBtn = document.getElementById("nav-saved-btn");
+const navDraftsBtn = document.getElementById("nav-drafts-btn");
+const navClosedBtn = document.getElementById("nav-closed-btn");
+const navLibraryBtn = document.getElementById("nav-library-btn");
 const navSettingsBtn = document.getElementById("nav-settings-btn");
 
 const toastContainer = document.getElementById("toast-container");
@@ -282,8 +284,18 @@ function goToBuilder() {
     renderApp();
 }
 
-function goToSavedScreen() {
-    currentScreen = "saved";
+function goToDraftsScreen() {
+    currentScreen = "drafts";
+    renderApp();
+}
+
+function goToClosedScreen() {
+    currentScreen = "closed";
+    renderApp();
+}
+
+function goToLibraryScreen() {
+    currentScreen = "library";
     renderApp();
 }
 
@@ -318,28 +330,19 @@ function setSavedSearchValue(value) {
     renderApp();
 }
 
-function renderSavedScreen() {
+function renderDraftsScreen() {
     setWorkspaceChromeVisibility(false);
-    setActiveSidebarLink("nav-saved-btn");
+    setActiveSidebarLink("nav-drafts-btn");
 
-    const search = getSavedSearchValue().trim().toUpperCase();
+    const search = (state.draftsSearch || "").trim().toUpperCase();
     const drafts = getAllDrafts();
 
     const filteredDrafts = drafts.filter(draft => {
-        if (!search) return true;
-
-        const title = String(draft.title || "").toUpperCase();
         const infos = draft?.state?.data?.infos || {};
         const adresse = String(infos.adresse || "").toUpperCase();
-        const nature = String(infos.nature_travaux || "").toUpperCase();
-        const ville = String(infos.ville || "").toUpperCase();
+        const notes = String(infos.notes || "").toUpperCase();
 
-        return (
-            title.includes(search) ||
-            adresse.includes(search) ||
-            nature.includes(search) ||
-            ville.includes(search)
-        );
+        return !search || adresse.includes(search) || notes.includes(search);
     });
 
     content.innerHTML = `
@@ -347,10 +350,7 @@ function renderSavedScreen() {
             <div class="panel">
                 <div class="section-toolbar">
                     <div>
-                        <h3>Enregistrés</h3>
-                        <p class="panel-muted">
-                            Tous les brouillons enregistrés localement.
-                        </p>
+                        <h3>Brouillons</h3>
                     </div>
                 </div>
 
@@ -359,9 +359,9 @@ function renderSavedScreen() {
                         <label>Rechercher</label>
                         <input
                             type="text"
-                            placeholder="Adresse, ville, nature des travaux..."
-                            value="${escapeHtml(getSavedSearchValue())}"
-                            oninput="setSavedSearchValue(this.value)"
+                            placeholder="Adresse ou notes..."
+                            value="${escapeHtml(state.draftsSearch || "")}"
+                            oninput="state.draftsSearch=this.value; renderApp();"
                         />
                     </div>
                 </div>
@@ -369,41 +369,231 @@ function renderSavedScreen() {
                 ${
                     filteredDrafts.length
                         ? `
-                        <div class="enregistres-list">
-                            ${filteredDrafts.map(draft => {
-                                const infos = draft?.state?.data?.infos || {};
-                                const addressLine = [infos.adresse, infos.code_postal, infos.ville]
-                                    .filter(Boolean)
-                                    .join(" ");
+                        <div class="table-shell">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Adresse</th>
+                                        <th>Dernière mise à jour</th>
+                                        <th>Notes</th>
+                                        <th>Ouvrir</th>
+                                        <th>Supprimer</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${filteredDrafts.map(draft => {
+                                        const infos = draft?.state?.data?.infos || {};
+                                        const addressLine = [infos.adresse, infos.code_postal, infos.ville]
+                                            .filter(Boolean)
+                                            .join(" ");
 
-                                return `
-                                    <div class="draft-item">
-                                        <div class="draft-main">
-                                            <div class="draft-title">${escapeHtml(draft.title || "Brouillon")}</div>
-                                            <div class="draft-meta">
-                                                ${addressLine ? escapeHtml(addressLine) : "Adresse non renseignée"}
-                                            </div>
-                                            <div class="draft-meta">
-                                                ${infos.nature_travaux ? escapeHtml(infos.nature_travaux) : "Nature non renseignée"}
-                                            </div>
-                                            <div class="draft-meta">
-                                                Dernière mise à jour : ${formatDraftDate(draft.updatedAt)}
-                                            </div>
-                                        </div>
-
-                                        <div class="draft-actions">
-                                            <button class="draft-btn load" onclick="loadDraft('${draft.id}'); goToBuilder();">Ouvrir</button>
-                                            <button class="draft-btn load" onclick="duplicateDraft('${draft.id}')">Dupliquer</button>
-                                            <button class="draft-btn delete" onclick="deleteDraft('${draft.id}'); setTimeout(renderApp, 50);">Supprimer</button>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join("")}
+                                        return `
+                                            <tr>
+                                                <td>${escapeHtml(addressLine || "Adresse non renseignée")}</td>
+                                                <td>${escapeHtml(formatDraftDate(draft.updatedAt))}</td>
+                                                <td>${escapeHtml(infos.notes || "")}</td>
+                                                <td>
+                                                    <button class="draft-btn load" onclick="loadDraft('${draft.id}'); goToBuilder();">Ouvrir</button>
+                                                </td>
+                                                <td>
+                                                    <button class="draft-btn delete" onclick="deleteDraft('${draft.id}'); setTimeout(renderApp, 50);">Supprimer</button>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join("")}
+                                </tbody>
+                            </table>
                         </div>
                         `
                         : `
                         <div class="empty-state">
                             <p>Aucun brouillon trouvé.</p>
+                        </div>
+                        `
+                }
+            </div>
+        </div>
+    `;
+}
+
+function getClosedItems() {
+    try {
+        return JSON.parse(localStorage.getItem(CLOSED_KEY) || "[]");
+    } catch (error) {
+        console.error("Erreur chargement clôturés :", error);
+        return [];
+    }
+}
+
+function setClosedItems(items) {
+    localStorage.setItem(CLOSED_KEY, JSON.stringify(items));
+}
+
+function renderClosedScreen() {
+    setWorkspaceChromeVisibility(false);
+    setActiveSidebarLink("nav-closed-btn");
+
+    const search = (state.closedSearch || "").trim().toUpperCase();
+    const items = getClosedItems();
+
+    const filteredItems = items.filter(item => {
+        const infos = item?.state?.data?.infos || {};
+        const adresse = String(infos.adresse || "").toUpperCase();
+        return !search || adresse.includes(search);
+    });
+
+    content.innerHTML = `
+        <div class="single-panel-layout enregistres-layout">
+            <div class="panel">
+                <div class="section-toolbar">
+                    <div>
+                        <h3>Clôturés</h3>
+                    </div>
+                </div>
+
+                <div class="enregistres-toolbar">
+                    <div class="field full">
+                        <label>Rechercher</label>
+                        <input
+                            type="text"
+                            placeholder="Adresse..."
+                            value="${escapeHtml(state.closedSearch || "")}"
+                            oninput="state.closedSearch=this.value; renderApp();"
+                        />
+                    </div>
+                </div>
+
+                ${
+                    filteredItems.length
+                        ? `
+                        <div class="table-shell">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Adresse</th>
+                                        <th>Enregistré le</th>
+                                        <th>Aperçu</th>
+                                        <th>Télécharger</th>
+                                        <th>Supprimer</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${filteredItems.map(item => {
+                                        const infos = item?.state?.data?.infos || {};
+                                        const addressLine = [infos.adresse, infos.code_postal, infos.ville]
+                                            .filter(Boolean)
+                                            .join(" ");
+
+                                        return `
+                                            <tr>
+                                                <td>${escapeHtml(addressLine || "Adresse non renseignée")}</td>
+                                                <td>${escapeHtml(formatDraftDate(item.savedAt))}</td>
+                                                <td><button class="draft-btn load" onclick="previewClosedDoe('${item.id}')">Aperçu</button></td>
+                                                <td><button class="draft-btn load" onclick="downloadClosedDoe('${item.id}')">Télécharger</button></td>
+                                                <td><button class="draft-btn delete" onclick="deleteClosedDoe('${item.id}')">Supprimer</button></td>
+                                            </tr>
+                                        `;
+                                    }).join("")}
+                                </tbody>
+                            </table>
+                        </div>
+                        `
+                        : `
+                        <div class="empty-state">
+                            <p>Aucun DOE clôturé.</p>
+                        </div>
+                        `
+                }
+            </div>
+        </div>
+    `;
+}
+
+function renderLibraryScreen() {
+    setWorkspaceChromeVisibility(false);
+    setActiveSidebarLink("nav-library-btn");
+
+    const search = (state.librarySearch || "").trim().toUpperCase();
+    const typeFilter = state.libraryTypeFilter || "";
+
+    const list = Array.isArray(referenceData.technicalSheetsLibrary)
+        ? referenceData.technicalSheetsLibrary
+        : [];
+
+    const availableTypes = [...new Set(list.map(item => item.type).filter(Boolean))];
+
+    const filtered = list.filter(item => {
+        const matchesSearch =
+            !search ||
+            String(item.type || "").toUpperCase().includes(search) ||
+            String(item.marque || "").toUpperCase().includes(search) ||
+            String(item.modele || "").toUpperCase().includes(search);
+
+        const matchesType = !typeFilter || item.type === typeFilter;
+
+        return matchesSearch && matchesType;
+    });
+
+    content.innerHTML = `
+        <div class="single-panel-layout enregistres-layout">
+            <div class="panel">
+                <div class="section-toolbar">
+                    <div>
+                        <h3>Bibliothèque</h3>
+                    </div>
+                </div>
+
+                <div class="field-grid">
+                    <div class="field span-8">
+                        <label>Rechercher</label>
+                        <input
+                            type="text"
+                            placeholder="Type, marque, modèle..."
+                            value="${escapeHtml(state.librarySearch || "")}"
+                            oninput="state.librarySearch=this.value; renderApp();"
+                        />
+                    </div>
+
+                    <div class="field span-4">
+                        <label>Filtrer par type</label>
+                        <select onchange="state.libraryTypeFilter=this.value; renderApp();">
+                            <option value="">Tous</option>
+                            ${availableTypes.map(type => `
+                                <option value="${escapeHtml(type)}" ${state.libraryTypeFilter === type ? "selected" : ""}>
+                                    ${escapeHtml(type)}
+                                </option>
+                            `).join("")}
+                        </select>
+                    </div>
+                </div>
+
+                ${
+                    filtered.length
+                        ? `
+                        <div class="table-shell">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Marque</th>
+                                        <th>Modèle</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${filtered.map(item => `
+                                        <tr>
+                                            <td>${escapeHtml(item.type || "")}</td>
+                                            <td>${escapeHtml(item.marque || "")}</td>
+                                            <td>${escapeHtml(item.modele || "")}</td>
+                                        </tr>
+                                    `).join("")}
+                                </tbody>
+                            </table>
+                        </div>
+                        `
+                        : `
+                        <div class="empty-state">
+                            <p>Aucun résultat.</p>
                         </div>
                         `
                 }
@@ -419,182 +609,117 @@ function renderSettingsScreen() {
     const workTypes = Array.isArray(referenceData.workTypes) ? referenceData.workTypes : [];
     const pvTypes = Array.isArray(referenceData.pvTypes) ? referenceData.pvTypes : [];
     const schemaTypes = Array.isArray(referenceData.schemaTypes) ? referenceData.schemaTypes : [];
-    const postalEntries = Object.entries(referenceData.postalCodes || {});
-    const technicalSheets = Array.isArray(referenceData.technicalSheetsLibrary)
-        ? referenceData.technicalSheetsLibrary
-        : [];
+    const equipmentEntries = Object.entries(referenceData.equipment || {});
 
     content.innerHTML = `
         <div class="single-panel-layout settings-layout">
-            <div class="settings-grid">
-                <div class="settings-main-column">
-                    <div class="panel">
-                        <div class="section-toolbar">
-                            <div>
-                                <h3>Paramètres</h3>
-                                <p class="panel-muted">
-                                    Gérez les valeurs de référence utilisées dans le DOE builder.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="settings-section">
-                            <div class="section-toolbar">
-                                <div>
-                                    <h4>Natures de travaux</h4>
-                                </div>
-                                <button class="add-row-btn" type="button" onclick="promptAddSettingValue('workTypes')">+ Ajouter</button>
-                            </div>
-
-                            ${
-                                workTypes.length
-                                    ? `
-                                    <div class="settings-chip-list">
-                                        ${workTypes.map((item, index) => `
-                                            <div class="settings-chip">
-                                                <span>${escapeHtml(item)}</span>
-                                                <button type="button" onclick="removeSettingValue('workTypes', ${index})">✕</button>
-                                            </div>
-                                        `).join("")}
-                                    </div>
-                                    `
-                                    : `<div class="empty-state"><p>Aucune nature de travaux.</p></div>`
-                            }
-                        </div>
-
-                        <div class="settings-section">
-                            <div class="section-toolbar">
-                                <div>
-                                    <h4>Types de PV</h4>
-                                </div>
-                                <button class="add-row-btn" type="button" onclick="promptAddSettingValue('pvTypes')">+ Ajouter</button>
-                            </div>
-
-                            ${
-                                pvTypes.length
-                                    ? `
-                                    <div class="settings-chip-list">
-                                        ${pvTypes.map((item, index) => `
-                                            <div class="settings-chip">
-                                                <span>${escapeHtml(item)}</span>
-                                                <button type="button" onclick="removeSettingValue('pvTypes', ${index})">✕</button>
-                                            </div>
-                                        `).join("")}
-                                    </div>
-                                    `
-                                    : `<div class="empty-state"><p>Aucun type de PV.</p></div>`
-                            }
-                        </div>
-
-                        <div class="settings-section">
-                            <div class="section-toolbar">
-                                <div>
-                                    <h4>Types de schémas</h4>
-                                </div>
-                                <button class="add-row-btn" type="button" onclick="promptAddSettingValue('schemaTypes')">+ Ajouter</button>
-                            </div>
-
-                            ${
-                                schemaTypes.length
-                                    ? `
-                                    <div class="settings-chip-list">
-                                        ${schemaTypes.map((item, index) => `
-                                            <div class="settings-chip">
-                                                <span>${escapeHtml(item)}</span>
-                                                <button type="button" onclick="removeSettingValue('schemaTypes', ${index})">✕</button>
-                                            </div>
-                                        `).join("")}
-                                    </div>
-                                    `
-                                    : `<div class="empty-state"><p>Aucun type de schéma.</p></div>`
-                            }
-                        </div>
-                    </div>
-
-                    <div class="panel">
-                        <div class="section-toolbar">
-                            <div>
-                                <h4>Codes postaux / villes</h4>
-                            </div>
-                            <button class="add-row-btn" type="button" onclick="promptAddPostalCity()">+ Ajouter</button>
-                        </div>
-
-                        ${
-                            postalEntries.length
-                                ? `
-                                <div class="settings-postal-list">
-                                    ${postalEntries.map(([cp, villes]) => `
-                                        <div class="settings-postal-card">
-                                            <div class="settings-postal-header">
-                                                <strong>${escapeHtml(cp)}</strong>
-                                            </div>
-                                            <div class="settings-chip-list">
-                                                ${(villes || []).map((ville, cityIndex) => `
-                                                    <div class="settings-chip">
-                                                        <span>${escapeHtml(ville)}</span>
-                                                        <button type="button" onclick="removePostalCity('${escapeJs(cp)}', ${cityIndex})">✕</button>
-                                                    </div>
-                                                `).join("")}
-                                            </div>
-                                        </div>
-                                    `).join("")}
-                                </div>
-                                `
-                                : `<div class="empty-state"><p>Aucun code postal enregistré.</p></div>`
-                        }
+            <div class="panel">
+                <div class="section-toolbar">
+                    <div>
+                        <h3>Paramètres</h3>
                     </div>
                 </div>
 
-                <div class="settings-side-column">
-                    <div class="panel">
-                        <div class="section-toolbar">
-                            <div>
-                                <h4>Bibliothèque fiches techniques</h4>
-                                <p class="panel-muted">
-                                    Vue d’ensemble des fiches enregistrées.
-                                </p>
-                            </div>
-                        </div>
-
-                        ${
-                            technicalSheets.length
-                                ? `
-                                <div class="settings-library-list">
-                                    ${technicalSheets.map(item => `
-                                        <div class="settings-library-item">
-                                            <strong>${escapeHtml(item.type || "TYPE")}</strong>
-                                            <div>${escapeHtml(item.marque || "—")}</div>
-                                            <div>${escapeHtml(item.modele || "—")}</div>
-                                            <div class="draft-meta">${escapeHtml(item.fileName || "Aucun fichier")}</div>
-                                        </div>
-                                    `).join("")}
-                                </div>
-                                `
-                                : `<div class="empty-state"><p>Aucune fiche en bibliothèque.</p></div>`
-                        }
+                <div class="settings-section">
+                    <div class="section-toolbar">
+                        <div><h4>Types travaux</h4></div>
+                        <button class="add-row-btn" type="button" onclick="promptAddSettingValue('workTypes')">+ Ajouter</button>
                     </div>
+                    ${
+                        workTypes.length
+                            ? `<div class="settings-chip-list">
+                                ${workTypes.map((item, index) => `
+                                    <div class="settings-chip">
+                                        <span>${escapeHtml(item)}</span>
+                                        <button type="button" onclick="removeSettingValue('workTypes', ${index})">✕</button>
+                                    </div>
+                                `).join("")}
+                            </div>`
+                            : `<div class="empty-state"><p>Aucun type travaux.</p></div>`
+                    }
+                </div>
 
-                    <div class="panel">
-                        <div class="section-toolbar">
-                            <div>
-                                <h4>Rappels</h4>
-                            </div>
-                        </div>
-
-                        <div class="accueil-helper-list">
-                            <div class="accueil-helper-card">
-                                Ces paramètres alimentent directement les menus déroulants du builder.
-                            </div>
-
-                            <div class="accueil-helper-card">
-                                La bibliothèque des fiches techniques s’alimente automatiquement lors des uploads.
-                            </div>
-
-                            <div class="accueil-helper-card">
-                                Les suppressions prennent effet immédiatement dans l’app.
-                            </div>
-                        </div>
+                <div class="settings-section">
+                    <div class="section-toolbar">
+                        <div><h4>Types équipement</h4></div>
                     </div>
+                    ${
+                        equipmentEntries.length
+                            ? `<div class="settings-chip-list">
+                                ${equipmentEntries.map(([key]) => `
+                                    <div class="settings-chip">
+                                        <span>${escapeHtml(key)}</span>
+                                    </div>
+                                `).join("")}
+                            </div>`
+                            : `<div class="empty-state"><p>Aucun type équipement.</p></div>`
+                    }
+                </div>
+
+                <div class="settings-section">
+                    <div class="section-toolbar">
+                        <div><h4>Marques</h4></div>
+                    </div>
+                    <div class="settings-chip-list">
+                        ${equipmentEntries.flatMap(([_, value]) =>
+                            Object.keys(value?.brands || {}).map(brand => `
+                                <div class="settings-chip"><span>${escapeHtml(brand)}</span></div>
+                            `)
+                        ).join("")}
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="section-toolbar">
+                        <div><h4>Modèle</h4></div>
+                    </div>
+                    <div class="settings-chip-list">
+                        ${equipmentEntries.flatMap(([_, value]) =>
+                            Object.values(value?.brands || {}).flatMap(models =>
+                                models.map(model => `
+                                    <div class="settings-chip"><span>${escapeHtml(model)}</span></div>
+                                `)
+                            )
+                        ).join("")}
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="section-toolbar">
+                        <div><h4>Types PV</h4></div>
+                        <button class="add-row-btn" type="button" onclick="promptAddSettingValue('pvTypes')">+ Ajouter</button>
+                    </div>
+                    ${
+                        pvTypes.length
+                            ? `<div class="settings-chip-list">
+                                ${pvTypes.map((item, index) => `
+                                    <div class="settings-chip">
+                                        <span>${escapeHtml(item)}</span>
+                                        <button type="button" onclick="removeSettingValue('pvTypes', ${index})">✕</button>
+                                    </div>
+                                `).join("")}
+                            </div>`
+                            : `<div class="empty-state"><p>Aucun type de PV.</p></div>`
+                    }
+                </div>
+
+                <div class="settings-section">
+                    <div class="section-toolbar">
+                        <div><h4>Types schémas</h4></div>
+                        <button class="add-row-btn" type="button" onclick="promptAddSettingValue('schemaTypes')">+ Ajouter</button>
+                    </div>
+                    ${
+                        schemaTypes.length
+                            ? `<div class="settings-chip-list">
+                                ${schemaTypes.map((item, index) => `
+                                    <div class="settings-chip">
+                                        <span>${escapeHtml(item)}</span>
+                                        <button type="button" onclick="removeSettingValue('schemaTypes', ${index})">✕</button>
+                                    </div>
+                                `).join("")}
+                            </div>`
+                            : `<div class="empty-state"><p>Aucun type de schéma.</p></div>`
+                    }
                 </div>
             </div>
         </div>
@@ -619,10 +744,6 @@ function renderAccueilScreen() {
         ? referenceData.schemaTypes.length
         : 0;
 
-    const postalCodesCount = referenceData.postalCodes
-        ? Object.keys(referenceData.postalCodes).length
-        : 0;
-
     content.innerHTML = `
         <div class="single-panel-layout accueil-layout">
             <div class="accueil-grid">
@@ -631,23 +752,23 @@ function renderAccueilScreen() {
                         <div class="section-toolbar">
                             <div>
                                 <h3>Accueil</h3>
-                                <p class="panel-muted">
-                                    Centre de pilotage du DOE builder.
-                                </p>
                             </div>
                         </div>
 
                         <div class="accueil-quick-actions">
                             <button type="button" class="banner-btn" onclick="handleNewDoeFromAccueil()">
-                                Nouveau DOE
+                                <span class="material-symbols-outlined">edit_square</span>
+                                Création DOE
                             </button>
 
-                            <button type="button" class="footer-btn secondary-action" onclick="openDraftsModal()">
-                                Ouvrir un brouillon
+                            <button type="button" class="footer-btn secondary-action" onclick="goToDraftsScreen()">
+                                <span class="material-symbols-outlined">draft</span>
+                                Brouillons
                             </button>
 
-                            <button type="button" class="footer-btn secondary-action" onclick="showSavedPlaceholder()">
-                                Voir les DOE enregistrés
+                            <button type="button" class="footer-btn secondary-action" onclick="goToClosedScreen()">
+                                <span class="material-symbols-outlined">inventory_2</span>
+                                Clôturés
                             </button>
                         </div>
                     </div>
@@ -656,9 +777,6 @@ function renderAccueilScreen() {
                         <div class="section-toolbar">
                             <div>
                                 <h3>Brouillons récents</h3>
-                                <p class="panel-muted">
-                                    Les derniers brouillons enregistrés localement.
-                                </p>
                             </div>
                         </div>
 
@@ -694,10 +812,11 @@ function renderAccueilScreen() {
                         <div class="section-toolbar">
                             <div>
                                 <h3>Bibliothèque</h3>
-                                <p class="panel-muted">
-                                    État actuel des données de référence.
-                                </p>
                             </div>
+                            <button type="button" class="footer-btn secondary-action" onclick="goToLibraryScreen()">
+                                <span class="material-symbols-outlined">library_books</span>
+                                Bibliothèque
+                            </button>
                         </div>
 
                         <div class="summary-list">
@@ -715,37 +834,6 @@ function renderAccueilScreen() {
                                 <span>Types de schémas</span>
                                 <strong>${schemaTypesCount}</strong>
                             </div>
-
-                            <div class="summary-item">
-                                <span>Codes postaux connus</span>
-                                <strong>${postalCodesCount}</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="panel">
-                        <div class="section-toolbar">
-                            <div>
-                                <h3>Rappels utiles</h3>
-                            </div>
-                        </div>
-
-                        <div class="accueil-helper-list">
-                            <div class="accueil-helper-card">
-                                Les champs obligatoires sont vérifiés au moment de l’export.
-                            </div>
-
-                            <div class="accueil-helper-card">
-                                L’ordre des lignes dans l’app détermine l’ordre du DOE PDF.
-                            </div>
-
-                            <div class="accueil-helper-card">
-                                Deux brouillons avec la même adresse et la même nature peuvent être écrasés.
-                            </div>
-
-                            <div class="accueil-helper-card">
-                                Les fichiers invalides bloquent l’export pour éviter les DOE cassés.
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -760,8 +848,18 @@ function renderApp() {
         return;
     }
 
-    if (currentScreen === "saved") {
-        renderSavedScreen();
+    if (currentScreen === "drafts") {
+        renderDraftsScreen();
+        return;
+    }
+
+    if (currentScreen === "closed") {
+        renderClosedScreen();
+        return;
+    }
+
+    if (currentScreen === "library") {
+        renderLibraryScreen();
         return;
     }
 
@@ -782,7 +880,7 @@ function handleNewDoeFromAccueil() {
 }
 
 function showSavedPlaceholder() {
-    goToSavedScreen();
+    goToClosedScreen();
 }
 
 function deepClone(value) {
@@ -810,6 +908,135 @@ function handleSaveDraft() {
     saveDraftByMode("normal");
 }
 
+function handleClearDoe() {
+    openConfirmModal(
+        "Effacer ce DOE",
+        "Tous les champs saisis seront supprimés.",
+        () => {
+            resetCurrentDoe();
+            renderApp();
+        }
+    );
+}
+
+function handleCloseDoe() {
+    const currentKey = getCurrentDraftMatchKey();
+
+    if (!currentKey.adresse || !currentKey.nature) {
+        showToast("Adresse et nature des travaux requises pour clôturer.", "error");
+        return;
+    }
+
+    const closedItems = getClosedItems();
+
+    const payload = {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        savedAt: new Date().toISOString(),
+        state: deepClone(state)
+    };
+
+    const drafts = getAllDrafts();
+    const existingDraftIndex = drafts.findIndex(draft => {
+        const infos = draft?.state?.data?.infos || {};
+        return (
+            normalizeDraftKey(infos.adresse) === currentKey.adresse &&
+            normalizeDraftKey(infos.nature_travaux) === currentKey.nature
+        );
+    });
+
+    const finalizeClose = () => {
+        if (existingDraftIndex >= 0) {
+            drafts.splice(existingDraftIndex, 1);
+            setAllDrafts(drafts);
+        }
+
+        closedItems.unshift(payload);
+        setClosedItems(closedItems);
+
+        resetCurrentDoe();
+        showToast("DOE clôturé.", "success");
+        goToClosedScreen();
+    };
+
+    if (existingDraftIndex >= 0) {
+        openConfirmModal(
+            "Brouillon existant",
+            "Un brouillon avec la même adresse et le même type de travaux existe. Il sera supprimé automatiquement si vous clôturez.",
+            finalizeClose
+        );
+        return;
+    }
+
+    finalizeClose();
+}
+
+function getClosedDoeById(id) {
+    return getClosedItems().find(item => item.id === id);
+}
+
+async function previewClosedDoe(id) {
+    const item = getClosedDoeById(id);
+    if (!item) {
+        showToast("DOE introuvable.", "error");
+        return;
+    }
+
+    const previousState = deepClone(state);
+    const previousScreen = currentScreen;
+
+    state = deepClone(item.state);
+
+    try {
+        const result = await buildRealDoePdfBlob();
+        const url = URL.createObjectURL(result.blob);
+        window.open(url, "_blank");
+    } catch (error) {
+        console.error(error);
+        showToast("Impossible de générer l’aperçu.", "error");
+    } finally {
+        state = previousState;
+        currentScreen = previousScreen;
+        renderApp();
+    }
+}
+
+async function downloadClosedDoe(id) {
+    const item = getClosedDoeById(id);
+    if (!item) {
+        showToast("DOE introuvable.", "error");
+        return;
+    }
+
+    const previousState = deepClone(state);
+    const previousScreen = currentScreen;
+
+    state = deepClone(item.state);
+
+    try {
+        await startFakeExportPrep();
+    } catch (error) {
+        console.error(error);
+        showToast("Impossible de télécharger le ZIP.", "error");
+    } finally {
+        state = previousState;
+        currentScreen = previousScreen;
+        renderApp();
+    }
+}
+
+function deleteClosedDoe(id) {
+    openConfirmModal(
+        "Supprimer ce DOE clôturé",
+        "Cette action est définitive.",
+        () => {
+            const updated = getClosedItems().filter(item => item.id !== id);
+            setClosedItems(updated);
+            renderApp();
+            showToast("DOE supprimé.", "success");
+        }
+    );
+}
+
 function handleLeaveToAccueil() {
     openLeaveConfirmModal(() => {
         resetCurrentDoe();
@@ -830,7 +1057,7 @@ function wireSidebarNavigation() {
     navAccueilBtn?.addEventListener("click", () => {
         if (currentScreen === "accueil") return;
 
-        if (currentScreen === "saved" || currentScreen === "settings") {
+        if (["drafts", "closed", "library", "settings"].includes(currentScreen)) {
             goToAccueil();
             return;
         }
@@ -839,31 +1066,60 @@ function wireSidebarNavigation() {
     });
 
     navNewBtn?.addEventListener("click", () => {
-        if (currentScreen === "accueil" || currentScreen === "saved" || currentScreen === "settings") {
+        if (["accueil", "drafts", "closed", "library", "settings"].includes(currentScreen)) {
             handleNewDoeFromAccueil();
             return;
         }
+
         handleNewDoe();
     });
 
-    navSavedBtn?.addEventListener("click", () => {
-        if (currentScreen === "saved") return;
+    navDraftsBtn?.addEventListener("click", () => {
+        if (currentScreen === "drafts") return;
 
-        if (currentScreen === "accueil" || currentScreen === "settings") {
-            goToSavedScreen();
+        if (["accueil", "closed", "library", "settings"].includes(currentScreen)) {
+            goToDraftsScreen();
             return;
         }
 
         openLeaveConfirmModal(() => {
             resetCurrentDoe();
-            goToSavedScreen();
+            goToDraftsScreen();
+        });
+    });
+
+    navClosedBtn?.addEventListener("click", () => {
+        if (currentScreen === "closed") return;
+
+        if (["accueil", "drafts", "library", "settings"].includes(currentScreen)) {
+            goToClosedScreen();
+            return;
+        }
+
+        openLeaveConfirmModal(() => {
+            resetCurrentDoe();
+            goToClosedScreen();
+        });
+    });
+
+    navLibraryBtn?.addEventListener("click", () => {
+        if (currentScreen === "library") return;
+
+        if (["accueil", "drafts", "closed", "settings"].includes(currentScreen)) {
+            goToLibraryScreen();
+            return;
+        }
+
+        openLeaveConfirmModal(() => {
+            resetCurrentDoe();
+            goToLibraryScreen();
         });
     });
 
     navSettingsBtn?.addEventListener("click", () => {
         if (currentScreen === "settings") return;
 
-        if (currentScreen === "accueil" || currentScreen === "saved") {
+        if (["accueil", "drafts", "closed", "library"].includes(currentScreen)) {
             goToSettingsScreen();
             return;
         }
@@ -3050,6 +3306,22 @@ function clearDateValue(field) {
     renderStep();
 }
 
+let confirmAction = null;
+
+function openConfirmModal(title, message, onConfirm) {
+    confirmTitle.textContent = title;
+    confirmMessage.textContent = message;
+    confirmAction = onConfirm;
+    confirmModal.classList.remove("hidden");
+}
+
+function closeConfirmModal() {
+    confirmModal.classList.add("hidden");
+    confirmAction = null;
+}
+
+
+
 /* ========================
    INFOS STATE HELPERS
 ======================== */
@@ -4284,6 +4556,15 @@ wireDraftOverwriteModal();
 wireLeaveConfirmModal();
 wireSidebarNavigation();
 renderApp();
+
+confirmCancelBtn?.addEventListener("click", closeConfirmModal);
+closeConfirmBtn?.addEventListener("click", closeConfirmModal);
+confirmOkBtn?.addEventListener("click", () => {
+    if (typeof confirmAction === "function") {
+        confirmAction();
+    }
+    closeConfirmModal();
+});
 
 /* ========================
    WINDOW EXPORTS
