@@ -477,19 +477,43 @@ button {
 
 .table-filter-input {
     width: 100%;
-    margin-top: 8px;
+    min-height: 44px;
     border: 1px solid rgba(171,171,171,0.25);
     background: rgba(255,255,255,0.96);
-    border-radius: 10px;
-    padding: 8px 10px;
+    border-radius: 14px;
+    padding: 10px 38px 10px 12px;
     color: #1D1E18;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #5f6673 50%),
+        linear-gradient(135deg, #5f6673 50%, transparent 50%);
+    background-position:
+        calc(100% - 18px) calc(50% - 3px),
+        calc(100% - 12px) calc(50% - 3px);
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+}
+
+.table-filter-input:hover {
+    border-color: rgba(22,153,209,0.35);
+}
+
+.table-filter-input:focus {
+    outline: none;
+    border-color: rgba(22,153,209,0.7);
+    box-shadow: 0 0 0 4px rgba(22,153,209,0.12);
+    transform: translateY(-1px);
 }
 
 .table-sort-btn {
+    width: 100%;
     border: none;
     background: transparent;
     padding: 0;
-    margin: 0;
+    margin: 0 0 8px;
     font: inherit;
     font-size: 12px;
     text-transform: uppercase;
@@ -497,10 +521,28 @@ button {
     color: #5f6673;
     font-weight: 700;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    text-align: left;
 }
 
 .table-sort-btn:hover {
     color: #00448C;
+}
+
+.table-sort-btn.is-active {
+    color: #00448C;
+}
+
+.sort-icon {
+    font-size: 18px;
+    opacity: 0.6;
+}
+
+.sort-icon.is-active {
+    opacity: 1;
 }
 
 .builder-top-actions {
