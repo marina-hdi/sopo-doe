@@ -485,6 +485,24 @@ button {
     color: #1D1E18;
 }
 
+.table-sort-btn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #5f6673;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.table-sort-btn:hover {
+    color: #00448C;
+}
+
 .builder-top-actions {
     display: flex;
     flex-wrap: wrap;
