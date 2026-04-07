@@ -718,7 +718,7 @@ function renderSettingsScreen() {
     const workTypes = Array.isArray(referenceData.workTypes) ? referenceData.workTypes : [];
     const pvTypes = Array.isArray(referenceData.pvTypes) ? referenceData.pvTypes : [];
     const schemaTypes = Array.isArray(referenceData.schemaTypes) ? referenceData.schemaTypes : [];
-    const equipmentEntries = Object.entries(referenceData.equipment || {});
+    const equipmentEntries = Object.keys(referenceData.equipment || {});
 
     content.innerHTML = `
         <div class="single-panel-layout settings-layout">
@@ -750,56 +750,19 @@ function renderSettingsScreen() {
 
                 <div class="settings-section">
                     <div class="section-toolbar">
-                        <div><h4>Équipements, marques et modèles</h4></div>
-                        <button class="add-row-btn" type="button" onclick="promptAddEquipmentType()">+ Ajouter un équipement</button>
+                        <div><h4>Équipements</h4></div>
+                        <button class="add-row-btn" type="button" onclick="promptAddEquipmentType()">+ Ajouter</button>
                     </div>
-
                     ${
                         equipmentEntries.length
-                            ? `
-                            <div class="settings-equipment-list">
-                                ${equipmentEntries.map(([typeKey, typeValue]) => `
-                                    <div class="settings-equipment-card">
-                                        <div class="section-toolbar">
-                                            <div><h4>${escapeHtml(typeKey)}</h4></div>
-                                            <div class="draft-actions">
-                                                <button class="footer-btn secondary-action" type="button" onclick="promptAddBrand('${escapeJs(typeKey)}')">+ Marque</button>
-                                                <button class="draft-btn delete" type="button" onclick="removeEquipmentType('${escapeJs(typeKey)}')">Supprimer</button>
-                                            </div>
-                                        </div>
-
-                                        ${
-                                            Object.entries(typeValue?.brands || {}).length
-                                                ? Object.entries(typeValue.brands).map(([brandKey, models]) => `
-                                                    <div class="settings-brand-block">
-                                                        <div class="section-toolbar">
-                                                            <div><strong>${escapeHtml(brandKey)}</strong></div>
-                                                            <div class="draft-actions">
-                                                                <button class="footer-btn secondary-action" type="button" onclick="promptAddModel('${escapeJs(typeKey)}', '${escapeJs(brandKey)}')">+ Modèle</button>
-                                                                <button class="draft-btn delete" type="button" onclick="removeBrand('${escapeJs(typeKey)}', '${escapeJs(brandKey)}')">Supprimer</button>
-                                                            </div>
-                                                        </div>
-
-                                                        ${
-                                                            models.length
-                                                                ? `<div class="settings-chip-list">
-                                                                    ${models.map((model, modelIndex) => `
-                                                                        <div class="settings-chip">
-                                                                            <span>${escapeHtml(model)}</span>
-                                                                            <button type="button" onclick="removeModel('${escapeJs(typeKey)}', '${escapeJs(brandKey)}', ${modelIndex})">✕</button>
-                                                                        </div>
-                                                                    `).join("")}
-                                                                </div>`
-                                                                : `<div class="empty-state"><p>Aucun modèle.</p></div>`
-                                                        }
-                                                    </div>
-                                                `).join("")
-                                                : `<div class="empty-state"><p>Aucune marque.</p></div>`
-                                        }
+                            ? `<div class="settings-chip-list">
+                                ${equipmentEntries.map(typeKey => `
+                                    <div class="settings-chip">
+                                        <span>${escapeHtml(typeKey)}</span>
+                                        <button type="button" onclick="removeEquipmentType('${escapeJs(typeKey)}')">✕</button>
                                     </div>
                                 `).join("")}
-                            </div>
-                            `
+                            </div>`
                             : `<div class="empty-state"><p>Aucun type équipement.</p></div>`
                     }
                 </div>
@@ -4898,7 +4861,9 @@ window.removeSettingValue = removeSettingValue;
 
 window.filterDraftsTable = filterDraftsTable;
 window.filterLibraryTable = filterLibraryTable;
+window.filterClosedTable = filterClosedTable;
 window.downloadLibraryItem = downloadLibraryItem;
+window.sortLibraryTable = sortLibraryTable;
 
 window.promptAddEquipmentType = promptAddEquipmentType;
 window.removeEquipmentType = removeEquipmentType;
