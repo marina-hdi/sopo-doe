@@ -769,29 +769,37 @@ function renderLibraryScreen() {
                                              </div>
                                         </th>
 
-                                        <th>Télécharger</th>
+                                       <th>Télécharger</th>
+                                       <th>Remplacer</th>
+                                       <th>Supprimer</th>
                                     </tr>
                                 </thead>
                                 <tbody id="library-table-body">
-                                    ${list.map((item, index) => `
-                                        <tr
-                                            data-index="${index}"
-                                            data-type="${escapeHtml(String(item.type || "").toUpperCase())}"
-                                            data-marque="${escapeHtml(String(item.marque || "").toUpperCase())}"
-                                            data-modele="${escapeHtml(String(item.modele || "").toUpperCase())}"
-                                        >
-                                            <td>${escapeHtml(item.type || "")}</td>
-                                            <td>${escapeHtml(item.marque || "")}</td>
-                                            <td>${escapeHtml(item.modele || "")}</td>
-                                            <td>
-                                                ${
-                                                    item.file
-                                                        ? `<button class="draft-btn load" onclick="downloadLibraryItem(${index})">Télécharger</button>`
-                                                        : `<span class="draft-meta">—</span>`
-                                                }
-                                            </td>
-                                        </tr>
-                                    `).join("")}
+                                ${list.map((item, index) => `
+                                  <tr
+                                      data-index="${index}"
+                                      data-type="${escapeHtml(String(item.type || "").toUpperCase())}"
+                                      data-marque="${escapeHtml(String(item.marque || "").toUpperCase())}"
+                                      data-modele="${escapeHtml(String(item.modele || "").toUpperCase())}"
+                                  >
+                                      <td>${escapeHtml(item.type || "")}</td>
+                                      <td>${escapeHtml(item.marque || "")}</td>
+                                      <td>${escapeHtml(item.modele || "")}</td>
+                                      <td>
+                                          ${
+                                              item.file
+                                                  ? `<button class="draft-btn load" onclick="downloadLibraryItem(${index})">Télécharger</button>`
+                                                  : `<span class="draft-meta">—</span>`
+                                          }
+                                      </td>
+                                      <td>
+                                          <button class="draft-btn load" onclick="replaceLibraryItem(${index})">Remplacer</button>
+                                      </td>
+                                      <td>
+                                          <button class="draft-btn delete" onclick="deleteLibraryItem(${index})">Supprimer</button>
+                                      </td>
+                                  </tr>
+                              `).join("")}
                                 </tbody>
                             </table>
                         </div>
@@ -936,6 +944,75 @@ function downloadLibraryItem(index) {
         console.error(error);
         showToast("Impossible de télécharger ce fichier.", "error");
     }
+}
+
+function replaceLibraryItem(index) {
+    const list = Array.isArray(referenceData.technicalSheetsLibrary)
+        ? referenceData.technicalSheetsLibrary
+        : [];
+
+    const item = list[index];
+    if (!item) {
+        showToast("Fiche introuvable.", "error");
+        return;
+    }
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".pdf,.jpg,.jpeg,.png";
+
+    input.onchange = (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const validation = validateFile(file);
+        if (!validation.valid) {
+            showToast(validation.reason || "Fichier invalide.", "error");
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+            item.file = e.target?.result || null;
+            item.fileName = file.name;
+            item.fileType = file.type;
+            saveReferenceData();
+            renderLibraryScreen();
+            showToast("Fiche remplacée.", "success");
+        };
+
+        reader.onerror = function () {
+            showToast("Impossible de lire le fichier.", "error");
+        };
+
+        reader.readAsDataURL(file);
+    };
+
+    input.click();
+}
+
+function deleteLibraryItem(index) {
+    const list = Array.isArray(referenceData.technicalSheetsLibrary)
+        ? referenceData.technicalSheetsLibrary
+        : [];
+
+    const item = list[index];
+    if (!item) {
+        showToast("Fiche introuvable.", "error");
+        return;
+    }
+
+    openConfirmModal(
+        "Supprimer cette fiche",
+        `La fiche ${item.fileName || item.modele || "sélectionnée"} sera supprimée de la bibliothèque.`,
+        () => {
+            list.splice(index, 1);
+            saveReferenceData();
+            renderLibraryScreen();
+            showToast("Fiche supprimée.", "success");
+        }
+    );
 }
 
 function renderSettingsScreen() {
@@ -5200,8 +5277,11 @@ window.removeSettingValue = removeSettingValue;
 window.filterDraftsTable = filterDraftsTable;
 window.filterLibraryTable = filterLibraryTable;
 window.filterClosedTable = filterClosedTable;
+           
 window.downloadLibraryItem = downloadLibraryItem;
 window.sortLibraryTable = sortLibraryTable;
+window.replaceLibraryItem = replaceLibraryItem;
+window.deleteLibraryItem = deleteLibraryItem;
 
 window.promptAddEquipmentType = promptAddEquipmentType;
 window.removeEquipmentType = removeEquipmentType;
