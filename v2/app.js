@@ -3,6 +3,11 @@ console.log("DOE v2 clean app loaded ✅");
 /* ========================
    STORAGE KEYS
 ======================== */
+const SUPABASE_URL = "https://mefoczkqihvjltxqcxue.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZm9jemtxaWh2amx0eHFjeHVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NDg3MDMsImV4cCI6MjA5MTIyNDcwM30.HO012TpTfhcLXNBB-zvFpt9y1jibYpAyxIwcfxXMeBs";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 const AUTOSAVE_KEY = "doe_v2_autosave";
 const DRAFTS_KEY = "doe_v2_saved_drafts";
 const CLOSED_KEY = "doe_v2_closed";
@@ -1121,6 +1126,21 @@ function getRecentNotes() {
         .filter(item => item.note && item.note.trim() !== "")
         .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
         .slice(0, 15);
+}
+
+function renderLoginScreen() {
+    content.innerHTML = `
+        <div class="login-screen">
+            <div class="login-card">
+                <h2>Connexion</h2>
+
+                <input id="login-email" type="email" placeholder="Email" />
+                <input id="login-password" type="password" placeholder="Mot de passe" />
+
+                <button onclick="handleLogin()">Se connecter</button>
+            </div>
+        </div>
+    `;
 }
 
 function renderAccueilScreen() {
