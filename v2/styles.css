@@ -2226,26 +2226,38 @@ button {
     background: transparent;
 }
 
-.library-filter-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+.library-filter-field {
+    position: relative;
 }
 
-.filter-clear-btn {
+.library-filter-field.has-clear .custom-select-trigger {
+    padding-right: 72px;
+}
+
+.filter-clear-inside {
+    position: absolute;
+    top: 50%;
+    right: 38px;
+    transform: translateY(-50%);
     border: none;
-    background: rgba(206, 35, 42, 0.10);
-    color: #CE232A;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
+    background: transparent;
+    color: #7b8190;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    flex: 0 0 auto;
-    font-weight: 700;
+    z-index: 3;
+    transition: 0.18s ease;
+    font-size: 14px;
+    line-height: 1;
 }
 
-.filter-clear-btn:hover {
-    background: rgba(206, 35, 42, 0.18);
+.filter-clear-inside:hover {
+    background: rgba(0, 68, 140, 0.08);
+    color: #00448C;
 }
 
 .archive-badge {
