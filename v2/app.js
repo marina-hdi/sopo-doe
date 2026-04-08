@@ -727,17 +727,21 @@ function renderLibraryScreen() {
                                                 <span class="material-symbols-outlined sort-icon">unfold_more</span>
                                             </button>
                                             <div class="library-filter-select">
-                                                ${renderCustomSelect({
-                                                    id: "library-filter-type",
-                                                    label: "",
-                                                    value: state.libraryFilters?.type || "TOUS",
-                                                    placeholder: "TOUS",
-                                                    options: ["TOUS", ...types]
-                                                })}
-                                              ${(state.libraryFilters?.type || "") ? `
-                                                  <button type="button" class="filter-clear-btn" onclick="clearLibraryFilter('type')">✕</button>
-                                              ` : ""}
-                                            </div>
+                                              <div class="library-filter-field ${state.libraryFilters?.type ? "has-clear" : ""}">
+                                                  ${renderCustomSelect({
+                                                      id: "library-filter-type",
+                                                      label: "",
+                                                      value: state.libraryFilters?.type || "TOUS",
+                                                      placeholder: "TOUS",
+                                                      options: ["TOUS", ...types]
+                                                  })}
+                                                  ${
+                                                      (state.libraryFilters?.type || "")
+                                                          ? `<button type="button" class="filter-clear-inside" onclick="clearLibraryFilter('type')" aria-label="Effacer filtre type">✕</button>`
+                                                          : ""
+                                                  }
+                                              </div>
+                                          </div>
                                         </th>
 
                                         <th>
@@ -745,18 +749,22 @@ function renderLibraryScreen() {
                                                 <span>Marque</span>
                                                 <span class="material-symbols-outlined sort-icon">unfold_more</span>
                                             </button>
-                                            <div class="library-filter-select">
-                                                ${renderCustomSelect({
-                                                    id: "library-filter-marque",
-                                                    label: "",
-                                                    value: state.libraryFilters?.marque || "TOUS",
-                                                    placeholder: "TOUS",
-                                                    options: ["TOUS", ...marques]
-                                                })}
-                                              ${(state.libraryFilters?.type || "") ? `
-                                                  <button type="button" class="filter-clear-btn" onclick="clearLibraryFilter('type')">✕</button>
-                                              ` : ""}
-                                            </div>
+                                             <div class="library-filter-select">
+                                                 <div class="library-filter-field ${state.libraryFilters?.marque ? "has-clear" : ""}">
+                                                     ${renderCustomSelect({
+                                                         id: "library-filter-marque",
+                                                         label: "",
+                                                         value: state.libraryFilters?.marque || "TOUS",
+                                                         placeholder: "TOUS",
+                                                         options: ["TOUS", ...marques]
+                                                     })}
+                                                     ${
+                                                         (state.libraryFilters?.marque || "")
+                                                             ? `<button type="button" class="filter-clear-inside" onclick="clearLibraryFilter('marque')" aria-label="Effacer filtre marque">✕</button>`
+                                                             : ""
+                                                     }
+                                                 </div>
+                                             </div>
                                         </th>
 
                                         <th>
@@ -764,18 +772,22 @@ function renderLibraryScreen() {
                                                 <span>Modèle</span>
                                                 <span class="material-symbols-outlined sort-icon">unfold_more</span>
                                             </button>
-                                            <div class="library-filter-select">
-                                                ${renderCustomSelect({
-                                                    id: "library-filter-modele",
-                                                    label: "",
-                                                    value: state.libraryFilters?.modele || "TOUS",
-                                                    placeholder: "TOUS",
-                                                    options: ["TOUS", ...modeles]
-                                                })}
-                                              ${(state.libraryFilters?.type || "") ? `
-                                                  <button type="button" class="filter-clear-btn" onclick="clearLibraryFilter('type')">✕</button>
-                                              ` : ""}
-                                            </div>
+                                              <div class="library-filter-select">
+                                                 <div class="library-filter-field ${state.libraryFilters?.modele ? "has-clear" : ""}">
+                                                     ${renderCustomSelect({
+                                                         id: "library-filter-modele",
+                                                         label: "",
+                                                         value: state.libraryFilters?.modele || "TOUS",
+                                                         placeholder: "TOUS",
+                                                         options: ["TOUS", ...modeles]
+                                                     })}
+                                                     ${
+                                                         (state.libraryFilters?.modele || "")
+                                                             ? `<button type="button" class="filter-clear-inside" onclick="clearLibraryFilter('modele')" aria-label="Effacer filtre modèle">✕</button>`
+                                                             : ""
+                                                     }
+                                                 </div>
+                                             </div>
                                         </th>
 
                                         <th>Télécharger</th>
@@ -1225,7 +1237,29 @@ function getEmptyDoeState() {
     return getEmptyState().data;
 }
 
+function validateInfosForDraftSave() {
+    const infos = state.data?.infos || {};
+    const missing = [];
+
+    if (!String(infos.adresse || "").trim()) missing.push("Adresse");
+    if (!String(infos.nature_travaux || "").trim()) missing.push("Nature des travaux");
+    if (!String(infos.code_postal || "").trim()) missing.push("Code postal");
+    if (!String(infos.ville || "").trim()) missing.push("Ville");
+    if (!String(infos.date_reception || "").trim()) missing.push("Date de réception");
+    if (!String(infos.date_doe || "").trim()) missing.push("Date DOE");
+
+    return missing;
+}
+
 function handleSaveDraft() {
+    const missingInfos = validateInfosForDraftSave();
+
+    if (missingInfos.length) {
+        showToast(`Champs obligatoires manquants : ${missingInfos.join(", ")}`, "error");
+        goToStep(0);
+        return;
+    }
+
     const existingIndex = findExistingDraftIndexByKey();
 
     if (existingIndex >= 0) {
@@ -1777,17 +1811,26 @@ function wireLeaveConfirmModal() {
         executePendingLeave();
     });
 
-    document.getElementById("leave-save-btn")?.addEventListener("click", () => {
-        const existingIndex = findExistingDraftIndexByKey();
+document.getElementById("leave-save-btn")?.addEventListener("click", () => {
+    const missingInfos = validateInfosForDraftSave();
 
-        if (existingIndex >= 0) {
-            saveDraftByMode("overwrite");
-        } else {
-            saveDraftByMode("normal");
-        }
+    if (missingInfos.length) {
+        showToast(`Champs obligatoires manquants : ${missingInfos.join(", ")}`, "error");
+        goToStep(0);
+        closeLeaveConfirmModal();
+        return;
+    }
 
-        executePendingLeave();
-    });
+    const existingIndex = findExistingDraftIndexByKey();
+
+    if (existingIndex >= 0) {
+        saveDraftByMode("overwrite");
+    } else {
+        saveDraftByMode("normal");
+    }
+
+    executePendingLeave();
+});
 }
 
 function normalizeDraftKey(value) {
