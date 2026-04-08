@@ -1162,20 +1162,22 @@ function renderLoginScreen() {
     if (prevStepBtn) prevStepBtn.style.display = "none";
     if (nextStepBtn) nextStepBtn.style.display = "none";
 
-content.innerHTML = `
-    <div class="login-screen full">
-        <div class="login-card">
-            <h2>Connexion</h2>
+    content.classList.add("login-mode");
 
-            <input id="login-email" type="email" placeholder="Email" />
-            <input id="login-password" type="password" placeholder="Mot de passe" />
+    content.innerHTML = `
+        <div class="login-screen">
+            <div class="login-card">
+                <h2>Connexion</h2>
 
-            <button onclick="handleLogin()">Se connecter</button>
+                <input id="login-email" type="email" placeholder="Email" />
+                <input id="login-password" type="password" placeholder="Mot de passe" />
 
-            <p id="login-error" class="login-error"></p>
+                <button onclick="handleLogin()">Se connecter</button>
+
+                <p id="login-error" class="login-error"></p>
+            </div>
         </div>
-    </div>
-`;
+    `;
 }
 
 async function handleLogin() {
@@ -1369,6 +1371,8 @@ function renderApp() {
         renderLoginScreen();
         return;
     }
+
+  content.classList.remove("login-mode");
 
     const sidebar = document.querySelector(".sidebar");
     if (sidebar) sidebar.style.display = "";
