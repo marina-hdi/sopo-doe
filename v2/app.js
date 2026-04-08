@@ -10,7 +10,7 @@ document.getElementById("step-content").innerHTML = `
 const SUPABASE_URL = "https://mefoczkqihvjltxqcxue.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZm9jemtxaWh2amx0eHFjeHVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NDg3MDMsImV4cCI6MjA5MTIyNDcwM30.HO012TpTfhcLXNBB-zvFpt9y1jibYpAyxIwcfxXMeBs";
 
-const supabase = supabaseGlobal.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 if (!supabaseGlobal || typeof supabaseGlobal.createClient !== "function") {
     console.error("Supabase CDN non chargé correctement.", window.supabase);
@@ -1170,7 +1170,7 @@ async function handleLogin() {
     const email = document.getElementById("login-email").value;
     const password = document.getElementById("login-password").value;
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabaseClient.auth.signInWithPassword({
         email,
         password
     });
@@ -1186,13 +1186,13 @@ async function handleLogin() {
 }
 
 async function handleLogout() {
-    await supabase.auth.signOut();
+    await supabaseClient.auth.signOut();
     state.currentUser = null;
     renderLoginScreen();
 }
 
 async function loadCurrentProfile() {
-    const { data: authData } = await supabase.auth.getUser();
+    const { data: authData } = await supabaseClient.auth.getUser();
     const user = authData?.user;
 
     if (!user) {
@@ -5312,7 +5312,7 @@ async function initApp() {
     console.log("initApp lancé");
 
     try {
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error } = await supabaseClient.auth.getSession();
 
         if (error) {
             console.error("Erreur session Supabase :", error);
@@ -5336,7 +5336,7 @@ async function initApp() {
     }
 }
 
-supabase.auth.onAuthStateChange(async (event, session) => {
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (session) {
         await loadCurrentProfile();
         currentScreen = "accueil";
