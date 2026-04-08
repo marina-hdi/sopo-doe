@@ -2154,3 +2154,129 @@ button {
 .library-filter-select .custom-select-menu {
     min-width: 220px;
 }
+
+.accueil-grid-2cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(380px, 0.85fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.accueil-left-col,
+.accueil-right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.notes-panel {
+    height: 100%;
+    min-height: 580px;
+    display: flex;
+    flex-direction: column;
+}
+
+.notes-scroll-zone {
+    overflow-y: auto;
+    max-height: 540px;
+    border-radius: 16px;
+}
+
+.accueil-list-item {
+    padding: 12px 16px;
+}
+
+.export-doc-block {
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.export-doc-block:hover {
+    background: rgba(22, 153, 209, 0.08);
+}
+
+.export-doc-block.is-open {
+    background: rgba(22, 153, 209, 0.08);
+    border: 1px solid transparent;
+    box-shadow: inset 0 0 0 1px transparent;
+    position: relative;
+}
+
+.export-doc-block.is-open::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    padding: 1px;
+    background: linear-gradient(135deg, #a7ddff, #00448C);
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+.export-doc-toggle:hover {
+    background: transparent;
+}
+
+.library-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-clear-btn {
+    border: none;
+    background: rgba(206, 35, 42, 0.10);
+    color: #CE232A;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    cursor: pointer;
+    flex: 0 0 auto;
+    font-weight: 700;
+}
+
+.filter-clear-btn:hover {
+    background: rgba(206, 35, 42, 0.18);
+}
+
+.archive-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.archive-badge.draft {
+    background: rgba(22, 153, 209, 0.12);
+    color: #00448C;
+}
+
+.archive-badge.closed {
+    background: rgba(0, 68, 140, 0.12);
+    color: #1D1E18;
+}
+
+@media (max-width: 1100px) {
+    .accueil-grid-2cols {
+        grid-template-columns: 1fr;
+    }
+
+    .notes-panel {
+        min-height: 420px;
+    }
+
+    .notes-scroll-zone {
+        max-height: 360px;
+    }
+}
