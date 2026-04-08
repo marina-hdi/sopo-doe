@@ -1156,17 +1156,18 @@ function renderLoginScreen() {
 
     const appShell = document.querySelector(".app-shell");
     const sidebar = document.querySelector(".sidebar");
-
+    const mainPanel = document.querySelector(".main-panel");
+  
     if (appShell) appShell.classList.add("auth-mode");
     if (sidebar) sidebar.style.display = "none";
-
+    if (mainPanel) mainPanel.classList.add("login-layout");
     setWorkspaceChromeVisibility(false);
 
     if (prevStepBtn) prevStepBtn.style.display = "none";
     if (nextStepBtn) nextStepBtn.style.display = "none";
 
     content.classList.add("login-mode");
-
+   
     content.innerHTML = `
         <div class="login-screen">
             <div class="login-card">
@@ -1377,9 +1378,11 @@ function renderApp() {
 
     const appShell = document.querySelector(".app-shell");
     const sidebar = document.querySelector(".sidebar");
-
+    const mainPanel = document.querySelector(".main-panel");
+    
     if (appShell) appShell.classList.remove("auth-mode");
     if (sidebar) sidebar.style.display = "";
+    if (mainPanel) mainPanel.classList.remove("login-layout");
 
     content.classList.remove("login-mode");
 
