@@ -205,6 +205,29 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+  window.addEventListener("error", function (event) {
+    const target = document.getElementById("step-content");
+    if (!target) return;
+
+    target.innerHTML = `
+      <div style="
+        background:#fff;
+        border:1px solid rgba(0,0,0,0.08);
+        border-radius:16px;
+        padding:20px;
+        margin:20px;
+        font-family:Arial, sans-serif;
+      ">
+        <h2 style="margin-top:0;">Erreur JavaScript</h2>
+        <p><strong>Message :</strong> ${String(event.message || "")}</p>
+        <p><strong>Fichier :</strong> ${String(event.filename || "")}</p>
+        <p><strong>Ligne :</strong> ${String(event.lineno || "")}</p>
+        <p><strong>Colonne :</strong> ${String(event.colno || "")}</p>
+      </div>
+    `;
+  });
+</script>
   <script src="app.js"></script>
 </body>
 </html>
