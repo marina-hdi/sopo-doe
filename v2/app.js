@@ -1111,34 +1111,34 @@ function renderAccueilScreen() {
             </div>
 
             <div class="accueil-grid-2cols">
-                <div class="panel accueil-scroll-panel">
-                    <div class="section-toolbar">
-                        <div><h3>Derniers brouillons</h3></div>
-                    </div>
+            <div class="panel accueil-scroll-panel">
+    <div class="section-toolbar">
+        <div><h3>Derniers brouillons</h3></div>
+    </div>
 
-                    ${
-                        drafts.length
-                            ? `
-                            <div class="accueil-scroll-zone">
-                                <div class="accueil-drafts-list">
-                                    ${drafts.map(draft => `
-                                        <div class="draft-item accueil-list-item">
-                                            <div class="draft-main">
-                                                <div class="draft-title">${escapeHtml(draft.title || "Brouillon")}</div>
-                                                <div class="draft-meta">Dernière mise à jour : ${formatDraftDate(draft.updatedAt)}</div>
-                                            </div>
-                                            <div class="draft-actions">
-                                                <button class="draft-btn load" onclick="loadDraft('${draft.id}'); goToBuilder();">Ouvrir</button>
-                                                <button class="draft-btn delete" onclick="archiveDraft('${draft.id}')">Archiver</button>
-                                            </div>
-                                        </div>
-                                    `).join("")}
-                                </div>
+    ${
+        drafts.length
+            ? `
+            <div class="accueil-scroll-zone drafts-scroll-zone">
+                <div class="accueil-drafts-list">
+                    ${drafts.map(draft => `
+                        <div class="draft-item accueil-list-item">
+                            <div class="draft-main">
+                                <div class="draft-title">${escapeHtml(draft.title || "Brouillon")}</div>
+                                <div class="draft-meta">Dernière mise à jour : ${formatDraftDate(draft.updatedAt)}</div>
                             </div>
-                            `
-                            : `<div class="empty-state"><p>Aucun brouillon.</p></div>`
-                    }
+                            <div class="draft-actions">
+                                <button class="draft-btn load" onclick="loadDraft('${draft.id}'); goToBuilder();">Ouvrir</button>
+                                <button class="draft-btn delete" onclick="archiveDraft('${draft.id}')">Archiver</button>
+                            </div>
+                        </div>
+                    `).join("")}
                 </div>
+            </div>
+            `
+            : `<div class="empty-state"><p>Aucun brouillon.</p></div>`
+    }
+</div>
 
                 <div class="panel accueil-scroll-panel">
                     <div class="section-toolbar">
