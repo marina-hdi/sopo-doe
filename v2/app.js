@@ -1143,6 +1143,30 @@ function renderLoginScreen() {
     `;
 }
 
+async function handleLogin() {
+    const email = document.getElementById("login-email").value;
+    const password = document.getElementById("login-password").value;
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+    });
+
+    if (error) {
+        alert("Erreur de connexion");
+        return;
+    }
+
+    state.currentUser = data.user;
+    renderAccueilScreen();
+}
+
+async function handleLogout() {
+    await supabase.auth.signOut();
+    state.currentUser = null;
+    renderLoginScreen();
+}
+
 function renderAccueilScreen() {
     setWorkspaceChromeVisibility(false);
     setActiveSidebarLink("nav-accueil-btn");
@@ -5226,6 +5250,27 @@ confirmOkBtn?.addEventListener("click", () => {
         confirmAction();
     }
     closeConfirmModal();
+});
+
+async function initApp() {
+    const { data } = await supabase.auth.getSession();
+
+    if (!data.session) {
+        renderLoginScreen();
+        return;
+    }
+
+    state.currentUser = data.session.user;
+    renderAccueilScreen();
+}
+
+supabase.auth.onAuthStateChange((event, session) => {
+    if (session) {
+        state.currentUser = session.user;
+    } else {
+        state.currentUser = null;
+        renderLoginScreen();
+    }
 });
 
 /* ========================
