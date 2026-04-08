@@ -1176,6 +1176,11 @@ function renderLoginScreen() {
 async function handleLogin() {
     const email = document.getElementById("login-email").value;
     const password = document.getElementById("login-password").value;
+    const errorEl = document.getElementById("login-error");
+
+    if (errorEl) {
+        errorEl.textContent = "";
+    }
 
     const { error } = await supabaseClient.auth.signInWithPassword({
         email,
@@ -1183,13 +1188,30 @@ async function handleLogin() {
     });
 
     if (error) {
-        showToast("Erreur de connexion.", "error");
+        console.error("Erreur de connexion :", error);
+
+        let message = "Erreur de connexion";
+
+        if (error.message?.includes("Invalid login credentials")) {
+            message = "Email ou mot de passe incorrect";
+        } else if (error.message?.includes("Email not confirmed")) {
+            message = "Email non confirmé";
+        } else if (error.message) {
+            message = error.message;
+        }
+
+        if (errorEl) {
+            errorEl.textContent = message;
+        } else {
+            showToast(message, "error");
+        }
+
         return;
     }
 
-      await loadCurrentProfile();
-      currentScreen = "accueil";
-      renderApp();
+    await loadCurrentProfile();
+    currentScreen = "accueil";
+    renderApp();
 }
 
 async function handleLogout() {
@@ -1207,7 +1229,7 @@ async function loadCurrentProfile() {
         return null;
     }
 
-    const { data: profile, error } = await supabase
+    const { data: profile, error } = await supabaseClient
         .from("profiles")
         .select("id, username, full_name")
         .eq("id", user.id)
@@ -1962,20 +1984,8 @@ function downloadFile(section, index) {
             URL.revokeObjectURL(objectUrl);
         }, 10000);
     } catch (error) {
-    console.error(error);
-
-    const errorEl = document.getElementById("login-error");
-
-    let message = "Erreur de connexion";
-
-    if (error.message.includes("Invalid login credentials")) {
-        message = "Email ou mot de passe incorrect";
-    } else if (error.message) {
-        message = error.message;
-    }
-
-    if (errorEl) {
-        errorEl.textContent = message;
+        console.error("Erreur téléchargement fichier :", error);
+        showToast("Impossible de télécharger ce fichier.", "error");
     }
 }
 
