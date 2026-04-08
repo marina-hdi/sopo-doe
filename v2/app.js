@@ -1151,11 +1151,16 @@ function getRecentNotes() {
 }
 
 function renderLoginScreen() {
-    const sidebar = document.querySelector(".sidebar");
-    const workspace = document.querySelector(".workspace");
+    state.currentUser = null;
+    currentScreen = "login";
 
+    const sidebar = document.querySelector(".sidebar");
     if (sidebar) sidebar.style.display = "none";
-    if (workspace) workspace.style.width = "100%";
+
+    setWorkspaceChromeVisibility(false);
+
+    if (prevStepBtn) prevStepBtn.style.display = "none";
+    if (nextStepBtn) nextStepBtn.style.display = "none";
 
     content.innerHTML = `
         <div class="login-screen">
@@ -1167,7 +1172,7 @@ function renderLoginScreen() {
 
                 <button onclick="handleLogin()">Se connecter</button>
 
-                <p id="login-error" style="color:red; margin-top:10px;"></p>
+                <p id="login-error" class="login-error"></p>
             </div>
         </div>
     `;
@@ -1360,12 +1365,19 @@ function renderAccueilScreen() {
 }
 
 function renderApp() {
-  const sidebar = document.querySelector(".sidebar");
-  const workspace = document.querySelector(".workspace");
-  
-  if (sidebar) sidebar.style.display = "block";
-  if (workspace) workspace.style.width = "";
-  
+    if (!state.currentUser) {
+        renderLoginScreen();
+        return;
+    }
+
+    const sidebar = document.querySelector(".sidebar");
+    if (sidebar) sidebar.style.display = "";
+
+    setWorkspaceChromeVisibility(currentScreen === "builder");
+
+    if (prevStepBtn) prevStepBtn.style.display = currentScreen === "builder" ? "" : "none";
+    if (nextStepBtn) nextStepBtn.style.display = currentScreen === "builder" ? "" : "none";
+
     if (currentScreen === "accueil") {
         renderAccueilScreen();
         return;
@@ -1398,6 +1410,8 @@ function renderApp() {
 
     setWorkspaceChromeVisibility(true);
     setActiveSidebarLink("nav-new-btn");
+    if (prevStepBtn) prevStepBtn.style.display = "";
+    if (nextStepBtn) nextStepBtn.style.display = "";
     renderStep();
 }
 
@@ -5288,7 +5302,13 @@ function registerStepSelectHandlers() {
    STEP SWITCHING
 ======================== */
 steps.forEach((step, index) => {
-    step.addEventListener("click", () => goToStep(index));
+    step.addEventListener("click", () => {
+        if (!state.currentUser) {
+            renderLoginScreen();
+            return;
+        }
+        goToStep(index);
+    });
 });
 
 function goToStep(index) {
@@ -5321,12 +5341,22 @@ function renderStep() {
    NAV BUTTONS
 ======================== */
 nextStepBtn.onclick = () => {
+    if (!state.currentUser) {
+        renderLoginScreen();
+        return;
+    }
+
     if (state.currentStep < stepsConfig.length - 1) {
         goToStep(state.currentStep + 1);
     }
 };
 
 prevStepBtn.onclick = () => {
+    if (!state.currentUser) {
+        renderLoginScreen();
+        return;
+    }
+
     if (state.currentStep > 0) {
         goToStep(state.currentStep - 1);
     }
