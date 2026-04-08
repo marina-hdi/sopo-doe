@@ -1,5 +1,9 @@
 console.log("DOE v2 clean app loaded ✅");
 
+document.getElementById("step-content").innerHTML = `
+  <div style="padding:20px; font-weight:700;">app.js chargé</div>
+`;
+
 /* ========================
    STORAGE KEYS
 ======================== */
