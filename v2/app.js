@@ -1055,64 +1055,62 @@ function renderAccueilScreen() {
 
     content.innerHTML = `
         <div class="single-panel-layout accueil-layout">
-            <div class="panel">
-               <div class="section-toolbar accueil-header">
-                   <div class="accueil-user">
-                       <span>Bonjour, ${escapeHtml(state.currentUser?.username || "")}</span>
-                       <button class="logout-icon-btn" onclick="handleLogout()" aria-label="Déconnexion" title="Déconnexion">
-                           <span class="material-symbols-outlined">logout</span>
-                       </button>
-                   </div>
-               </div>
-
-                <div class="accueil-quick-actions">
-                    <button type="button" class="banner-btn" onclick="handleNewDoeFromAccueil()">
-                        <span class="material-symbols-outlined">edit_square</span>
-                        Création DOE
-                    </button>
-
-                    <button type="button" class="footer-btn secondary-action" onclick="goToDraftsScreen()">
-                        <span class="material-symbols-outlined">draft</span>
-                        Brouillons
-                    </button>
-
-                    <button type="button" class="footer-btn secondary-action" onclick="goToClosedScreen()">
-                        <span class="material-symbols-outlined">inventory_2</span>
-                        Clôturés
-                    </button>
-                </div>
-            </div>
-
+            <div class="panel accueil-top-panel">
+             <div class="accueil-topbar">
+                 <div class="accueil-quick-actions">
+                     <button type="button" class="banner-btn" onclick="handleNewDoeFromAccueil()">
+                         <span class="material-symbols-outlined">edit_square</span>
+                         Création DOE
+                     </button>
+         
+                     <button type="button" class="footer-btn secondary-action" onclick="goToDraftsScreen()">
+                         <span class="material-symbols-outlined">draft</span>
+                         Brouillons
+                     </button>
+         
+                     <button type="button" class="footer-btn secondary-action" onclick="goToClosedScreen()">
+                         <span class="material-symbols-outlined">inventory_2</span>
+                         Clôturés
+                     </button>
+                 </div>
+         
+                 <div class="accueil-user">
+                     <span>Bonjour, ${escapeHtml(state.currentUser?.username || "")}</span>
+                     <button class="logout-icon-btn" onclick="handleLogout()" aria-label="Déconnexion" title="Déconnexion">
+                         <span class="material-symbols-outlined">logout</span>
+                     </button>
+                 </div>
+             </div>
+         </div>
             <div class="accueil-grid-2cols">
             <div class="panel accueil-scroll-panel">
-    <div class="section-toolbar">
-        <div><h3>Derniers brouillons</h3></div>
-    </div>
-
-    ${
-        drafts.length
-            ? `
-            <div class="accueil-scroll-zone drafts-scroll-zone">
-                <div class="accueil-drafts-list">
-                    ${drafts.map(draft => `
-                        <div class="draft-item accueil-list-item">
-                            <div class="draft-main">
-                                <div class="draft-title">${escapeHtml(draft.title || "Brouillon")}</div>
-                                <div class="draft-meta">Dernière mise à jour : ${formatDraftDate(draft.updatedAt)}</div>
-                            </div>
-                            <div class="draft-actions">
-                                <button class="draft-btn load" onclick="loadDraft('${draft.id}'); goToBuilder();">Ouvrir</button>
-                                <button class="draft-btn delete" onclick="archiveDraft('${draft.id}')">Archiver</button>
+                <div class="section-toolbar">
+                    <div><h3>Derniers brouillons</h3></div>
+                </div>
+            
+                ${
+                    drafts.length
+                        ? `
+                        <div class="accueil-scroll-zone drafts-scroll-zone">
+                            <div class="accueil-drafts-list">
+                                ${drafts.map(draft => `
+                                    <div class="draft-item accueil-list-item">
+                                        <div class="draft-main">
+                                            <div class="draft-title">${escapeHtml(draft.title || "Brouillon")}</div>
+                                            <div class="draft-meta">Dernière mise à jour : ${formatDraftDate(draft.updatedAt)}</div>
+                                        </div>
+                                        <div class="draft-actions">
+                                            <button class="draft-btn load" onclick="loadDraft('${draft.id}'); goToBuilder();">Ouvrir</button>
+                                            <button class="draft-btn delete" onclick="archiveDraft('${draft.id}')">Archiver</button>
+                                        </div>
+                                    </div>
+                                `).join("")}
                             </div>
                         </div>
-                    `).join("")}
-                </div>
+                        `
+                        : `<div class="empty-state"><p>Aucun brouillon.</p></div>`
+                }
             </div>
-            `
-            : `<div class="empty-state"><p>Aucun brouillon.</p></div>`
-    }
-</div>
-
                 <div class="panel accueil-scroll-panel">
                     <div class="section-toolbar">
                         <div><h3>Dernières notes</h3></div>
