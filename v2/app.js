@@ -1147,24 +1147,59 @@ async function handleLogin() {
     const email = document.getElementById("login-email").value;
     const password = document.getElementById("login-password").value;
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
         email,
         password
     });
 
     if (error) {
-        alert("Erreur de connexion");
+        showToast("Erreur de connexion.", "error");
         return;
     }
 
-    state.currentUser = data.user;
-    renderAccueilScreen();
+    await loadCurrentProfile();
+    goToAccueil();
 }
 
 async function handleLogout() {
     await supabase.auth.signOut();
     state.currentUser = null;
     renderLoginScreen();
+}
+
+async function loadCurrentProfile() {
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData?.user;
+
+    if (!user) {
+        state.currentUser = null;
+        return null;
+    }
+
+    const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("id, username, full_name")
+        .eq("id", user.id)
+        .single();
+
+    if (error) {
+        console.error("Erreur chargement profil :", error);
+        state.currentUser = {
+            id: user.id,
+            email: user.email,
+            username: user.email || ""
+        };
+        return state.currentUser;
+    }
+
+    state.currentUser = {
+        id: user.id,
+        email: user.email,
+        username: profile.username,
+        full_name: profile.full_name
+    };
+
+    return state.currentUser;
 }
 
 function renderAccueilScreen() {
@@ -5260,8 +5295,8 @@ async function initApp() {
         return;
     }
 
-    state.currentUser = data.session.user;
-    renderAccueilScreen();
+    await loadCurrentProfile();
+    renderApp();
 }
 
 supabase.auth.onAuthStateChange((event, session) => {
