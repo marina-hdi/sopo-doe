@@ -5264,3 +5264,10 @@ window.downloadClosedDoe = downloadClosedDoe;
 window.deleteClosedDoe = deleteClosedDoe;
 
 window.setLibraryFilter = setLibraryFilter;
+window.archiveDraft = archiveDraft;
+window.archiveClosedDoe = archiveClosedDoe;
+window.restoreArchivedItem = restoreArchivedItem;
+window.deleteArchivedItem = deleteArchivedItem;
+window.reopenClosedDoe = reopenClosedDoe;
+window.clearLibraryFilter = clearLibraryFilter;
+window.goToArchivesScreen = goToArchivesScreen;
