@@ -1867,11 +1867,12 @@ button {
     align-items: stretch;
     min-width: 0;
     min-height: 0;
+    flex: 1;
 }
 
 .accueil-scroll-panel {
-    min-height: 620px;
-    height: 620px;
+    min-height: 0;
+    height: 100%;
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -1931,10 +1932,10 @@ button {
         margin-left: 0;
     }
 
-    .accueil-scroll-panel {
-        min-height: 420px;
-        height: 420px;
-    }
+   .accueil-scroll-panel {
+       min-height: 420px;
+       height: 100%;
+   }
 }
 
 /* ========================
