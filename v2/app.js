@@ -1668,6 +1668,7 @@ function moveRow(section, index, direction) {
     list[index] = list[newIndex];
     list[newIndex] = temp;
 
+   markAsDirty();
     saveAutosave();
     renderStep();
 }
@@ -1846,6 +1847,7 @@ function resetCurrentDoe() {
     state.currentDraftId = null;
     resetExportValidationState();
     saveAutosave();
+    markAsClean();
 }
 
 function wireLeaveConfirmModal() {
@@ -1930,6 +1932,7 @@ function saveDraftByMode(mode = "normal") {
 
     localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
     saveAutosave();
+    markAsClean()
     showToast("Brouillon enregistré.", "success");
 }
 
@@ -3231,6 +3234,7 @@ function loadDraft(draftId) {
 
     state = draft.state;
     saveAutosave();
+    markAsClean();
     closeDraftsModal();
     goToStep(state.currentStep || 0);
     showToast("Brouillon chargé.", "success");
@@ -3930,7 +3934,8 @@ function handleInputChange(section, field, value, inputEl = null) {
         inputEl.value = finalValue;
     }
 
-    saveAutosave();
+   markAsDirty();
+   saveAutosave();
 }
 
 function handlePostalCodeChange(value) {
@@ -3945,6 +3950,8 @@ function handlePostalCodeChange(value) {
         state.data.infos.ville = "";
     }
 
+
+   markAsDirty();
     saveAutosave();
     renderChantierBanner();
     updateVilleSelectUI();
@@ -4135,6 +4142,7 @@ function setFicheField(index, field, value) {
         tryAutoAttachTechnicalSheet(index);
     }
 
+   markAsDirty();
     saveAutosave();
     renderStep();
 }
@@ -4188,8 +4196,10 @@ function setDocTypeField(section, index, value) {
     if (!row) return;
 
     row.type = String(value || "").toUpperCase();
-    saveAutosave();
-    renderStep();
+
+   markAsDirty();
+   saveAutosave();
+   renderStep();
 }
 
 function promptAddSettingValue(settingKey) {
@@ -4362,6 +4372,7 @@ function handleFileUpload(section, index, input) {
         item.fileLastModified = file.lastModified || null;
         item.fileSource = "upload";
 
+        markAsDirty();
         saveAutosave();
         renderStep();
         showToast(validation.reason, "error");
@@ -4385,9 +4396,10 @@ function handleFileUpload(section, index, input) {
             upsertTechnicalSheetLibraryEntry(item);
         }
 
-        saveAutosave();
-        renderStep();
-        showToast("Fichier ajouté.", "success");
+      markAsDirty();
+      saveAutosave();
+      renderStep();
+      showToast("Fichier ajouté.", "success");
     };
 
     reader.onerror = function () {
@@ -4395,9 +4407,10 @@ function handleFileUpload(section, index, input) {
         item.error = "Impossible de lire le fichier";
         item.file = null;
 
-        saveAutosave();
-        renderStep();
-        showToast("Erreur lecture fichier", "error");
+      markAsDirty();
+      saveAutosave();
+      renderStep();
+      showToast("Erreur lecture fichier", "error");
     };
 
     reader.readAsDataURL(file);
@@ -4420,6 +4433,7 @@ function deleteFile(section, index) {
             delete item.fileSource;
             delete item.autoMatched;
 
+            markAsDirty();
             saveAutosave();
             renderStep();
             showToast("Fichier supprimé.", "info");
@@ -4975,14 +4989,16 @@ function renderDocRow(section, item, index, typeOptions) {
 ======================== */
 function addRow(key) {
     state.data[key].push({});
-    saveAutosave();
-    renderStep();
+   markAsDirty();
+   saveAutosave();
+   renderStep();
 }
 
 function removeRow(key, index) {
     state.data[key].splice(index, 1);
-    saveAutosave();
-    renderStep();
+   markAsDirty();
+   saveAutosave();
+   renderStep();
 }
 
 function updateRow(key, index, field, value, inputEl = null) {
@@ -4993,7 +5009,8 @@ function updateRow(key, index, field, value, inputEl = null) {
         inputEl.value = finalValue;
     }
 
-    saveAutosave();
+   markAsDirty();
+   saveAutosave();
 }
 
 /* ========================
