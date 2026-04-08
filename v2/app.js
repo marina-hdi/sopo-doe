@@ -1151,8 +1151,11 @@ function getRecentNotes() {
 }
 
 function renderLoginScreen() {
-    setWorkspaceChromeVisibility(false);
-    setActiveSidebarLink(null);
+    const sidebar = document.querySelector(".sidebar");
+    const workspace = document.querySelector(".workspace");
+
+    if (sidebar) sidebar.style.display = "none";
+    if (workspace) workspace.style.width = "100%";
 
     content.innerHTML = `
         <div class="login-screen">
@@ -1163,6 +1166,8 @@ function renderLoginScreen() {
                 <input id="login-password" type="password" placeholder="Mot de passe" />
 
                 <button onclick="handleLogin()">Se connecter</button>
+
+                <p id="login-error" style="color:red; margin-top:10px;"></p>
             </div>
         </div>
     `;
@@ -1333,6 +1338,12 @@ function renderAccueilScreen() {
 }
 
 function renderApp() {
+  const sidebar = document.querySelector(".sidebar");
+  const workspace = document.querySelector(".workspace");
+  
+  if (sidebar) sidebar.style.display = "block";
+  if (workspace) workspace.style.width = "";
+  
     if (currentScreen === "accueil") {
         renderAccueilScreen();
         return;
@@ -1685,6 +1696,11 @@ function wireSidebarNavigation() {
     }
 
     navAccueilBtn?.addEventListener("click", () => {
+        if (!state.currentUser) {
+            renderLoginScreen();
+            return;
+        }
+      
         if (currentScreen === "accueil") return;
 
         if (["drafts", "closed", "archives", "library", "settings"].includes(currentScreen)) {
@@ -1695,7 +1711,12 @@ function wireSidebarNavigation() {
         leaveBuilder(goToAccueil);
     });
 
-    navNewBtn?.addEventListener("click", () => {
+    navNewBtn?.addEventListener("click", () => {{
+        if (!state.currentUser) {
+            renderLoginScreen();
+            return;
+        }
+      
         if (currentScreen === "builder") return;
 
         if (["accueil", "drafts", "closed", "archives", "library", "settings"].includes(currentScreen)) {
@@ -1709,7 +1730,12 @@ function wireSidebarNavigation() {
         });
     });
 
-    navDraftsBtn?.addEventListener("click", () => {
+    navDraftsBtn?.addEventListener("click", () => {{
+        if (!state.currentUser) {
+            renderLoginScreen();
+            return;
+        }
+      
         if (currentScreen === "drafts") return;
 
         if (["accueil", "closed", "archives", "library", "settings"].includes(currentScreen)) {
@@ -1720,7 +1746,12 @@ function wireSidebarNavigation() {
         leaveBuilder(goToDraftsScreen);
     });
 
-    navClosedBtn?.addEventListener("click", () => {
+    navClosedBtn?.addEventListener("click", () => {{
+        if (!state.currentUser) {
+            renderLoginScreen();
+            return;
+        }
+      
         if (currentScreen === "closed") return;
 
         if (["accueil", "drafts", "archives", "library", "settings"].includes(currentScreen)) {
@@ -1731,7 +1762,12 @@ function wireSidebarNavigation() {
         leaveBuilder(goToClosedScreen);
     });
 
-    navLibraryBtn?.addEventListener("click", () => {
+    navLibraryBtn?.addEventListener("click", () => {{
+        if (!state.currentUser) {
+            renderLoginScreen();
+            return;
+        }
+      
         if (currentScreen === "library") return;
 
         if (["accueil", "drafts", "closed", "archives", "settings"].includes(currentScreen)) {
@@ -1742,7 +1778,12 @@ function wireSidebarNavigation() {
         leaveBuilder(goToLibraryScreen);
     });
 
-    navArchivesBtn?.addEventListener("click", () => {
+    navArchivesBtn?.addEventListener("click", () => {{
+        if (!state.currentUser) {
+            renderLoginScreen();
+            return;
+        }
+      
         if (currentScreen === "archives") return;
 
         if (["accueil", "drafts", "closed", "library", "settings"].includes(currentScreen)) {
@@ -1753,7 +1794,12 @@ function wireSidebarNavigation() {
         leaveBuilder(goToArchivesScreen);
     });
 
-    navSettingsBtn?.addEventListener("click", () => {
+    navSettingsBtn?.addEventListener("click", () => {{
+        if (!state.currentUser) {
+            renderLoginScreen();
+            return;
+        }
+      
         if (currentScreen === "settings") return;
 
         if (["accueil", "drafts", "closed", "archives", "library"].includes(currentScreen)) {
@@ -1916,8 +1962,20 @@ function downloadFile(section, index) {
             URL.revokeObjectURL(objectUrl);
         }, 10000);
     } catch (error) {
-        console.error("Erreur téléchargement fichier :", error);
-        showToast("Impossible de télécharger ce fichier.", "error");
+    console.error(error);
+
+    const errorEl = document.getElementById("login-error");
+
+    let message = "Erreur de connexion";
+
+    if (error.message.includes("Invalid login credentials")) {
+        message = "Email ou mot de passe incorrect";
+    } else if (error.message) {
+        message = error.message;
+    }
+
+    if (errorEl) {
+        errorEl.textContent = message;
     }
 }
 
