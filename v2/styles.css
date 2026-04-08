@@ -1805,7 +1805,8 @@ button {
     flex-direction: column;
     gap: 16px;
     min-width: 0;
-    min-height: 0;
+    min-height: 100%;
+    height: 100%;
 }
 
 .accueil-top-panel {
@@ -1868,6 +1869,7 @@ button {
     min-width: 0;
     min-height: 0;
     flex: 1;
+    height: 0;
 }
 
 .accueil-scroll-panel {
