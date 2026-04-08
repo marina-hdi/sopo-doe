@@ -320,6 +320,7 @@ button {
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 6px;
+    padding-bottom: 5px;
 }
 
 .main-panel-footer {
