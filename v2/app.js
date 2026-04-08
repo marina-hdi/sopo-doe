@@ -1129,6 +1129,9 @@ function getRecentNotes() {
 }
 
 function renderLoginScreen() {
+    setWorkspaceChromeVisibility(false);
+    setActiveSidebarLink(null);
+
     content.innerHTML = `
         <div class="login-screen">
             <div class="login-card">
@@ -3093,10 +3096,6 @@ function isRowCardMissing(section, index) {
 
 function hasAnyValue(value) {
     return value !== undefined && value !== null && String(value).trim() !== "";
-}
-
-function handleLogout() {
-    showToast("La déconnexion sera activée avec Supabase.", "info");
 }
 
 function collectExportValidation() {
@@ -5276,7 +5275,7 @@ if (createValueModal) {
 wireDraftOverwriteModal();
 wireLeaveConfirmModal();
 wireSidebarNavigation();
-renderApp();
+initApp();
 
 confirmCancelBtn?.addEventListener("click", closeConfirmModal);
 closeConfirmBtn?.addEventListener("click", closeConfirmModal);
@@ -5299,9 +5298,10 @@ async function initApp() {
     renderApp();
 }
 
-supabase.auth.onAuthStateChange((event, session) => {
+supabase.auth.onAuthStateChange(async (event, session) => {
     if (session) {
-        state.currentUser = session.user;
+        await loadCurrentProfile();
+        renderApp();
     } else {
         state.currentUser = null;
         renderLoginScreen();
