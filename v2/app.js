@@ -1064,8 +1064,7 @@ function renderAccueilScreen() {
     setWorkspaceChromeVisibility(false);
     setActiveSidebarLink("nav-accueil-btn");
 
-    const drafts = getAllDrafts().slice(0, 3);
-    const closedItems = getClosedItems().slice(0, 3);
+    const drafts = getAllDrafts();
     const notes = getRecentNotes();
 
     content.innerHTML = `
@@ -1075,7 +1074,9 @@ function renderAccueilScreen() {
                     <div><h3>Accueil</h3></div>
                     <div class="accueil-user">
                         <span>Bonjour, ${escapeHtml(state.currentUser?.username || "")}</span>
-                        <button class="logout-btn" onclick="handleLogout()">Déconnexion</button>
+                        <button class="logout-icon-btn" onclick="handleLogout()" aria-label="Déconnexion" title="Déconnexion">
+                            <span class="material-symbols-outlined">logout</span>
+                        </button>
                     </div>
                 </div>
 
@@ -1098,12 +1099,16 @@ function renderAccueilScreen() {
             </div>
 
             <div class="accueil-grid-2cols">
-                <div class="accueil-left-col">
-                    <div class="panel">
-                        <div class="section-toolbar"><div><h3>Derniers brouillons</h3></div></div>
-                        ${
-                            drafts.length
-                                ? `<div class="accueil-drafts-list">
+                <div class="panel accueil-scroll-panel">
+                    <div class="section-toolbar">
+                        <div><h3>Derniers brouillons</h3></div>
+                    </div>
+
+                    ${
+                        drafts.length
+                            ? `
+                            <div class="accueil-scroll-zone">
+                                <div class="accueil-drafts-list">
                                     ${drafts.map(draft => `
                                         <div class="draft-item accueil-list-item">
                                             <div class="draft-main">
@@ -1116,69 +1121,44 @@ function renderAccueilScreen() {
                                             </div>
                                         </div>
                                     `).join("")}
-                                </div>`
-                                : `<div class="empty-state"><p>Aucun brouillon récent.</p></div>`
-                        }
-                    </div>
-
-                    <div class="panel">
-                        <div class="section-toolbar"><div><h3>Derniers DOE</h3></div></div>
-                        ${
-                            closedItems.length
-                                ? `<div class="accueil-drafts-list">
-                                    ${closedItems.map(item => {
-                                        const infos = item?.state?.data?.infos || {};
-                                        const addressLine = [infos.adresse, infos.code_postal, infos.ville].filter(Boolean).join(" ");
-
-                                        return `
-                                            <div class="draft-item accueil-list-item">
-                                                <div class="draft-main">
-                                                    <div class="draft-title">${escapeHtml(addressLine || "Adresse non renseignée")}</div>
-                                                    <div class="draft-meta">Clôturé le : ${formatDraftDate(item.savedAt)}</div>
-                                                </div>
-                                                <div class="draft-actions">
-                                                    <button class="draft-btn load" onclick="previewClosedDoe('${item.id}')">Aperçu</button>
-                                                    <button class="draft-btn load" onclick="downloadClosedDoe('${item.id}')">Télécharger</button>
-                                                </div>
-                                            </div>
-                                        `;
-                                    }).join("")}
-                                </div>`
-                                : `<div class="empty-state"><p>Aucun DOE clôturé.</p></div>`
-                        }
-                    </div>
+                                </div>
+                            </div>
+                            `
+                            : `<div class="empty-state"><p>Aucun brouillon.</p></div>`
+                    }
                 </div>
 
-                <div class="accueil-right-col">
-                    <div class="panel notes-panel">
-                        <div class="section-toolbar"><div><h3>Dernières notes</h3></div></div>
-                        ${
-                            notes.length
-                                ? `
-                                <div class="notes-scroll-zone">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Adresse</th>
-                                                <th>Note</th>
-                                                <th>Mis à jour le</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${notes.map(item => `
-                                                <tr>
-                                                    <td>${escapeHtml(item.adresse || "")}</td>
-                                                    <td>${escapeHtml(item.note || "")}</td>
-                                                    <td>${escapeHtml(formatDraftDate(item.updatedAt))}</td>
-                                                </tr>
-                                            `).join("")}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                `
-                                : `<div class="empty-state"><p>Aucune note récente.</p></div>`
-                        }
+                <div class="panel accueil-scroll-panel">
+                    <div class="section-toolbar">
+                        <div><h3>Dernières notes</h3></div>
                     </div>
+
+                    ${
+                        notes.length
+                            ? `
+                            <div class="accueil-scroll-zone notes-scroll-zone">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Adresse</th>
+                                            <th>Note</th>
+                                            <th>Mis à jour le</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${notes.map(item => `
+                                            <tr>
+                                                <td>${escapeHtml(item.adresse || "")}</td>
+                                                <td>${escapeHtml(item.note || "")}</td>
+                                                <td>${escapeHtml(formatDraftDate(item.updatedAt))}</td>
+                                            </tr>
+                                        `).join("")}
+                                    </tbody>
+                                </table>
+                            </div>
+                            `
+                            : `<div class="empty-state"><p>Aucune note récente.</p></div>`
+                    }
                 </div>
             </div>
         </div>
