@@ -344,12 +344,6 @@ function renderDraftsScreen() {
     content.innerHTML = `
         <div class="single-panel-layout enregistres-layout">
             <div class="panel">
-                <div class="section-toolbar">
-                    <div>
-                        <h3>Brouillons</h3>
-                    </div>
-                </div>
-
                 <div class="enregistres-toolbar">
                     <div class="field full">
                         <label>Rechercher</label>
@@ -532,12 +526,6 @@ function renderClosedScreen() {
     content.innerHTML = `
         <div class="single-panel-layout enregistres-layout">
             <div class="panel">
-                <div class="section-toolbar">
-                    <div>
-                        <h3>Clôturés</h3>
-                    </div>
-                </div>
-
                 <div class="enregistres-toolbar">
                     <div class="field full">
                         <label>Rechercher</label>
@@ -619,10 +607,6 @@ function renderArchivesScreen() {
     content.innerHTML = `
         <div class="single-panel-layout enregistres-layout">
             <div class="panel">
-                <div class="section-toolbar">
-                    <div><h3>Archives</h3></div>
-                </div>
-
                 <div class="enregistres-toolbar">
                     <div class="field full">
                         <label>Rechercher</label>
@@ -708,11 +692,6 @@ function renderLibraryScreen() {
     content.innerHTML = `
         <div class="single-panel-layout enregistres-layout">
             <div class="panel">
-                <div class="section-toolbar">
-                    <div>
-                        <h3>Bibliothèque</h3>
-                    </div>
-                </div>
 
                 ${
                     list.length
@@ -971,11 +950,6 @@ function renderSettingsScreen() {
     content.innerHTML = `
         <div class="single-panel-layout settings-layout">
             <div class="panel">
-                <div class="section-toolbar">
-                    <div>
-                        <h3>Paramètres</h3>
-                    </div>
-                </div>
 
                 <div class="settings-section">
                     <div class="section-toolbar">
@@ -1082,15 +1056,14 @@ function renderAccueilScreen() {
     content.innerHTML = `
         <div class="single-panel-layout accueil-layout">
             <div class="panel">
-                <div class="section-toolbar accueil-header">
-                    <div><h3>Accueil</h3></div>
-                    <div class="accueil-user">
-                        <span>Bonjour, ${escapeHtml(state.currentUser?.username || "")}</span>
-                        <button class="logout-icon-btn" onclick="handleLogout()" aria-label="Déconnexion" title="Déconnexion">
-                            <span class="material-symbols-outlined">logout</span>
-                        </button>
-                    </div>
-                </div>
+               <div class="section-toolbar accueil-header">
+                   <div class="accueil-user">
+                       <span>Bonjour, ${escapeHtml(state.currentUser?.username || "")}</span>
+                       <button class="logout-icon-btn" onclick="handleLogout()" aria-label="Déconnexion" title="Déconnexion">
+                           <span class="material-symbols-outlined">logout</span>
+                       </button>
+                   </div>
+               </div>
 
                 <div class="accueil-quick-actions">
                     <button type="button" class="banner-btn" onclick="handleNewDoeFromAccueil()">
