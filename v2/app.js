@@ -727,7 +727,7 @@ function renderLibraryScreen() {
                                                 <span class="material-symbols-outlined sort-icon">unfold_more</span>
                                             </button>
                                             <div class="library-filter-select">
-                                              <div class="library-filter-field ${state.libraryFilters?.type ? "has-clear" : ""}">
+                                              <div class="library-filter-field">
                                                   ${renderCustomSelect({
                                                       id: "library-filter-type",
                                                       label: "",
@@ -750,7 +750,7 @@ function renderLibraryScreen() {
                                                 <span class="material-symbols-outlined sort-icon">unfold_more</span>
                                             </button>
                                              <div class="library-filter-select">
-                                                 <div class="library-filter-field ${state.libraryFilters?.marque ? "has-clear" : ""}">
+                                                 <div class="library-filter-field">
                                                      ${renderCustomSelect({
                                                          id: "library-filter-marque",
                                                          label: "",
@@ -773,7 +773,7 @@ function renderLibraryScreen() {
                                                 <span class="material-symbols-outlined sort-icon">unfold_more</span>
                                             </button>
                                               <div class="library-filter-select">
-                                                 <div class="library-filter-field ${state.libraryFilters?.modele ? "has-clear" : ""}">
+                                                 <div class="library-filter-field">
                                                      ${renderCustomSelect({
                                                          id: "library-filter-modele",
                                                          label: "",
