@@ -6,6 +6,7 @@ console.log("DOE v2 clean app loaded ✅");
 const AUTOSAVE_KEY = "doe_v2_autosave";
 const DRAFTS_KEY = "doe_v2_saved_drafts";
 const CLOSED_KEY = "doe_v2_closed";
+const ARCHIVED_KEY = "doe_v2_archived";
 const REFERENCE_DATA_KEY = "doe_v2_reference_data";
 
 /* ========================
@@ -169,6 +170,8 @@ let exportValidationState = {
     }
 };
 
+let hasUnsavedChanges = false;
+
 /* ========================
    STEP CONFIG
 ======================== */
@@ -199,6 +202,7 @@ const navDraftsBtn = document.getElementById("nav-drafts-btn");
 const navClosedBtn = document.getElementById("nav-closed-btn");
 const navLibraryBtn = document.getElementById("nav-library-btn");
 const navSettingsBtn = document.getElementById("nav-settings-btn");
+const navArchivesBtn = document.getElementById("nav-archives-btn");
 
 const toastContainer = document.getElementById("toast-container");
 
@@ -299,6 +303,11 @@ function goToLibraryScreen() {
     renderApp();
 }
 
+function goToArchivesScreen() {
+    currentScreen = "archives";
+    renderApp();
+}
+
 function goToSettingsScreen() {
     currentScreen = "settings";
     renderApp();
@@ -361,11 +370,11 @@ function renderDraftsScreen() {
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>Adresse</th>
-                                        <th>Dernière mise à jour</th>
-                                        <th>Notes</th>
-                                        <th>Ouvrir</th>
-                                        <th>Supprimer</th>
+                                       <th>Adresse</th>
+                                       <th>Dernière mise à jour</th>
+                                       <th>Notes</th>
+                                       <th>Ouvrir</th>
+                                       <th>Archiver</th>
                                     </tr>
                                 </thead>
                                 <tbody id="drafts-table-body">
@@ -385,9 +394,9 @@ function renderDraftsScreen() {
                                                 <td>
                                                     <button class="draft-btn load" onclick="loadDraft('${draft.id}'); goToBuilder();">Ouvrir</button>
                                                 </td>
-                                                <td>
-                                                    <button class="draft-btn delete" onclick="deleteDraft('${draft.id}'); setTimeout(renderDraftsScreen, 50);">Supprimer</button>
-                                                </td>
+                                                   <td>
+                                                       <button class="draft-btn delete" onclick="archiveDraft('${draft.id}')">Archiver</button>
+                                                   </td>
                                             </tr>
                                         `;
                                     }).join("")}
@@ -433,6 +442,87 @@ function setClosedItems(items) {
     localStorage.setItem(CLOSED_KEY, JSON.stringify(items));
 }
 
+function getArchivedItems() {
+    try {
+        return JSON.parse(localStorage.getItem(ARCHIVED_KEY) || "[]");
+    } catch (error) {
+        console.error("Erreur chargement archives :", error);
+        return [];
+    }
+}
+
+function setArchivedItems(items) {
+    localStorage.setItem(ARCHIVED_KEY, JSON.stringify(items));
+}
+
+function archiveDraft(id) {
+    const drafts = getAllDrafts();
+    const draft = drafts.find(item => item.id === id);
+    if (!draft) return;
+
+    const archived = getArchivedItems();
+    archived.unshift({
+        archiveType: "draft",
+        archivedAt: new Date().toISOString(),
+        payload: draft
+    });
+
+    setArchivedItems(archived);
+    setAllDrafts(drafts.filter(item => item.id !== id));
+
+    showToast("Brouillon archivé.", "success");
+    renderApp();
+}
+
+function archiveClosedDoe(id) {
+    const items = getClosedItems();
+    const item = items.find(entry => entry.id === id);
+    if (!item) return;
+
+    const archived = getArchivedItems();
+    archived.unshift({
+        archiveType: "closed",
+        archivedAt: new Date().toISOString(),
+        payload: item
+    });
+
+    setArchivedItems(archived);
+    setClosedItems(items.filter(entry => entry.id !== id));
+
+    showToast("DOE clôturé archivé.", "success");
+    renderApp();
+}
+
+function restoreArchivedItem(index) {
+    const archived = getArchivedItems();
+    const item = archived[index];
+    if (!item) return;
+
+    if (item.archiveType === "draft") {
+        const drafts = getAllDrafts();
+        drafts.unshift(item.payload);
+        setAllDrafts(drafts);
+    } else if (item.archiveType === "closed") {
+        const closed = getClosedItems();
+        closed.unshift(item.payload);
+        setClosedItems(closed);
+    }
+
+    archived.splice(index, 1);
+    setArchivedItems(archived);
+
+    showToast("Élément restauré.", "success");
+    renderApp();
+}
+
+function deleteArchivedItem(index) {
+    const archived = getArchivedItems();
+    archived.splice(index, 1);
+    setArchivedItems(archived);
+    showToast("Archive supprimée.", "info");
+    renderApp();
+}
+
 function renderClosedScreen() {
     setWorkspaceChromeVisibility(false);
     setActiveSidebarLink("nav-closed-btn");
@@ -468,11 +558,12 @@ function renderClosedScreen() {
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>Adresse</th>
-                                        <th>Enregistré le</th>
-                                        <th>Aperçu</th>
-                                        <th>Télécharger</th>
-                                        <th>Supprimer</th>
+                                       <th>Adresse</th>
+                                       <th>Enregistré le</th>
+                                       <th>Aperçu</th>
+                                       <th>Télécharger</th>
+                                       <th>Réouvrir</th>
+                                       <th>Archiver</th>
                                     </tr>
                                 </thead>
                                 <tbody id="closed-table-body">
@@ -489,8 +580,9 @@ function renderClosedScreen() {
                                                 <td>${escapeHtml(formatDraftDate(item.savedAt))}</td>
                                                 <td><button class="draft-btn load" onclick="previewClosedDoe('${item.id}')">Aperçu</button></td>
                                                 <td><button class="draft-btn load" onclick="downloadClosedDoe('${item.id}')">Télécharger</button></td>
-                                                <td><button class="draft-btn delete" onclick="deleteClosedDoe('${item.id}')">Supprimer</button></td>
-                                            </tr>
+                                                <td><button class="draft-btn load" onclick="reopenClosedDoe('${item.id}')">Réouvrir</button></td>
+                                                <td><button class="draft-btn delete" onclick="archiveClosedDoe('${item.id}')">Archiver</button></td>
+                                          </tr>
                                         `;
                                     }).join("")}
                                 </tbody>
@@ -508,6 +600,85 @@ function renderClosedScreen() {
     `;
 
     filterClosedTable(state.closedSearch || "");
+}
+
+function renderArchivesScreen() {
+    setWorkspaceChromeVisibility(false);
+    setActiveSidebarLink("nav-archives-btn");
+
+    const archived = getArchivedItems();
+    const search = String(state.archivesSearch || "").trim().toUpperCase();
+
+    const filtered = archived.filter(item => {
+        const payload = item.payload || {};
+        const infos = payload?.state?.data?.infos || {};
+        const addressLine = [infos.adresse, infos.code_postal, infos.ville].filter(Boolean).join(" ");
+        return !search || addressLine.toUpperCase().includes(search);
+    });
+
+    content.innerHTML = `
+        <div class="single-panel-layout enregistres-layout">
+            <div class="panel">
+                <div class="section-toolbar">
+                    <div><h3>Archives</h3></div>
+                </div>
+
+                <div class="enregistres-toolbar">
+                    <div class="field full">
+                        <label>Rechercher</label>
+                        <input
+                            type="text"
+                            placeholder="Adresse..."
+                            value="${escapeHtml(state.archivesSearch || "")}"
+                            oninput="state.archivesSearch=this.value; renderArchivesScreen();"
+                        />
+                    </div>
+                </div>
+
+                ${
+                    filtered.length
+                        ? `
+                        <div class="table-shell">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Adresse</th>
+                                        <th>Archivé le</th>
+                                        <th>Restaurer</th>
+                                        <th>Supprimer</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${filtered.map(item => {
+                                        const originalIndex = archived.indexOf(item);
+                                        const payload = item.payload || {};
+                                        const infos = payload?.state?.data?.infos || {};
+                                        const addressLine = [infos.adresse, infos.code_postal, infos.ville].filter(Boolean).join(" ");
+
+                                        return `
+                                            <tr>
+                                                <td>
+                                                    <span class="archive-badge ${item.archiveType === "draft" ? "draft" : "closed"}">
+                                                        ${item.archiveType === "draft" ? "Brouillon" : "Clôturé"}
+                                                    </span>
+                                                </td>
+                                                <td>${escapeHtml(addressLine || "Adresse non renseignée")}</td>
+                                                <td>${escapeHtml(formatDraftDate(item.archivedAt))}</td>
+                                                <td><button class="draft-btn load" onclick="restoreArchivedItem(${originalIndex})">Restaurer</button></td>
+                                                <td><button class="draft-btn delete" onclick="deleteArchivedItem(${originalIndex})">Supprimer</button></td>
+                                            </tr>
+                                        `;
+                                    }).join("")}
+                                </tbody>
+                            </table>
+                        </div>
+                        `
+                        : `<div class="empty-state"><p>Aucune archive.</p></div>`
+                }
+            </div>
+        </div>
+    `;
 }
 
 function filterClosedTable(value) {
@@ -563,6 +734,9 @@ function renderLibraryScreen() {
                                                     placeholder: "TOUS",
                                                     options: ["TOUS", ...types]
                                                 })}
+                                              ${(state.libraryFilters?.type || "") ? `
+                                                  <button type="button" class="filter-clear-btn" onclick="clearLibraryFilter('type')">✕</button>
+                                              ` : ""}
                                             </div>
                                         </th>
 
@@ -579,6 +753,9 @@ function renderLibraryScreen() {
                                                     placeholder: "TOUS",
                                                     options: ["TOUS", ...marques]
                                                 })}
+                                              ${(state.libraryFilters?.type || "") ? `
+                                                  <button type="button" class="filter-clear-btn" onclick="clearLibraryFilter('type')">✕</button>
+                                              ` : ""}
                                             </div>
                                         </th>
 
@@ -595,6 +772,9 @@ function renderLibraryScreen() {
                                                     placeholder: "TOUS",
                                                     options: ["TOUS", ...modeles]
                                                 })}
+                                              ${(state.libraryFilters?.type || "") ? `
+                                                  <button type="button" class="filter-clear-btn" onclick="clearLibraryFilter('type')">✕</button>
+                                              ` : ""}
                                             </div>
                                         </th>
 
@@ -654,6 +834,12 @@ function setLibraryFilter(field, value) {
     }
 
     state.libraryFilters[field] = value === "TOUS" ? "" : value;
+    renderLibraryScreen();
+}
+
+function clearLibraryFilter(field) {
+    if (!state.libraryFilters) return;
+    state.libraryFilters[field] = "";
     renderLibraryScreen();
 }
 
@@ -859,138 +1045,93 @@ function renderSettingsScreen() {
     `;
 }
 
+function getRecentNotes() {
+    return getAllDrafts()
+        .map(draft => {
+            const infos = draft?.state?.data?.infos || {};
+            return {
+                adresse: [infos.adresse, infos.code_postal, infos.ville].filter(Boolean).join(" "),
+                note: infos.notes || "",
+                updatedAt: draft.updatedAt || null
+            };
+        })
+        .filter(item => item.note && item.note.trim() !== "")
+        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+        .slice(0, 15);
+}
+
 function renderAccueilScreen() {
     setWorkspaceChromeVisibility(false);
     setActiveSidebarLink("nav-accueil-btn");
 
-    const drafts = getAllDrafts().slice(0, 5);
-    const closedItems = getClosedItems().slice(0, 5);
+    const drafts = getAllDrafts().slice(0, 3);
+    const closedItems = getClosedItems().slice(0, 3);
+    const notes = getRecentNotes();
 
     content.innerHTML = `
         <div class="single-panel-layout accueil-layout">
-            <div class="accueil-grid single-column">
-                <div class="accueil-main-column">
-                    <div class="panel">
-                        <div class="section-toolbar accueil-header">
-                            <div>
-                                <h3>Accueil</h3>
-                            </div>
-                        
-                            <div class="accueil-user">
-                                <span>Bonjour, ${escapeHtml(state.currentUser?.username || "")}</span>
-                                <button class="logout-btn" onclick="handleLogout()">Déconnexion</button>
-                            </div>
-                        </div>
-
-                        <div class="accueil-quick-actions">
-                            <button type="button" class="banner-btn" onclick="handleNewDoeFromAccueil()">
-                                <span class="material-symbols-outlined">edit_square</span>
-                                Création DOE
-                            </button>
-
-                            <button type="button" class="footer-btn secondary-action" onclick="goToDraftsScreen()">
-                                <span class="material-symbols-outlined">draft</span>
-                                Brouillons
-                            </button>
-
-                            <button type="button" class="footer-btn secondary-action" onclick="goToClosedScreen()">
-                                <span class="material-symbols-outlined">inventory_2</span>
-                                Clôturés
-                            </button>
-                        </div>
+            <div class="panel">
+                <div class="section-toolbar accueil-header">
+                    <div><h3>Accueil</h3></div>
+                    <div class="accueil-user">
+                        <span>Bonjour, ${escapeHtml(state.currentUser?.username || "")}</span>
+                        <button class="logout-btn" onclick="handleLogout()">Déconnexion</button>
                     </div>
+                </div>
 
+                <div class="accueil-quick-actions">
+                    <button type="button" class="banner-btn" onclick="handleNewDoeFromAccueil()">
+                        <span class="material-symbols-outlined">edit_square</span>
+                        Création DOE
+                    </button>
+
+                    <button type="button" class="footer-btn secondary-action" onclick="goToDraftsScreen()">
+                        <span class="material-symbols-outlined">draft</span>
+                        Brouillons
+                    </button>
+
+                    <button type="button" class="footer-btn secondary-action" onclick="goToClosedScreen()">
+                        <span class="material-symbols-outlined">inventory_2</span>
+                        Clôturés
+                    </button>
+                </div>
+            </div>
+
+            <div class="accueil-grid-2cols">
+                <div class="accueil-left-col">
                     <div class="panel">
-                        <div class="section-toolbar">
-                            <div>
-                                <h3>Brouillons récents</h3>
-                            </div>
-                        </div>
-
+                        <div class="section-toolbar"><div><h3>Derniers brouillons</h3></div></div>
                         ${
                             drafts.length
-                                ? `
-                                <div class="accueil-drafts-list">
+                                ? `<div class="accueil-drafts-list">
                                     ${drafts.map(draft => `
-                                        <div class="draft-item">
+                                        <div class="draft-item accueil-list-item">
                                             <div class="draft-main">
                                                 <div class="draft-title">${escapeHtml(draft.title || "Brouillon")}</div>
                                                 <div class="draft-meta">Dernière mise à jour : ${formatDraftDate(draft.updatedAt)}</div>
                                             </div>
                                             <div class="draft-actions">
                                                 <button class="draft-btn load" onclick="loadDraft('${draft.id}'); goToBuilder();">Ouvrir</button>
-                                                <button class="draft-btn delete" onclick="deleteDraft('${draft.id}')">Supprimer</button>
+                                                <button class="draft-btn delete" onclick="archiveDraft('${draft.id}')">Archiver</button>
                                             </div>
                                         </div>
                                     `).join("")}
-                                </div>
-                                `
-                                : `
-                                <div class="empty-state">
-                                    <p>Aucun brouillon récent.</p>
-                                </div>
-                                `
+                                </div>`
+                                : `<div class="empty-state"><p>Aucun brouillon récent.</p></div>`
                         }
                     </div>
 
                     <div class="panel">
-    <div class="section-toolbar">
-        <div>
-            <h4>Dernières notes</h4>
-        </div>
-    </div>
-
-    ${
-        getRecentNotes().length
-            ? `
-            <div class="table-shell">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Adresse</th>
-                            <th>Note</th>
-                            <th>Mis à jour le</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${getRecentNotes().map(note => `
-                            <tr>
-                                <td>${escapeHtml(note.adresse || "")}</td>
-                                <td>${escapeHtml(note.note || "")}</td>
-                                <td>${escapeHtml(formatDraftDate(note.updated_at))}</td>
-                            </tr>
-                        `).join("")}
-                    </tbody>
-                </table>
-            </div>
-            `
-            : `
-            <div class="empty-state">
-                <p>Aucune note récente.</p>
-            </div>
-            `
-    }
-</div>
-
-                    <div class="panel">
-                        <div class="section-toolbar">
-                            <div>
-                                <h3>Derniers DOE</h3>
-                            </div>
-                        </div>
-
+                        <div class="section-toolbar"><div><h3>Derniers DOE</h3></div></div>
                         ${
                             closedItems.length
-                                ? `
-                                <div class="accueil-drafts-list">
+                                ? `<div class="accueil-drafts-list">
                                     ${closedItems.map(item => {
                                         const infos = item?.state?.data?.infos || {};
-                                        const addressLine = [infos.adresse, infos.code_postal, infos.ville]
-                                            .filter(Boolean)
-                                            .join(" ");
+                                        const addressLine = [infos.adresse, infos.code_postal, infos.ville].filter(Boolean).join(" ");
 
                                         return `
-                                            <div class="draft-item">
+                                            <div class="draft-item accueil-list-item">
                                                 <div class="draft-main">
                                                     <div class="draft-title">${escapeHtml(addressLine || "Adresse non renseignée")}</div>
                                                     <div class="draft-meta">Clôturé le : ${formatDraftDate(item.savedAt)}</div>
@@ -1002,13 +1143,40 @@ function renderAccueilScreen() {
                                             </div>
                                         `;
                                     }).join("")}
+                                </div>`
+                                : `<div class="empty-state"><p>Aucun DOE clôturé.</p></div>`
+                        }
+                    </div>
+                </div>
+
+                <div class="accueil-right-col">
+                    <div class="panel notes-panel">
+                        <div class="section-toolbar"><div><h3>Dernières notes</h3></div></div>
+                        ${
+                            notes.length
+                                ? `
+                                <div class="notes-scroll-zone">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Adresse</th>
+                                                <th>Note</th>
+                                                <th>Mis à jour le</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${notes.map(item => `
+                                                <tr>
+                                                    <td>${escapeHtml(item.adresse || "")}</td>
+                                                    <td>${escapeHtml(item.note || "")}</td>
+                                                    <td>${escapeHtml(formatDraftDate(item.updatedAt))}</td>
+                                                </tr>
+                                            `).join("")}
+                                        </tbody>
+                                    </table>
                                 </div>
                                 `
-                                : `
-                                <div class="empty-state">
-                                    <p>Aucun DOE clôturé.</p>
-                                </div>
-                                `
+                                : `<div class="empty-state"><p>Aucune note récente.</p></div>`
                         }
                     </div>
                 </div>
@@ -1030,6 +1198,11 @@ function renderApp() {
 
     if (currentScreen === "closed") {
         renderClosedScreen();
+        return;
+    }
+
+    if (currentScreen === "archives") {
+        renderArchivesScreen();
         return;
     }
 
@@ -1323,6 +1496,29 @@ function deleteClosedDoe(id) {
     );
 }
 
+function reopenClosedDoe(id) {
+    const items = getClosedItems();
+    const item = items.find(entry => entry.id === id);
+    if (!item) return;
+
+    const drafts = getAllDrafts();
+    const restoredDraft = {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        title: [item?.state?.data?.infos?.adresse, item?.state?.data?.infos?.code_postal, item?.state?.data?.infos?.ville]
+            .filter(Boolean)
+            .join(" ") || "Brouillon",
+        updatedAt: new Date().toISOString(),
+        state: deepClone(item.state)
+    };
+
+    drafts.unshift(restoredDraft);
+    setAllDrafts(drafts);
+    setClosedItems(items.filter(entry => entry.id !== id));
+
+    showToast("DOE rouvert et renvoyé dans Brouillons.", "success");
+    goToDraftsScreen();
+}
+
 function handleLeaveToAccueil() {
     openLeaveConfirmModal(() => {
         resetCurrentDoe();
@@ -1368,10 +1564,15 @@ function wireSidebarNavigation() {
             return;
         }
 
-        openLeaveConfirmModal(() => {
-            resetCurrentDoe();
-            goToDraftsScreen();
-        });
+if (hasUnsavedChanges) {
+    openLeaveConfirmModal(() => {
+        resetCurrentDoe();
+        goToDraftsScreen();
+    });
+} else {
+    resetCurrentDoe();
+    goToDraftsScreen();
+}
     });
 
     navClosedBtn?.addEventListener("click", () => {
@@ -1382,10 +1583,15 @@ function wireSidebarNavigation() {
             return;
         }
 
-        openLeaveConfirmModal(() => {
-            resetCurrentDoe();
-            goToClosedScreen();
-        });
+if (hasUnsavedChanges) {
+    openLeaveConfirmModal(() => {
+        resetCurrentDoe();
+        goToDraftsScreen();
+    });
+} else {
+    resetCurrentDoe();
+    goToDraftsScreen();
+}
     });
 
     navLibraryBtn?.addEventListener("click", () => {
@@ -1396,10 +1602,39 @@ function wireSidebarNavigation() {
             return;
         }
 
-        openLeaveConfirmModal(() => {
+if (hasUnsavedChanges) {
+    openLeaveConfirmModal(() => {
+        resetCurrentDoe();
+        goToDraftsScreen();
+    });
+} else {
+    resetCurrentDoe();
+    goToDraftsScreen();
+}
+    });
+
+       navArchivesBtn?.addEventListener("click", () => {
+        if (currentScreen === "archives") return;
+
+        if (["accueil", "drafts", "closed", "library", "settings"].includes(currentScreen)) {
+            goToArchivesScreen();
+            return;
+        }
+
+        if (hasUnsavedChanges) {
+if (hasUnsavedChanges) {
+    openLeaveConfirmModal(() => {
+        resetCurrentDoe();
+        goToDraftsScreen();
+    });
+} else {
+    resetCurrentDoe();
+    goToDraftsScreen();
+}
+        } else {
             resetCurrentDoe();
-            goToLibraryScreen();
-        });
+            goToArchivesScreen();
+        }
     });
 
     navSettingsBtn?.addEventListener("click", () => {
@@ -1410,10 +1645,15 @@ function wireSidebarNavigation() {
             return;
         }
 
-        openLeaveConfirmModal(() => {
-            resetCurrentDoe();
-            goToSettingsScreen();
-        });
+if (hasUnsavedChanges) {
+    openLeaveConfirmModal(() => {
+        resetCurrentDoe();
+        goToDraftsScreen();
+    });
+} else {
+    resetCurrentDoe();
+    goToDraftsScreen();
+}
     });
 }
 
@@ -1790,8 +2030,18 @@ function formatExportDocLabel(sectionKey, item) {
 
 function toggleExportDocList(sectionKey) {
     const el = document.getElementById(`export-doc-list-${sectionKey}`);
-    if (!el) return;
-    el.classList.toggle("hidden");
+    const parent = el?.closest(".export-doc-block");
+    if (!el || !parent) return;
+
+    const isOpen = !el.classList.contains("hidden");
+
+    document.querySelectorAll(".export-doc-list").forEach(node => node.classList.add("hidden"));
+    document.querySelectorAll(".export-doc-block").forEach(node => node.classList.remove("is-open"));
+
+    if (!isOpen) {
+        el.classList.remove("hidden");
+        parent.classList.add("is-open");
+    }
 }
 
 async function startFakeExportPrep() {
@@ -2913,6 +3163,14 @@ function clearAutosave() {
             showToast("Brouillon local effacé.", "info");
         }
     });
+}
+
+function markAsDirty() {
+    hasUnsavedChanges = true;
+}
+
+function markAsClean() {
+    hasUnsavedChanges = false;
 }
 
 /* ========================
