@@ -1154,7 +1154,10 @@ function renderLoginScreen() {
     state.currentUser = null;
     currentScreen = "login";
 
+    const appShell = document.querySelector(".app-shell");
     const sidebar = document.querySelector(".sidebar");
+
+    if (appShell) appShell.classList.add("auth-mode");
     if (sidebar) sidebar.style.display = "none";
 
     setWorkspaceChromeVisibility(false);
@@ -1372,10 +1375,13 @@ function renderApp() {
         return;
     }
 
-  content.classList.remove("login-mode");
-
+    const appShell = document.querySelector(".app-shell");
     const sidebar = document.querySelector(".sidebar");
+
+    if (appShell) appShell.classList.remove("auth-mode");
     if (sidebar) sidebar.style.display = "";
+
+    content.classList.remove("login-mode");
 
     setWorkspaceChromeVisibility(currentScreen === "builder");
 
