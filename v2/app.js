@@ -6,7 +6,25 @@ console.log("DOE v2 clean app loaded ✅");
 const SUPABASE_URL = "https://mefoczkqihvjltxqcxue.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZm9jemtxaWh2amx0eHFjeHVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NDg3MDMsImV4cCI6MjA5MTIyNDcwM30.HO012TpTfhcLXNBB-zvFpt9y1jibYpAyxIwcfxXMeBs";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseGlobal = window.supabase;
+
+if (!supabaseGlobal || typeof supabaseGlobal.createClient !== "function") {
+    console.error("Supabase CDN non chargé correctement.", window.supabase);
+
+    const fallbackContent = document.getElementById("step-content");
+    if (fallbackContent) {
+        fallbackContent.innerHTML = `
+            <div style="padding:24px; background:white; border-radius:16px;">
+                <h2>Erreur de chargement</h2>
+                <p>Le client Supabase n’a pas été chargé. Ouvre la console du navigateur pour voir l’erreur.</p>
+            </div>
+        `;
+    }
+
+    throw new Error("Supabase global introuvable");
+}
+
+const supabase = supabaseGlobal.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const AUTOSAVE_KEY = "doe_v2_autosave";
 const DRAFTS_KEY = "doe_v2_saved_drafts";
@@ -5273,6 +5291,7 @@ if (createValueModal) {
 /* ========================
    INIT
 ======================== */
+console.log("Avant initApp()");
 wireDraftOverwriteModal();
 wireLeaveConfirmModal();
 wireSidebarNavigation();
@@ -5288,6 +5307,8 @@ confirmOkBtn?.addEventListener("click", () => {
 });
 
 async function initApp() {
+    console.log("initApp lancé");
+
     try {
         const { data, error } = await supabase.auth.getSession();
 
@@ -5298,10 +5319,12 @@ async function initApp() {
         }
 
         if (!data.session) {
+            console.log("Aucune session -> login");
             renderLoginScreen();
             return;
         }
 
+        console.log("Session trouvée -> app");
         await loadCurrentProfile();
         currentScreen = "accueil";
         renderApp();
@@ -5416,3 +5439,6 @@ window.deleteArchivedItem = deleteArchivedItem;
 window.reopenClosedDoe = reopenClosedDoe;
 window.clearLibraryFilter = clearLibraryFilter;
 window.goToArchivesScreen = goToArchivesScreen;
+
+window.handleLogin = handleLogin;
+window.handleLogout = handleLogout;
