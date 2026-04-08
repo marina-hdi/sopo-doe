@@ -156,7 +156,7 @@ function getEmptyState() {
 ======================== */
 let state = loadAutosave() || getEmptyState();
 
-let currentScreen = "builder";
+let currentScreen = "accueil";
 
 if (!state.data.infos.date_doe) {
     state.data.infos.date_doe = getTodayDate();
@@ -1160,8 +1160,9 @@ async function handleLogin() {
         return;
     }
 
-    await loadCurrentProfile();
-    goToAccueil();
+      await loadCurrentProfile();
+      currentScreen = "accueil";
+      renderApp();
 }
 
 async function handleLogout() {
@@ -5287,20 +5288,33 @@ confirmOkBtn?.addEventListener("click", () => {
 });
 
 async function initApp() {
-    const { data } = await supabase.auth.getSession();
+    try {
+        const { data, error } = await supabase.auth.getSession();
 
-    if (!data.session) {
+        if (error) {
+            console.error("Erreur session Supabase :", error);
+            renderLoginScreen();
+            return;
+        }
+
+        if (!data.session) {
+            renderLoginScreen();
+            return;
+        }
+
+        await loadCurrentProfile();
+        currentScreen = "accueil";
+        renderApp();
+    } catch (error) {
+        console.error("Erreur initApp :", error);
         renderLoginScreen();
-        return;
     }
-
-    await loadCurrentProfile();
-    renderApp();
 }
 
 supabase.auth.onAuthStateChange(async (event, session) => {
     if (session) {
         await loadCurrentProfile();
+        currentScreen = "accueil";
         renderApp();
     } else {
         state.currentUser = null;
