@@ -1958,11 +1958,12 @@ button {
     display: block;
 }
 
-.accueil-grid {
+.accueil-grid-2cols {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 16px;
-    align-items: start;
+    align-items: stretch;
+    min-width: 0;
 }
 
 .accueil-main-column,
