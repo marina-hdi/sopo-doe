@@ -1318,23 +1318,6 @@ function handleCloseDoe() {
     finalizeClose();
 }
 
-function getRecentNotes() {
-    const drafts = getAllDrafts();
-
-    return drafts
-        .map(draft => {
-            const infos = draft?.state?.data?.infos || {};
-            return {
-                adresse: [infos.adresse, infos.code_postal, infos.ville].filter(Boolean).join(" "),
-                note: infos.notes || "",
-                updated_at: draft.updatedAt || draft.savedAt
-            };
-        })
-        .filter(item => item.note && item.note.trim() !== "")
-        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
-        .slice(0, 10);
-}
-
 function getClosedDoeById(id) {
     return getClosedItems().find(item => item.id === id);
 }
@@ -1519,101 +1502,78 @@ function reopenClosedDoe(id) {
     goToDraftsScreen();
 }
 
-function handleLeaveToAccueil() {
-    openLeaveConfirmModal(() => {
-        resetCurrentDoe();
-        currentScreen = "accueil";
-        renderApp();
-    });
-}
-
-function handleNewDoe() {
-    openLeaveConfirmModal(() => {
-        resetCurrentDoe();
-        currentScreen = "builder";
-        goToStep(0);
-    });
-}
-
 function wireSidebarNavigation() {
+    function leaveBuilder(targetFn) {
+        if (hasUnsavedChanges) {
+            openLeaveConfirmModal(() => {
+                resetCurrentDoe();
+                targetFn();
+            });
+        } else {
+            resetCurrentDoe();
+            targetFn();
+        }
+    }
+
     navAccueilBtn?.addEventListener("click", () => {
         if (currentScreen === "accueil") return;
 
-        if (["drafts", "closed", "library", "settings"].includes(currentScreen)) {
+        if (["drafts", "closed", "archives", "library", "settings"].includes(currentScreen)) {
             goToAccueil();
             return;
         }
 
-        handleLeaveToAccueil();
+        leaveBuilder(goToAccueil);
     });
 
     navNewBtn?.addEventListener("click", () => {
-        if (["accueil", "drafts", "closed", "library", "settings"].includes(currentScreen)) {
+        if (currentScreen === "builder") return;
+
+        if (["accueil", "drafts", "closed", "archives", "library", "settings"].includes(currentScreen)) {
             handleNewDoeFromAccueil();
             return;
         }
 
-        handleNewDoe();
+        leaveBuilder(() => {
+            currentScreen = "builder";
+            goToStep(0);
+        });
     });
 
     navDraftsBtn?.addEventListener("click", () => {
         if (currentScreen === "drafts") return;
 
-        if (["accueil", "closed", "library", "settings"].includes(currentScreen)) {
+        if (["accueil", "closed", "archives", "library", "settings"].includes(currentScreen)) {
             goToDraftsScreen();
             return;
         }
 
-if (hasUnsavedChanges) {
-    openLeaveConfirmModal(() => {
-        resetCurrentDoe();
-        goToDraftsScreen();
-    });
-} else {
-    resetCurrentDoe();
-    goToDraftsScreen();
-}
+        leaveBuilder(goToDraftsScreen);
     });
 
     navClosedBtn?.addEventListener("click", () => {
         if (currentScreen === "closed") return;
 
-        if (["accueil", "drafts", "library", "settings"].includes(currentScreen)) {
+        if (["accueil", "drafts", "archives", "library", "settings"].includes(currentScreen)) {
             goToClosedScreen();
             return;
         }
 
-if (hasUnsavedChanges) {
-    openLeaveConfirmModal(() => {
-        resetCurrentDoe();
-        goToDraftsScreen();
-    });
-} else {
-    resetCurrentDoe();
-    goToDraftsScreen();
-}
+        leaveBuilder(goToClosedScreen);
     });
 
     navLibraryBtn?.addEventListener("click", () => {
         if (currentScreen === "library") return;
 
-        if (["accueil", "drafts", "closed", "settings"].includes(currentScreen)) {
+        if (["accueil", "drafts", "closed", "archives", "settings"].includes(currentScreen)) {
             goToLibraryScreen();
             return;
         }
 
-if (hasUnsavedChanges) {
-    openLeaveConfirmModal(() => {
-        resetCurrentDoe();
-        goToDraftsScreen();
-    });
-} else {
-    resetCurrentDoe();
-    goToDraftsScreen();
-}
+        leaveBuilder(goToLibraryScreen);
     });
 
-       navArchivesBtn?.addEventListener("click", () => {
+    navArchivesBtn?.addEventListener("click", () => {
         if (currentScreen === "archives") return;
 
         if (["accueil", "drafts", "closed", "library", "settings"].includes(currentScreen)) {
@@ -1621,39 +1581,18 @@ if (hasUnsavedChanges) {
             return;
         }
 
-        if (hasUnsavedChanges) {
-if (hasUnsavedChanges) {
-    openLeaveConfirmModal(() => {
-        resetCurrentDoe();
-        goToDraftsScreen();
-    });
-} else {
-    resetCurrentDoe();
-    goToDraftsScreen();
-}
-        } else {
-            resetCurrentDoe();
-            goToArchivesScreen();
-        }
+        leaveBuilder(goToArchivesScreen);
     });
 
     navSettingsBtn?.addEventListener("click", () => {
         if (currentScreen === "settings") return;
 
-        if (["accueil", "drafts", "closed", "library"].includes(currentScreen)) {
+        if (["accueil", "drafts", "closed", "archives", "library"].includes(currentScreen)) {
             goToSettingsScreen();
             return;
         }
 
-if (hasUnsavedChanges) {
-    openLeaveConfirmModal(() => {
-        resetCurrentDoe();
-        goToDraftsScreen();
-    });
-} else {
-    resetCurrentDoe();
-    goToDraftsScreen();
-}
+        leaveBuilder(goToSettingsScreen);
     });
 }
 
@@ -1932,7 +1871,7 @@ function saveDraftByMode(mode = "normal") {
 
     localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
     saveAutosave();
-    markAsClean()
+    markAsClean();
     showToast("Brouillon enregistré.", "success");
 }
 
@@ -3004,9 +2943,8 @@ function hasAnyValue(value) {
     return value !== undefined && value !== null && String(value).trim() !== "";
 }
 
-async function handleLogout() {
-    await supabase.auth.signOut();
-    location.reload();
+function handleLogout() {
+    showToast("La déconnexion sera activée avec Supabase.", "info");
 }
 
 function collectExportValidation() {
