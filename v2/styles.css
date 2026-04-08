@@ -2395,3 +2395,15 @@ button {
         max-height: 360px;
     }
 }
+
+.section-toolbar {
+    margin-bottom: 12px;
+}
+
+.panel > .section-toolbar:first-child:empty {
+    display: none;
+}
+
+.single-panel-layout .panel {
+    padding-top: 18px;
+}
