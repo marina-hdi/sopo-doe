@@ -10,8 +10,6 @@ document.getElementById("step-content").innerHTML = `
 const SUPABASE_URL = "https://mefoczkqihvjltxqcxue.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZm9jemtxaWh2amx0eHFjeHVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NDg3MDMsImV4cCI6MjA5MTIyNDcwM30.HO012TpTfhcLXNBB-zvFpt9y1jibYpAyxIwcfxXMeBs";
 
-const supabaseGlobal = window.supabase;
-
 if (!supabaseGlobal || typeof supabaseGlobal.createClient !== "function") {
     console.error("Supabase CDN non chargé correctement.", window.supabase);
 
