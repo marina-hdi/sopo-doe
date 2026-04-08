@@ -1162,20 +1162,20 @@ function renderLoginScreen() {
     if (prevStepBtn) prevStepBtn.style.display = "none";
     if (nextStepBtn) nextStepBtn.style.display = "none";
 
-    content.innerHTML = `
-        <div class="login-screen">
-            <div class="login-card">
-                <h2>Connexion</h2>
+content.innerHTML = `
+    <div class="login-screen full">
+        <div class="login-card">
+            <h2>Connexion</h2>
 
-                <input id="login-email" type="email" placeholder="Email" />
-                <input id="login-password" type="password" placeholder="Mot de passe" />
+            <input id="login-email" type="email" placeholder="Email" />
+            <input id="login-password" type="password" placeholder="Mot de passe" />
 
-                <button onclick="handleLogin()">Se connecter</button>
+            <button onclick="handleLogin()">Se connecter</button>
 
-                <p id="login-error" class="login-error"></p>
-            </div>
+            <p id="login-error" class="login-error"></p>
         </div>
-    `;
+    </div>
+`;
 }
 
 async function handleLogin() {
