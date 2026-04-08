@@ -1801,12 +1801,16 @@ button {
    ACCUEIL
 ======================== */
 .accueil-layout {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
     min-width: 0;
+    min-height: 0;
 }
 
 .accueil-top-panel {
-    padding: 14px 18px;
+    padding: 12px 18px;
+    flex: 0 0 auto;
 }
 
 .accueil-topbar {
@@ -1862,11 +1866,12 @@ button {
     gap: 16px;
     align-items: stretch;
     min-width: 0;
+    min-height: 0;
 }
 
 .accueil-scroll-panel {
-    min-height: 640px;
-    height: 640px;
+    min-height: 620px;
+    height: 620px;
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -1909,6 +1914,27 @@ button {
 .notes-scroll-zone .data-table th,
 .notes-scroll-zone .data-table td {
     word-break: break-word;
+}
+
+@media (max-width: 1100px) {
+    .accueil-grid-2cols {
+        grid-template-columns: 1fr;
+    }
+
+    .accueil-topbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .accueil-user {
+        justify-content: space-between;
+        margin-left: 0;
+    }
+
+    .accueil-scroll-panel {
+        min-height: 420px;
+        height: 420px;
+    }
 }
 
 /* ========================
