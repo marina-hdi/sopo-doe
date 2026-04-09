@@ -1156,22 +1156,18 @@ function renderLoginScreen() {
 
     const appShell = document.querySelector(".app-shell");
     const sidebar = document.querySelector(".sidebar");
-    const mainPanel = document.querySelector(".main-panel");
-    const workspaceInner = document.querySelector(".workspace-inner");
 
     if (appShell) appShell.classList.add("auth-mode");
     if (sidebar) sidebar.style.display = "none";
-    if (mainPanel) mainPanel.classList.add("login-layout");
-    if (workspaceInner) workspaceInner.classList.add("login-workspace");
 
     setWorkspaceChromeVisibility(false);
+    setActiveSidebarLink(null);
 
     if (prevStepBtn) prevStepBtn.style.display = "none";
     if (nextStepBtn) nextStepBtn.style.display = "none";
 
-    content.classList.add("login-mode");
-
     chantierBannerZone.innerHTML = "";
+    content.classList.add("login-mode");
 
     content.innerHTML = `
         <div class="login-screen">
@@ -1181,7 +1177,7 @@ function renderLoginScreen() {
                 <input id="login-email" type="email" placeholder="Email" />
                 <input id="login-password" type="password" placeholder="Mot de passe" />
 
-                <button onclick="handleLogin()">Se connecter</button>
+                <button type="button" onclick="handleLogin()">Se connecter</button>
 
                 <p id="login-error" class="login-error"></p>
             </div>
@@ -1190,45 +1186,53 @@ function renderLoginScreen() {
 }
 
 async function handleLogin() {
-    const email = document.getElementById("login-email").value;
-    const password = document.getElementById("login-password").value;
+    const email = document.getElementById("login-email")?.value?.trim() || "";
+    const password = document.getElementById("login-password")?.value || "";
     const errorEl = document.getElementById("login-error");
 
-    if (errorEl) {
-        errorEl.textContent = "";
-    }
+    if (errorEl) errorEl.textContent = "";
 
-    const { error } = await supabaseClient.auth.signInWithPassword({
-        email,
-        password
-    });
+    try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email,
+            password
+        });
 
-    if (error) {
-        console.error("Erreur de connexion :", error);
+        if (error) {
+            let message = "Erreur de connexion";
 
-        let message = "Erreur de connexion";
+            if (error.message?.includes("Invalid login credentials")) {
+                message = "Email ou mot de passe incorrect";
+            } else if (error.message?.includes("Email not confirmed")) {
+                message = "Email non confirmé";
+            } else if (error.message) {
+                message = error.message;
+            }
 
-        if (error.message?.includes("Invalid login credentials")) {
-            message = "Email ou mot de passe incorrect";
-        } else if (error.message?.includes("Email not confirmed")) {
-            message = "Email non confirmé";
-        } else if (error.message) {
-            message = error.message;
+            if (errorEl) errorEl.textContent = message;
+            return;
         }
 
+        state.currentUser = {
+            id: data.user.id,
+            email: data.user.email,
+            username: data.user.email || ""
+        };
+
+        try {
+            await loadCurrentProfile();
+        } catch (profileError) {
+            console.error("Erreur chargement profil post-login :", profileError);
+        }
+
+        currentScreen = "accueil";
+        renderApp();
+    } catch (err) {
+        console.error("Erreur inattendue login :", err);
         if (errorEl) {
-            errorEl.textContent = message;
-        } else {
-            showToast(message, "error");
+            errorEl.textContent = "Connexion impossible pour le moment";
         }
-
-        return;
     }
-
-    await loadCurrentProfile();
-    currentScreen = "accueil";
-    console.log("LOGIN OK", state.currentUser);
-    renderApp();
 }
 
 async function handleLogout() {
@@ -1378,7 +1382,7 @@ function renderAccueilScreen() {
 
 function renderApp() {
     console.log("renderApp currentUser =", state.currentUser, "currentScreen =", currentScreen);
-  
+
     if (!state.currentUser) {
         renderLoginScreen();
         return;
@@ -1386,13 +1390,9 @@ function renderApp() {
 
     const appShell = document.querySelector(".app-shell");
     const sidebar = document.querySelector(".sidebar");
-    const mainPanel = document.querySelector(".main-panel");
-    const workspaceInner = document.querySelector(".workspace-inner");
 
     if (appShell) appShell.classList.remove("auth-mode");
     if (sidebar) sidebar.style.display = "";
-    if (mainPanel) mainPanel.classList.remove("login-layout");
-    if (workspaceInner) workspaceInner.classList.remove("login-workspace");
 
     content.classList.remove("login-mode");
 
