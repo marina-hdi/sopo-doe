@@ -1227,6 +1227,7 @@ async function handleLogin() {
 
     await loadCurrentProfile();
     currentScreen = "accueil";
+    console.log("LOGIN OK", state.currentUser);
     renderApp();
 }
 
@@ -1376,6 +1377,8 @@ function renderAccueilScreen() {
 }
 
 function renderApp() {
+    console.log("renderApp currentUser =", state.currentUser, "currentScreen =", currentScreen);
+  
     if (!state.currentUser) {
         renderLoginScreen();
         return;
