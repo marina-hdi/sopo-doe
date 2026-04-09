@@ -1151,7 +1151,6 @@ function getRecentNotes() {
 }
 
 function renderLoginScreen() {
-    state.currentUser = null;
     currentScreen = "login";
 
     const appShell = document.querySelector(".app-shell");
