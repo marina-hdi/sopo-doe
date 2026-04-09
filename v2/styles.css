@@ -2265,11 +2265,15 @@ button {
     grid-template-columns: 1fr !important;
 }
 
+.app-shell.auth-mode .sidebar {
+    display: none !important;
+}
+
 .app-shell.auth-mode .workspace {
     grid-column: 1 / -1;
 }
 
-.workspace-inner.login-workspace {
+.app-shell.auth-mode .workspace-inner {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -2278,18 +2282,20 @@ button {
     padding: 0 !important;
 }
 
-.workspace-inner.login-workspace::before {
+.app-shell.auth-mode .workspace-inner::before {
     display: none !important;
 }
 
-.main-panel.login-layout {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 !important;
+.app-shell.auth-mode .main-panel {
     background: transparent !important;
-    box-shadow: none !important;
     border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+.app-shell.auth-mode .main-panel-footer,
+.app-shell.auth-mode .workspace-top-sticky {
+    display: none !important;
 }
 
 #step-content.login-mode {
