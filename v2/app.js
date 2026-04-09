@@ -176,11 +176,21 @@ function getEmptyState() {
 /* ========================
    GLOBAL STATE
 ======================== */
-let state = loadAutosave() || getEmptyState();
+let state = {
+    ...getEmptyState(),
+    currentUser: null,
+    draftsSearch: "",
+    closedSearch: "",
+    archivesSearch: "",
+    savedSearch: "",
+    libraryFilters: { type: "", marque: "", modele: "" },
+    librarySort: { column: "", direction: "asc" },
+    ...(loadAutosave() || {})
+};
 
 let currentScreen = "accueil";
 
-if (!state.data.infos.date_doe) {
+if (!state.data?.infos?.date_doe) {
     state.data.infos.date_doe = getTodayDate();
 }
 
@@ -1451,6 +1461,48 @@ function deepClone(value) {
     return JSON.parse(JSON.stringify(value));
 }
 
+function getDoeOnlyState() {
+    const empty = getEmptyState();
+
+    return {
+        currentStep: Number.isInteger(state?.currentStep) ? state.currentStep : empty.currentStep,
+        currentDraftId: state?.currentDraftId || null,
+        data: deepClone(state?.data || empty.data)
+    };
+}
+
+function replaceDoeState(nextDoeState) {
+    const empty = getEmptyState();
+
+    const preservedUiState = {
+        currentUser: state?.currentUser || null,
+        draftsSearch: state?.draftsSearch || "",
+        closedSearch: state?.closedSearch || "",
+        archivesSearch: state?.archivesSearch || "",
+        savedSearch: state?.savedSearch || "",
+        libraryFilters: deepClone(
+            state?.libraryFilters || { type: "", marque: "", modele: "" }
+        ),
+        librarySort: deepClone(
+            state?.librarySort || { column: "", direction: "asc" }
+        )
+    };
+
+    state = {
+        ...empty,
+        ...preservedUiState,
+        currentStep: Number.isInteger(nextDoeState?.currentStep)
+            ? nextDoeState.currentStep
+            : empty.currentStep,
+        currentDraftId: nextDoeState?.currentDraftId || null,
+        data: deepClone(nextDoeState?.data || empty.data)
+    };
+
+    if (!state.data?.infos?.date_doe) {
+        state.data.infos.date_doe = getTodayDate();
+    }
+}
+
 function getSavedDrafts() {
     return getAllDrafts();
 }
@@ -1518,7 +1570,7 @@ function handleCloseDoe() {
     const payload = {
         id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
         savedAt: new Date().toISOString(),
-        state: deepClone(state)
+        state: getDoeOnlyState()
     };
 
     const drafts = getAllDrafts();
@@ -2054,9 +2106,7 @@ function executePendingLeave() {
 }
 
 function resetCurrentDoe() {
-    state = getEmptyState();
-    state.data.infos.date_doe = getTodayDate();
-    state.currentDraftId = null;
+    replaceDoeState(getEmptyState());
     resetExportValidationState();
     saveAutosave();
     markAsClean();
@@ -2126,7 +2176,7 @@ function buildDraftPayload() {
         id: state.currentDraftId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
         title: getDraftDisplayTitle(),
         updatedAt: new Date().toISOString(),
-        state: deepClone(state)
+        state: getDoeOnlyState()
     };
 }
 
@@ -3376,8 +3426,7 @@ function clearAutosave() {
         confirmLabel: "Effacer",
         onConfirm: () => {
             localStorage.removeItem(AUTOSAVE_KEY);
-            state = getEmptyState();
-            state.data.infos.date_doe = getTodayDate();
+            replaceDoeState(getEmptyState());
             goToStep(0);
             showToast("Brouillon local effacé.", "info");
         }
@@ -3448,7 +3497,7 @@ function loadDraft(draftId) {
     const draft = getAllDrafts().find(item => item.id === draftId);
     if (!draft) return;
 
-    state = draft.state;
+    replaceDoeState(draft.state);
     saveAutosave();
     markAsClean();
     closeDraftsModal();
