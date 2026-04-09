@@ -1195,17 +1195,23 @@ function renderLoginScreen() {
 }
 
 async function handleLogin() {
+    console.log("handleLogin déclenché");
+
     const email = document.getElementById("login-email")?.value?.trim() || "";
     const password = document.getElementById("login-password")?.value || "";
     const errorEl = document.getElementById("login-error");
 
     if (errorEl) errorEl.textContent = "";
 
+    console.log("Tentative login avec :", email);
+
     try {
         const { data, error } = await supabaseClient.auth.signInWithPassword({
             email,
             password
         });
+
+        console.log("Résultat signInWithPassword :", { data, error });
 
         if (error) {
             let message = "Erreur de connexion";
@@ -5482,8 +5488,11 @@ confirmOkBtn?.addEventListener("click", () => {
 async function initApp() {
     console.log("initApp lancé");
 
+    renderLoginScreen();
+
     try {
         const { data, error } = await supabaseClient.auth.getSession();
+        console.log("Résultat getSession :", { data, error });
 
         if (error) {
             console.error("Erreur session Supabase :", error);
@@ -5507,11 +5516,20 @@ async function initApp() {
     }
 }
 
-supabaseClient.auth.onAuthStateChange(async (event, session) => {
+supabaseClient.auth.onAuthStateChange((event, session) => {
+    console.log("onAuthStateChange:", event, !!session);
+
     if (session) {
-        await loadCurrentProfile();
-        currentScreen = "accueil";
-        renderApp();
+        setTimeout(async () => {
+            try {
+                await loadCurrentProfile();
+                currentScreen = "accueil";
+                renderApp();
+            } catch (error) {
+                console.error("Erreur onAuthStateChange :", error);
+                renderLoginScreen();
+            }
+        }, 0);
     } else {
         state.currentUser = null;
         renderLoginScreen();
