@@ -1,34 +1,12 @@
 console.log("DOE v2 clean app loaded ✅");
 
-document.getElementById("step-content").innerHTML = `
-  <div style="padding:20px; font-weight:700;">app.js chargé</div>
-`;
-
 /* ========================
    STORAGE KEYS
 ======================== */
-const SUPABASE_URL = "https://mefoczkqihvjltxqcxue.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZm9jemtxaWh2amx0eHFjeHVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NDg3MDMsImV4cCI6MjA5MTIyNDcwM30.HO012TpTfhcLXNBB-zvFpt9y1jibYpAyxIwcfxXMeBs";
+let SUPABASE_URL = "https://mefoczkqihvjltxqcxue.supabase.co";
+let SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZm9jemtxaWh2amx0eHFjeHVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NDg3MDMsImV4cCI6MjA5MTIyNDcwM30.HO012TpTfhcLXNBB-zvFpt9y1jibYpAyxIwcfxXMeBs";
 
-const supabaseGlobal = window.supabase;
-
-if (!supabaseGlobal || typeof supabaseGlobal.createClient !== "function") {
-    console.error("Supabase CDN non chargé correctement.", window.supabase);
-
-    const fallbackContent = document.getElementById("step-content");
-    if (fallbackContent) {
-        fallbackContent.innerHTML = `
-            <div style="padding:24px; background:white; border-radius:16px;">
-                <h2>Erreur de chargement</h2>
-                <p>Le client Supabase n’a pas été chargé. Ouvre la console du navigateur pour voir l’erreur.</p>
-            </div>
-        `;
-    }
-
-    throw new Error("Supabase global introuvable");
-}
-
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let supabaseClient = null;
 
 const AUTOSAVE_KEY = "doe_v2_autosave";
 const DRAFTS_KEY = "doe_v2_saved_drafts";
@@ -5486,6 +5464,14 @@ confirmOkBtn?.addEventListener("click", () => {
 });
 
 async function initApp() {
+    // Charger les clés depuis Netlify Function
+    const res = await fetch("/api/config");
+    const cfg = await res.json();
+    SUPABASE_URL = cfg.supabaseUrl;
+    SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // ← fin de l'ajout, ton code continue normalement ici
+  
     console.log("initApp lancé");
 
     renderLoginScreen();
