@@ -5470,57 +5470,51 @@ async function initApp() {
     SUPABASE_URL = cfg.supabaseUrl;
     SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    // ← fin de l'ajout, ton code continue normalement ici
-  
+
     console.log("initApp lancé");
-
     renderLoginScreen();
-
     try {
         const { data, error } = await supabaseClient.auth.getSession();
         console.log("Résultat getSession :", { data, error });
-
         if (error) {
             console.error("Erreur session Supabase :", error);
             renderLoginScreen();
             return;
         }
-
         if (!data.session) {
             console.log("Aucune session -> login");
             renderLoginScreen();
             return;
         }
-
         console.log("Session trouvée -> app");
         await loadCurrentProfile();
         currentScreen = "accueil";
         renderApp();
+
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            console.log("onAuthStateChange:", event, !!session);
+            if (session) {
+                setTimeout(async () => {
+                    try {
+                        await loadCurrentProfile();
+                        currentScreen = "accueil";
+                        renderApp();
+                    } catch (error) {
+                        console.error("Erreur onAuthStateChange :", error);
+                        renderLoginScreen();
+                    }
+                }, 0);
+            } else {
+                state.currentUser = null;
+                renderLoginScreen();
+            }
+        });
+
     } catch (error) {
         console.error("Erreur initApp :", error);
         renderLoginScreen();
     }
 }
-
-supabaseClient.auth.onAuthStateChange((event, session) => {
-    console.log("onAuthStateChange:", event, !!session);
-
-    if (session) {
-        setTimeout(async () => {
-            try {
-                await loadCurrentProfile();
-                currentScreen = "accueil";
-                renderApp();
-            } catch (error) {
-                console.error("Erreur onAuthStateChange :", error);
-                renderLoginScreen();
-            }
-        }, 0);
-    } else {
-        state.currentUser = null;
-        renderLoginScreen();
-    }
-});
 
 /* ========================
    WINDOW EXPORTS
