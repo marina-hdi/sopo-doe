@@ -507,26 +507,11 @@ const defaultReferenceData = {
 /* ========================
    LOAD / SAVE REFERENCE DATA
 ======================== */
-function loadReferenceData() {
-    try {
-        const raw = localStorage.getItem(REFERENCE_DATA_KEY);
-        return raw ? JSON.parse(raw) : null;
-    } catch (error) {
-        console.error("Erreur chargement referenceData :", error);
-        return null;
-    }
-}
-
 function saveReferenceData() {
-    try {
-        localStorage.setItem(REFERENCE_DATA_KEY, JSON.stringify(referenceData));
-    } catch (error) {
-        console.error("Erreur sauvegarde referenceData :", error);
-        showToast("Impossible de sauvegarder la bibliothèque.", "error");
-    }
+    // référentiel stocké en mémoire uniquement (pas localStorage)
 }
 
-let referenceData = loadReferenceData() || structuredClone(defaultReferenceData);
+let referenceData = structuredClone(defaultReferenceData);
 
 referenceData = {
     ...structuredClone(defaultReferenceData),
@@ -748,21 +733,24 @@ function goToSettingsScreen() {
     renderApp();
 }
 
-function duplicateDraft(draftId) {
-    const drafts = getAllDrafts();
-    const draft = drafts.find(item => item.id === draftId);
-    if (!draft) return;
-
-    const copy = deepClone(draft);
-    copy.id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
-    copy.title = `${draft.title || "Brouillon"} (copie)`;
-    copy.updatedAt = new Date().toISOString();
-
-    drafts.unshift(copy);
-    setAllDrafts(drafts);
-
-    showToast("Brouillon dupliqué.", "success");
-    renderApp();
+async function duplicateDraft(draftId) {
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        const drafts = await getAllDrafts();
+        const draft = drafts.find(item => item.id === draftId);
+        if (!draft) return;
+        const { error } = await supabaseClient.from("drafts").insert({
+            user_id: user.id,
+            title: `${draft.title || "Brouillon"} (copie)`,
+            state: draft.state
+        });
+        if (error) throw error;
+        showToast("Brouillon dupliqué.", "success");
+        renderApp();
+    } catch (error) {
+        console.error("Erreur duplicateDraft :", error);
+        showToast("Erreur duplication.", "error");
+    }
 }
 
 function setSavedSearchValue(value) {
@@ -770,11 +758,11 @@ function setSavedSearchValue(value) {
     renderApp();
 }
 
-function renderDraftsScreen() {
+async function renderDraftsScreen() {
     setWorkspaceChromeVisibility(false);
     setActiveSidebarLink("nav-drafts-btn");
 
-    const drafts = getAllDrafts();
+    const drafts = await getAllDrafts();
 
     content.innerHTML = `
         <div class="single-panel-layout enregistres-layout">
@@ -858,105 +846,153 @@ function filterDraftsTable(value) {
     });
 }
 
-function getClosedItems() {
+async function getClosedItems() {
     try {
-        return JSON.parse(localStorage.getItem(CLOSED_KEY) || "[]");
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) return [];
+        const { data, error } = await supabaseClient
+            .from("closed_does")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("updated_at", { ascending: false });
+        if (error) throw error;
+        return (data || []).map(row => ({
+            id: row.id,
+            title: row.title,
+            updatedAt: row.updated_at,
+            state: row.state
+        }));
     } catch (error) {
-        console.error("Erreur chargement clôturés :", error);
+        console.error("Erreur getClosedItems :", error);
         return [];
     }
 }
 
-function setClosedItems(items) {
-    localStorage.setItem(CLOSED_KEY, JSON.stringify(items));
+async function setClosedItems(items) {
+    // non utilisé en mode Supabase
 }
 
-function getArchivedItems() {
+async function getArchivedItems() {
     try {
-        return JSON.parse(localStorage.getItem(ARCHIVED_KEY) || "[]");
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) return [];
+        const { data, error } = await supabaseClient
+            .from("archived_does")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("updated_at", { ascending: false });
+        if (error) throw error;
+        return (data || []).map(row => ({
+            id: row.id,
+            archiveType: row.state?.archiveType || "draft",
+            archivedAt: row.updated_at,
+            payload: row.state?.payload || row.state
+        }));
     } catch (error) {
-        console.error("Erreur chargement archives :", error);
+        console.error("Erreur getArchivedItems :", error);
         return [];
     }
 }
 
-function setArchivedItems(items) {
-    localStorage.setItem(ARCHIVED_KEY, JSON.stringify(items));
+async function setArchivedItems(items) {
+    // non utilisé en mode Supabase
 }
 
-function archiveDraft(id) {
-    const drafts = getAllDrafts();
-    const draft = drafts.find(item => item.id === id);
-    if (!draft) return;
-
-    const archived = getArchivedItems();
-    archived.unshift({
-        archiveType: "draft",
-        archivedAt: new Date().toISOString(),
-        payload: draft
-    });
-
-    setArchivedItems(archived);
-    setAllDrafts(drafts.filter(item => item.id !== id));
-
-    showToast("Brouillon archivé.", "success");
-    renderApp();
-}
-
-function archiveClosedDoe(id) {
-    const items = getClosedItems();
-    const item = items.find(entry => entry.id === id);
-    if (!item) return;
-
-    const archived = getArchivedItems();
-    archived.unshift({
-        archiveType: "closed",
-        archivedAt: new Date().toISOString(),
-        payload: item
-    });
-
-    setArchivedItems(archived);
-    setClosedItems(items.filter(entry => entry.id !== id));
-
-    showToast("DOE clôturé archivé.", "success");
-    renderApp();
-}
-
-function restoreArchivedItem(index) {
-    const archived = getArchivedItems();
-    const item = archived[index];
-    if (!item) return;
-
-    if (item.archiveType === "draft") {
-        const drafts = getAllDrafts();
-        drafts.unshift(item.payload);
-        setAllDrafts(drafts);
-    } else if (item.archiveType === "closed") {
-        const closed = getClosedItems();
-        closed.unshift(item.payload);
-        setClosedItems(closed);
+async function archiveDraft(id) {
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        const drafts = await getAllDrafts();
+        const draft = drafts.find(item => item.id === id);
+        if (!draft) return;
+        const { error: insertError } = await supabaseClient
+            .from("archived_does")
+            .insert({
+                user_id: user.id,
+                title: draft.title,
+                state: { archiveType: "draft", archivedAt: new Date().toISOString(), payload: draft }
+            });
+        if (insertError) throw insertError;
+        const { error: deleteError } = await supabaseClient.from("drafts").delete().eq("id", id);
+        if (deleteError) throw deleteError;
+        showToast("Brouillon archivé.", "success");
+        renderApp();
+    } catch (error) {
+        console.error("Erreur archiveDraft :", error);
+        showToast("Erreur lors de l'archivage.", "error");
     }
-
-    archived.splice(index, 1);
-    setArchivedItems(archived);
-
-    showToast("Élément restauré.", "success");
-    renderApp();
 }
 
-function deleteArchivedItem(index) {
-    const archived = getArchivedItems();
-    archived.splice(index, 1);
-    setArchivedItems(archived);
-    showToast("Archive supprimée.", "info");
-    renderApp();
+async function archiveClosedDoe(id) {
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        const items = await getClosedItems();
+        const item = items.find(entry => entry.id === id);
+        if (!item) return;
+        const { error: insertError } = await supabaseClient
+            .from("archived_does")
+            .insert({
+                user_id: user.id,
+                title: item.title,
+                state: { archiveType: "closed", archivedAt: new Date().toISOString(), payload: item }
+            });
+        if (insertError) throw insertError;
+        const { error: deleteError } = await supabaseClient.from("closed_does").delete().eq("id", id);
+        if (deleteError) throw deleteError;
+        showToast("DOE clôturé archivé.", "success");
+        renderApp();
+    } catch (error) {
+        console.error("Erreur archiveClosedDoe :", error);
+        showToast("Erreur lors de l'archivage.", "error");
+    }
 }
 
-function renderClosedScreen() {
+async function restoreArchivedItem(index) {
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        const archived = await getArchivedItems();
+        const item = archived[index];
+        if (!item) return;
+        if (item.archiveType === "draft") {
+            const { error } = await supabaseClient.from("drafts").insert({
+                user_id: user.id, title: item.payload.title, state: item.payload.state
+            });
+            if (error) throw error;
+        } else if (item.archiveType === "closed") {
+            const { error } = await supabaseClient.from("closed_does").insert({
+                user_id: user.id, title: item.payload.title, state: item.payload.state
+            });
+            if (error) throw error;
+        }
+        const { error: deleteError } = await supabaseClient.from("archived_does").delete().eq("id", item.id);
+        if (deleteError) throw deleteError;
+        showToast("Élément restauré.", "success");
+        renderApp();
+    } catch (error) {
+        console.error("Erreur restoreArchivedItem :", error);
+        showToast("Erreur lors de la restauration.", "error");
+    }
+}
+
+async function deleteArchivedItem(index) {
+    try {
+        const archived = await getArchivedItems();
+        const item = archived[index];
+        if (!item) return;
+        const { error } = await supabaseClient.from("archived_does").delete().eq("id", item.id);
+        if (error) throw error;
+        showToast("Archive supprimée.", "info");
+        renderApp();
+    } catch (error) {
+        console.error("Erreur deleteArchivedItem :", error);
+        showToast("Erreur lors de la suppression.", "error");
+    }
+}
+
+async function renderClosedScreen() {
     setWorkspaceChromeVisibility(false);
     setActiveSidebarLink("nav-closed-btn");
 
-    const items = getClosedItems();
+    const items = await getClosedItems();
 
     content.innerHTML = `
         <div class="single-panel-layout enregistres-layout">
@@ -1029,7 +1065,7 @@ function renderArchivesScreen() {
     setWorkspaceChromeVisibility(false);
     setActiveSidebarLink("nav-archives-btn");
 
-    const archived = getArchivedItems();
+    const archived = await getArchivedItems();
     const search = String(state.archivesSearch || "").trim().toUpperCase();
 
     const filtered = archived.filter(item => {
@@ -2584,31 +2620,45 @@ function buildDraftPayload() {
     };
 }
 
-function saveDraftByMode(mode = "normal") {
-    const drafts = getSavedDrafts();
-    const existingIndex = findExistingDraftIndexByKey();
-    const payload = buildDraftPayload();
+async function saveDraftByMode(mode = "normal") {
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) { showToast("Non connecté.", "error"); return; }
 
-    if (mode === "overwrite" && existingIndex >= 0) {
-        payload.id = drafts[existingIndex].id;
-        drafts[existingIndex] = payload;
-        state.currentDraftId = payload.id;
-    } else {
-        const sameIdIndex = drafts.findIndex(d => d.id === payload.id);
+        const payload = buildDraftPayload();
+        const row = {
+            user_id: user.id,
+            title: payload.title,
+            state: payload.state,
+            updated_at: new Date().toISOString()
+        };
 
-        if (sameIdIndex >= 0) {
-            drafts[sameIdIndex] = payload;
+        if (state.currentDraftId) {
+            // Mettre à jour le brouillon existant
+            const { error } = await supabaseClient
+                .from("drafts")
+                .update(row)
+                .eq("id", state.currentDraftId)
+                .eq("user_id", user.id);
+            if (error) throw error;
         } else {
-            drafts.unshift(payload);
+            // Créer un nouveau brouillon
+            const { data, error } = await supabaseClient
+                .from("drafts")
+                .insert({ ...row, id: payload.id })
+                .select()
+                .single();
+            if (error) throw error;
+            state.currentDraftId = data.id;
         }
 
-        state.currentDraftId = payload.id;
+        saveAutosave();
+        markAsClean();
+        showToast("Brouillon enregistré.", "success");
+    } catch (error) {
+        console.error("Erreur saveDraftByMode :", error);
+        showToast("Erreur lors de la sauvegarde.", "error");
     }
-
-    localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
-    saveAutosave();
-    markAsClean();
-    showToast("Brouillon enregistré.", "success");
 }
 
 function openDraftOverwriteModal() {
@@ -3846,20 +3896,32 @@ function markAsClean() {
 }
 
 /* ========================
-   DRAFTS
+   DRAFTS — Supabase
 ======================== */
-function getAllDrafts() {
+async function getAllDrafts() {
     try {
-        const raw = localStorage.getItem(DRAFTS_KEY);
-        return raw ? JSON.parse(raw) : [];
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) return [];
+        const { data, error } = await supabaseClient
+            .from("drafts")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("updated_at", { ascending: false });
+        if (error) throw error;
+        return (data || []).map(row => ({
+            id: row.id,
+            title: row.title,
+            updatedAt: row.updated_at,
+            state: row.state
+        }));
     } catch (error) {
-        console.error("Erreur lecture brouillons :", error);
+        console.error("Erreur getAllDrafts :", error);
         return [];
     }
 }
 
-function setAllDrafts(drafts) {
-    localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
+async function setAllDrafts(drafts) {
+    // non utilisé en mode Supabase
 }
 
 function saveDraft() {
@@ -3875,8 +3937,9 @@ function closeDraftsModal() {
     draftsModal.classList.add("hidden");
 }
 
-function renderDraftsList() {
-    const drafts = getAllDrafts();
+async function renderDraftsList() {
+    draftsList.innerHTML = `<div class="empty-drafts">Chargement...</div>`;
+    const drafts = await getAllDrafts();
 
     if (!drafts.length) {
         draftsList.innerHTML = `<div class="empty-drafts">Aucun brouillon enregistré pour le moment.</div>`;
@@ -3897,28 +3960,43 @@ function renderDraftsList() {
     `).join("");
 }
 
-function loadDraft(draftId) {
-    const draft = getAllDrafts().find(item => item.id === draftId);
-    if (!draft) return;
-
-    replaceDoeState(draft.state);
-    saveAutosave();
-    markAsClean();
-    closeDraftsModal();
-    goToStep(state.currentStep || 0);
-    showToast("Brouillon chargé.", "success");
+async function loadDraft(draftId) {
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        const { data, error } = await supabaseClient
+            .from("drafts")
+            .select("*")
+            .eq("id", draftId)
+            .eq("user_id", user.id)
+            .single();
+        if (error) throw error;
+        replaceDoeState(data.state);
+        saveAutosave();
+        markAsClean();
+        closeDraftsModal();
+        goToStep(state.currentStep || 0);
+        showToast("Brouillon chargé.", "success");
+    } catch (error) {
+        console.error("Erreur loadDraft :", error);
+        showToast("Impossible de charger le brouillon.", "error");
+    }
 }
 
-function deleteDraft(draftId) {
+async function deleteDraft(draftId) {
     askConfirm({
         title: "Supprimer le brouillon",
         message: "Ce brouillon enregistré sera supprimé définitivement.",
         confirmLabel: "Supprimer",
-        onConfirm: () => {
-            const drafts = getAllDrafts().filter(item => item.id !== draftId);
-            setAllDrafts(drafts);
-            renderDraftsList();
-            showToast("Brouillon supprimé.", "info");
+        onConfirm: async () => {
+            try {
+                const { error } = await supabaseClient.from("drafts").delete().eq("id", draftId);
+                if (error) throw error;
+                await renderDraftsList();
+                showToast("Brouillon supprimé.", "info");
+            } catch (error) {
+                console.error("Erreur deleteDraft :", error);
+                showToast("Erreur suppression.", "error");
+            }
         }
     });
 }
