@@ -1579,8 +1579,9 @@ function renderSettingsScreen() {
     `;
 }
 
-function getRecentNotes() {
-    return getAllDrafts()
+async function getRecentNotes() {
+    const drafts = await getAllDrafts();
+    return drafts
         .map(draft => {
             const infos = draft?.state?.data?.infos || {};
             return {
