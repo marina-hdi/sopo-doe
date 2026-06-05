@@ -1726,12 +1726,12 @@ async function loadCurrentProfile() {
     return state.currentUser;
 }
 
-function renderAccueilScreen() {
+async function renderAccueilScreen() {
     setWorkspaceChromeVisibility(false);
     setActiveSidebarLink("nav-accueil-btn");
 
-    const drafts = getAllDrafts();
-    const notes = getRecentNotes();
+    const drafts = await getAllDrafts();
+    const notes = await getRecentNotes();
 
     content.innerHTML = `
         <div class="single-panel-layout accueil-layout">
