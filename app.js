@@ -1944,7 +1944,7 @@ function replaceDoeState(nextDoeState) {
     }
 }
 
-function getSavedDrafts() {
+async function getSavedDrafts() {
     return getAllDrafts();
 }
 
@@ -2597,12 +2597,10 @@ function getCurrentDraftMatchKey() {
     };
 }
 
-function findExistingDraftIndexByKey() {
-    const drafts = getSavedDrafts();
+async function findExistingDraftIndexByKey() {
+    const drafts = await getSavedDrafts();
     const current = getCurrentDraftMatchKey();
-
     if (!current.adresse || !current.nature) return -1;
-
     return drafts.findIndex(draft => {
         const infos = draft?.state?.data?.infos || {};
         return (
