@@ -1061,7 +1061,7 @@ async function renderClosedScreen() {
     filterClosedTable(state.closedSearch || "");
 }
 
-function renderArchivesScreen() {
+async function renderArchivesScreen() {
     setWorkspaceChromeVisibility(false);
     setActiveSidebarLink("nav-archives-btn");
 
