@@ -1998,23 +1998,19 @@ function handleClearDoe() {
     );
 }
 
-function handleCloseDoe() {
+async function handleCloseDoe() {
     const currentKey = getCurrentDraftMatchKey();
-
     if (!currentKey.adresse || !currentKey.nature) {
         showToast("Adresse et nature des travaux requises pour clôturer.", "error");
         return;
     }
-
-    const closedItems = getClosedItems();
-
+    const closedItems = await getClosedItems();
     const payload = {
         id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
         savedAt: new Date().toISOString(),
         state: getDoeOnlyState()
     };
-
-    const drafts = getAllDrafts();
+    const drafts = await getAllDrafts();
     const existingDraftIndex = drafts.findIndex(draft => {
         const infos = draft?.state?.data?.infos || {};
         return (
@@ -2023,15 +2019,30 @@ function handleCloseDoe() {
         );
     });
 
-    const finalizeClose = () => {
+    const finalizeClose = async () => {
         if (existingDraftIndex >= 0) {
-            drafts.splice(existingDraftIndex, 1);
-            setAllDrafts(drafts);
+            const { error } = await supabaseClient
+                .from("drafts")
+                .delete()
+                .eq("id", drafts[existingDraftIndex].id);
+            if (error) console.error("Erreur suppression draft :", error);
         }
-
-        closedItems.unshift(payload);
-        setClosedItems(closedItems);
-
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        const { error } = await supabaseClient
+            .from("closed_does")
+            .insert({
+                user_id: user.id,
+                title: [
+                    currentKey.adresse,
+                    currentKey.nature
+                ].filter(Boolean).join(" — "),
+                state: payload.state
+            });
+        if (error) {
+            console.error("Erreur clôture :", error);
+            showToast("Erreur lors de la clôture.", "error");
+            return;
+        }
         resetCurrentDoe();
         showToast("DOE clôturé.", "success");
         goToClosedScreen();
@@ -2045,7 +2056,6 @@ function handleCloseDoe() {
         );
         return;
     }
-
     finalizeClose();
 }
 
