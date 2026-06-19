@@ -3203,23 +3203,23 @@ async function buildRealDoePdfBlob() {
 
         cover.drawRectangle({
             x: 0,
-            y: PAGE.height - 80,
+            y: PAGE.height - 60,
             width: 120,
-            height: 80,
+            height: 60,
             color: COLORS.primary
         });
 
         cover.drawText("SOPODEX", {
-            x: 18,
-            y: PAGE.height - 45,
+            x: 25,
+            y: PAGE.height - 35,
             size: 12,
             font: fontBold,
             color: COLORS.white
         });
 
         cover.drawText(headerContact, {
-            x: 140,
-            y: PAGE.height - 45,
+            x: 150,
+            y: PAGE.height - 35,
             size: 10,
             font: fontRegular,
             color: COLORS.primary
@@ -3227,7 +3227,7 @@ async function buildRealDoePdfBlob() {
 
         cover.drawRectangle({
             x: 0,
-            y: PAGE.height - 82,
+            y: PAGE.height - 62,
             width: PAGE.width,
             height: 1,
             color: COLORS.primary
@@ -3249,7 +3249,7 @@ async function buildRealDoePdfBlob() {
             color: COLORS.text
         });
 
-        cover.drawText("EXECUTES", {
+        cover.drawText("EXECUTÉS", {
             x: 80,
             y: 440,
             size: 28,
@@ -3276,7 +3276,7 @@ async function buildRealDoePdfBlob() {
 
         cover.drawText(objet || "SANS OBJET", {
             x: 80,
-            y: 220,
+            y: 230,
             size: 14,
             font: fontRegular,
             color: COLORS.primary
@@ -3311,7 +3311,7 @@ async function buildRealDoePdfBlob() {
             x: 80,
             y: PAGE.height - 120,
             width: 140,
-            height: 50,
+            height: 40,
             color: COLORS.black
         });
 
@@ -3336,7 +3336,7 @@ async function buildRealDoePdfBlob() {
 
         summary.drawRectangle({
             x: 80,
-            y: PAGE.height - 130,
+            y: PAGE.height - 122,
             width: PAGE.width - 160,
             height: 1,
             color: COLORS.text
@@ -3347,7 +3347,7 @@ async function buildRealDoePdfBlob() {
         function drawSummarySection(title, color, items, sectionKey) {
             summary.drawRectangle({
                 x: 80,
-                y: y + 5,
+                y,
                 width: 12,
                 height: 12,
                 color
