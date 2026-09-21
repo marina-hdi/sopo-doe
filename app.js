@@ -1,4 +1,4 @@
-console.log("DOE v2 clean app loaded ✅ (fichiers dans Supabase Storage)");
+console.log("DOE v2 clean app loaded ✅ (fichiers dans Supabase Storage, accès équipe)");
 
 /* ========================
    STORAGE KEYS
@@ -507,31 +507,48 @@ const defaultReferenceData = {
 /* ========================
    LOAD / SAVE REFERENCE DATA
 ======================== */
+/* ========================
+   RÉFÉRENTIEL / BIBLIOTHÈQUE — partagé par l'équipe (Supabase)
+   Une seule ligne partagée dans "reference_data".
+   Chaque modification est fusionnée avec celles des collègues.
+======================== */
+const TEAM_REFERENCE_ID = "00000000-0000-0000-0000-000000000001";
+let referenceBase = null;          // dernière version serveur connue (sans fichiers)
+let referenceSaveTimer = null;
+let referenceSaveRunning = false;
+let referenceSaveQueued = false;
+let referenceChangeCounter = 0;
+
 function saveReferenceData() {
-    // référentiel stocké en mémoire uniquement (pas localStorage)
+    // Appelé après chaque modification : enregistrement groupé 0,8 s plus tard
+    referenceChangeCounter++;
+    if (!supabaseClient) return;
+    clearTimeout(referenceSaveTimer);
+    referenceSaveTimer = setTimeout(() => {
+        referenceSaveTimer = null;
+        runReferenceSave();
+    }, 800);
 }
 
-let referenceData = structuredClone(defaultReferenceData);
+function normalizeReferenceData(data) {
+    const defaults = structuredClone(defaultReferenceData);
+    const d = data && typeof data === "object" ? data : {};
+    return {
+        ...defaults,
+        ...d,
+        equipment: d.equipment && typeof d.equipment === "object" && !Array.isArray(d.equipment)
+            ? d.equipment
+            : defaults.equipment,
+        technicalSheetsLibrary: Array.isArray(d.technicalSheetsLibrary)
+            ? d.technicalSheetsLibrary
+            : defaults.technicalSheetsLibrary,
+        pvTypes: Array.isArray(d.pvTypes) ? d.pvTypes : defaults.pvTypes,
+        schemaTypes: Array.isArray(d.schemaTypes) ? d.schemaTypes : defaults.schemaTypes
+    };
+}
 
-referenceData = {
-    ...structuredClone(defaultReferenceData),
-    ...referenceData,
-    equipment: {
-        ...structuredClone(defaultReferenceData).equipment,
-        ...(referenceData.equipment || {})
-    },
-    technicalSheetsLibrary: Array.isArray(referenceData.technicalSheetsLibrary)
-        ? referenceData.technicalSheetsLibrary
-        : structuredClone(defaultReferenceData).technicalSheetsLibrary,
-    pvTypes: Array.isArray(referenceData.pvTypes)
-        ? referenceData.pvTypes
-        : structuredClone(defaultReferenceData).pvTypes,
-    schemaTypes: Array.isArray(referenceData.schemaTypes)
-        ? referenceData.schemaTypes
-        : structuredClone(defaultReferenceData).schemaTypes
-};
-
-saveReferenceData();
+let referenceData = normalizeReferenceData(null);
+referenceBase = deepClone(referenceData); // point de départ commun : les listes par défaut
 
 /* ========================
    EMPTY STATE
@@ -706,6 +723,7 @@ function goToAccueil() {
 function goToBuilder() {
     currentScreen = "builder";
     renderApp();
+    refreshReferenceData();
 }
 
 function goToDraftsScreen() {
@@ -721,6 +739,7 @@ function goToClosedScreen() {
 function goToLibraryScreen() {
     currentScreen = "library";
     renderApp();
+    refreshReferenceData().then(changed => { if (changed) refreshReferenceViews(); });
 }
 
 function goToArchivesScreen() {
@@ -731,6 +750,7 @@ function goToArchivesScreen() {
 function goToSettingsScreen() {
     currentScreen = "settings";
     renderApp();
+    refreshReferenceData().then(changed => { if (changed) refreshReferenceViews(); });
 }
 
 async function duplicateDraft(draftId) {
@@ -857,7 +877,6 @@ async function getClosedItems() {
         const { data, error } = await supabaseClient
             .from("closed_does")
             .select("id, title, updated_at, infos:state->data->infos")
-            .eq("user_id", user.id)
             .order("updated_at", { ascending: false });
         if (error) throw error;
         return (data || []).map(row => ({
@@ -885,7 +904,6 @@ async function getArchivedItems() {
         const { data, error } = await supabaseClient
             .from("archived_does")
             .select("id, title, updated_at, archive_type:state->>archiveType, payload_title:state->payload->>title, infos:state->payload->state->data->infos, legacy_infos:state->data->infos")
-            .eq("user_id", user.id)
             .order("updated_at", { ascending: false });
         if (error) throw error;
         return (data || []).map(row => ({
@@ -976,7 +994,6 @@ async function restoreArchivedItem(index) {
             .from("archived_does")
             .select("*")
             .eq("id", listItem.id)
-            .eq("user_id", user.id)
             .single();
         if (fetchError) throw fetchError;
 
@@ -1293,7 +1310,7 @@ function renderLibraryScreen() {
                                       <td>${escapeHtml(item.modele || "")}</td>
                                       <td>
                                           ${
-                                              item.file
+                                              (item.file || item.storagePath)
                                                   ? `<button class="draft-btn load" onclick="downloadLibraryItem(${index})">Télécharger</button>`
                                                   : `<span class="draft-meta">—</span>`
                                           }
@@ -1431,12 +1448,15 @@ function updateLibrarySortUi() {
     });
 }
 
-function downloadLibraryItem(index) {
+async function downloadLibraryItem(index) {
     const list = Array.isArray(referenceData.technicalSheetsLibrary)
         ? referenceData.technicalSheetsLibrary
         : [];
 
     const item = list[index];
+    if (item && !item.file && item.storagePath) {
+        await hydrateLibraryItem(item);
+    }
     if (!item?.file) {
         showToast("Aucun fichier disponible.", "error");
         return;
@@ -2116,7 +2136,6 @@ async function getClosedDoeById(id) {
             .from("closed_does")
             .select("*")
             .eq("id", id)
-            .eq("user_id", user.id)
             .maybeSingle();
         if (error) throw error;
         if (!data) return null;
@@ -2717,6 +2736,12 @@ function buildDraftPayload() {
     };
 }
 
+function sameTimestamp(a, b) {
+    const ta = Date.parse(a), tb = Date.parse(b);
+    if (Number.isNaN(ta) || Number.isNaN(tb)) return true;
+    return ta === tb;
+}
+
 async function saveDraftByMode(mode = "normal") {
     if (isSavingDraft) return; // évite les doubles clics
     isSavingDraft = true;
@@ -2727,8 +2752,27 @@ async function saveDraftByMode(mode = "normal") {
 
         if (mode === "overwrite" && pendingOverwriteDraftId) {
             state.currentDraftId = pendingOverwriteDraftId;
+            state.loadedDraftUpdatedAt = null; // écrasement choisi volontairement
         }
         pendingOverwriteDraftId = null;
+
+        // Un collègue a-t-il enregistré ce brouillon depuis que je l'ai ouvert ?
+        if (state.currentDraftId && state.loadedDraftUpdatedAt && mode === "normal") {
+            const { data: current, error: checkError } = await supabaseClient
+                .from("drafts")
+                .select("updated_at")
+                .eq("id", state.currentDraftId)
+                .maybeSingle();
+            if (checkError) throw checkError;
+            if (current && !sameTimestamp(current.updated_at, state.loadedDraftUpdatedAt)) {
+                openConfirmModal(
+                    "Brouillon modifié par un collègue",
+                    "Quelqu'un a enregistré ce brouillon depuis que vous l'avez ouvert. Si vous continuez, ses modifications seront remplacées par les vôtres.",
+                    () => saveDraftByMode("force")
+                );
+                return;
+            }
+        }
 
         showToast("Enregistrement en cours...", "info");
 
@@ -2741,37 +2785,45 @@ async function saveDraftByMode(mode = "normal") {
         const cleanState = stripFilesForDb(payload.state);
         cleanState.currentDraftId = draftId;
 
-        const row = {
-            user_id: user.id,
+        const fields = {
             title: payload.title,
             state: cleanState,
             updated_at: new Date().toISOString()
         };
+        let savedUpdatedAt = fields.updated_at;
 
         if (state.currentDraftId) {
             const { data, error } = await supabaseClient
                 .from("drafts")
-                .update(row)
+                .update(fields)
                 .eq("id", state.currentDraftId)
-                .eq("user_id", user.id)
-                .select("id");
+                .select("id, updated_at");
             if (error) throw error;
 
-            if (!data || !data.length) {
+            if (data && data.length) {
+                savedUpdatedAt = data[0].updated_at;
+            } else {
                 // Le brouillon n'existe plus (supprimé / archivé) : on le recrée
-                const { error: insertError } = await supabaseClient
+                const { data: inserted, error: insertError } = await supabaseClient
                     .from("drafts")
-                    .insert({ ...row, id: state.currentDraftId });
+                    .insert({ ...fields, id: state.currentDraftId, user_id: user.id })
+                    .select("updated_at")
+                    .single();
                 if (insertError) throw insertError;
+                savedUpdatedAt = inserted.updated_at;
             }
         } else {
-            const { error } = await supabaseClient
+            const { data: inserted, error } = await supabaseClient
                 .from("drafts")
-                .insert({ ...row, id: draftId });
+                .insert({ ...fields, id: draftId, user_id: user.id })
+                .select("updated_at")
+                .single();
             if (error) throw error;
             state.currentDraftId = draftId;
+            savedUpdatedAt = inserted.updated_at;
         }
 
+        state.loadedDraftUpdatedAt = savedUpdatedAt;
         saveAutosave();
         markAsClean();
         showToast("Brouillon enregistré.", "success");
@@ -4181,6 +4233,210 @@ async function hydrateCurrentDoeInBackground() {
 }
 
 /* ========================
+   RÉFÉRENTIEL — synchronisation équipe
+======================== */
+function sameJson(a, b) {
+    return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function isPlainObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function libraryKey(item) {
+    return [item?.type, item?.marque, item?.modele]
+        .map(v => String(v || "").trim().toUpperCase())
+        .join("|");
+}
+
+// Fusion à 3 voies : base = version d'origine, local = mes changements, server = ceux des collègues
+function mergeReferenceData(base, local, server) {
+    if (server === undefined) return deepClone(local);
+    if (local === undefined) return deepClone(server);
+    if (sameJson(local, base)) return deepClone(server);
+    if (sameJson(server, base) || sameJson(local, server)) return deepClone(local);
+
+    if (isPlainObject(local) && isPlainObject(server)) {
+        const b = isPlainObject(base) ? base : {};
+        const result = {};
+        const keys = new Set([...Object.keys(server), ...Object.keys(local), ...Object.keys(b)]);
+        keys.forEach(key => {
+            const inB = key in b, inL = key in local, inS = key in server;
+            if (inL && inS) {
+                result[key] = mergeReferenceData(b[key], local[key], server[key]);
+            } else if (inL) {
+                // absent chez le serveur : ajouté par moi, ou supprimé par un collègue
+                if (!inB || !sameJson(local[key], b[key])) result[key] = deepClone(local[key]);
+            } else if (inS) {
+                // absent chez moi : ajouté par un collègue, ou supprimé par moi
+                if (!inB || !sameJson(server[key], b[key])) result[key] = deepClone(server[key]);
+            }
+        });
+        return result;
+    }
+
+    if (Array.isArray(local) && Array.isArray(server)) {
+        const b = Array.isArray(base) ? base : [];
+        const all = [...local, ...server, ...b];
+
+        if (all.every(x => x === null || typeof x !== "object")) {
+            const removed = new Set(b.filter(x => !local.includes(x)));
+            const result = server.filter(x => !removed.has(x));
+            local.forEach(x => {
+                if (!b.includes(x) && !result.includes(x)) result.push(x);
+            });
+            return result;
+        }
+
+        if (all.some(x => isPlainObject(x) && ("modele" in x || "marque" in x))) {
+            const toMap = arr => Object.fromEntries(arr.filter(isPlainObject).map(x => [libraryKey(x), x]));
+            return Object.values(mergeReferenceData(toMap(b), toMap(local), toMap(server)));
+        }
+    }
+
+    return deepClone(local); // même élément modifié des deux côtés : ma version gagne
+}
+
+function stripReferenceFiles(data) {
+    const clean = deepClone(data || {});
+    (Array.isArray(clean.technicalSheetsLibrary) ? clean.technicalSheetsLibrary : []).forEach(item => {
+        if (!item || !isDataUrl(item.file)) return;
+        if (!item.storagePath) throw new Error(`Fiche non envoyée : ${item.fileName || item.modele || "sans nom"}`);
+        item.file = null;
+    });
+    return clean;
+}
+
+async function uploadPendingLibraryFiles(userId) {
+    const uploads = [];
+    (Array.isArray(referenceData.technicalSheetsLibrary) ? referenceData.technicalSheetsLibrary : []).forEach(item => {
+        if (!item || !isDataUrl(item.file)) return;
+        const alreadyStored = item.storagePath && item.storageKey === fileFingerprint(item.file);
+        if (!alreadyStored) uploads.push(uploadItemFile(item, userId));
+    });
+    await Promise.all(uploads);
+}
+
+// Remplace le référentiel local par celui du serveur, en gardant les fichiers déjà chargés
+function applyServerReferenceData(serverData) {
+    const loadedFiles = new Map();
+    (Array.isArray(referenceData.technicalSheetsLibrary) ? referenceData.technicalSheetsLibrary : []).forEach(item => {
+        if (item?.storagePath && isDataUrl(item.file)) {
+            loadedFiles.set(item.storagePath, { file: item.file, storageKey: item.storageKey });
+        }
+    });
+    const next = normalizeReferenceData(deepClone(serverData));
+    next.technicalSheetsLibrary.forEach(item => {
+        const cached = item?.storagePath && loadedFiles.get(item.storagePath);
+        if (cached && !item.file) {
+            item.file = cached.file;
+            item.storageKey = cached.storageKey;
+        }
+    });
+    referenceData = next;
+}
+
+async function fetchReferenceRow() {
+    const { data, error } = await supabaseClient
+        .from("reference_data")
+        .select("data, version")
+        .eq("id", TEAM_REFERENCE_ID)
+        .maybeSingle();
+    if (error) throw error;
+    return data;
+}
+
+function refreshReferenceViews() {
+    if (currentScreen === "library" || currentScreen === "settings") renderApp();
+}
+
+// Récupère les derniers ajouts des collègues (renvoie true si quelque chose a changé)
+async function refreshReferenceData() {
+    if (!supabaseClient || referenceSaveTimer || referenceSaveRunning) return false;
+    const counterAtStart = referenceChangeCounter;
+    try {
+        const row = await fetchReferenceRow();
+        if (!row || !row.data) return false;
+        if (referenceSaveTimer || referenceSaveRunning || referenceChangeCounter !== counterAtStart) return false;
+        if (sameJson(row.data, referenceBase)) return false;
+        applyServerReferenceData(row.data);
+        referenceBase = deepClone(row.data);
+        return true;
+    } catch (error) {
+        console.error("Erreur chargement référentiel :", error);
+        return false;
+    }
+}
+
+async function runReferenceSave() {
+    if (referenceSaveRunning) { referenceSaveQueued = true; return; }
+    referenceSaveRunning = true;
+
+    try {
+        const user = await getCurrentUserFast();
+        if (!user) return;
+
+        for (let attempt = 0; attempt < 5; attempt++) {
+            await uploadPendingLibraryFiles(user.id);
+            const counterAtSnapshot = referenceChangeCounter;
+            const localClean = stripReferenceFiles(referenceData);
+
+            const row = await fetchReferenceRow();
+            const merged = row && row.data
+                ? mergeReferenceData(referenceBase, localClean, row.data)
+                : localClean;
+            const now = new Date().toISOString();
+
+            let result;
+            if (!row) {
+                result = await supabaseClient
+                    .from("reference_data")
+                    .insert({ id: TEAM_REFERENCE_ID, user_id: user.id, data: merged, version: 1, updated_at: now })
+                    .select("version");
+                if (result.error && result.error.code === "23505") continue; // créé au même moment par un collègue
+            } else {
+                result = await supabaseClient
+                    .from("reference_data")
+                    .update({ user_id: user.id, data: merged, version: row.version + 1, updated_at: now })
+                    .eq("id", TEAM_REFERENCE_ID)
+                    .eq("version", row.version)
+                    .select("version");
+            }
+            if (result.error) throw result.error;
+            if (!result.data || !result.data.length) continue; // un collègue a enregistré entre-temps : on refusionne
+
+            if (referenceChangeCounter === counterAtSnapshot) {
+                referenceBase = deepClone(merged);
+                if (!sameJson(merged, localClean)) {
+                    applyServerReferenceData(merged);
+                    refreshReferenceViews();
+                }
+            } else {
+                // modifié pendant l'enregistrement : le prochain passage fusionnera
+                referenceBase = localClean;
+                referenceSaveQueued = true;
+            }
+            return;
+        }
+        throw new Error("Trop de modifications simultanées.");
+    } catch (error) {
+        console.error("Erreur sauvegarde référentiel :", error);
+        showToast("Bibliothèque / paramètres : enregistrement impossible, réessayez.", "error");
+    } finally {
+        referenceSaveRunning = false;
+        if (referenceSaveQueued) {
+            referenceSaveQueued = false;
+            runReferenceSave();
+        }
+    }
+}
+
+async function hydrateLibraryItem(item) {
+    if (!item || item.file || !item.storagePath) return;
+    await hydrateStateFiles({ data: { fiches: [item], pv: [], schemas: [] } });
+}
+
+/* ========================
    DRAFTS — Supabase
 ======================== */
 async function getAllDrafts() {
@@ -4191,7 +4447,6 @@ async function getAllDrafts() {
         const { data, error } = await supabaseClient
             .from("drafts")
             .select("id, title, updated_at, infos:state->data->infos")
-            .eq("user_id", user.id)
             .order("updated_at", { ascending: false });
         if (error) throw error;
         return (data || []).map(row => ({
@@ -4213,7 +4468,6 @@ async function getDraftById(draftId) {
         .from("drafts")
         .select("*")
         .eq("id", draftId)
-        .eq("user_id", user.id)
         .single();
     if (error) throw error;
     return { id: data.id, title: data.title, updatedAt: data.updated_at, state: data.state };
@@ -4267,6 +4521,7 @@ async function loadDraft(draftId) {
         await hydrateStateFiles(doeState);
         replaceDoeState(doeState);
         state.currentDraftId = draft.id; // pour que "Enregistrer" mette à jour CE brouillon
+        state.loadedDraftUpdatedAt = draft.updatedAt; // pour détecter les modifs d'un collègue
         saveAutosave();
         markAsClean();
         closeDraftsModal();
@@ -5068,6 +5323,22 @@ function tryAutoAttachTechnicalSheet(index) {
         row.fileType = match.fileType || "";
         row.file = match.file || null;
         clearStoredFileRef(row);
+        if (match.storagePath) {
+            // Fiche partagée : on réutilise le fichier déjà stocké
+            row.storagePath = match.storagePath;
+            if (row.file) row.storageKey = match.storageKey;
+            if (!row.file) {
+                hydrateStateFiles({ data: { fiches: [row], pv: [], schemas: [] } }).then(loaded => {
+                    if (!loaded) return;
+                    if (!match.file && match.storagePath === row.storagePath) {
+                        match.file = row.file;
+                        match.storageKey = row.storageKey;
+                    }
+                    saveAutosave();
+                    if (currentScreen === "builder") renderStep();
+                });
+            }
+        }
         row.fileSize = match.fileSize || 0;
         row.fileLastModified = match.fileLastModified || null;
         row.fileSource = "library";
@@ -6291,6 +6562,7 @@ async function initApp() {
         currentScreen = "accueil";
         renderApp();
         hydrateCurrentDoeInBackground();
+        refreshReferenceData().then(changed => { if (changed) refreshReferenceViews(); });
 
         supabaseClient.auth.onAuthStateChange((event, session) => {
             console.log("onAuthStateChange:", event, !!session);
@@ -6300,6 +6572,8 @@ async function initApp() {
                         await loadCurrentProfile();
                         currentScreen = "accueil";
                         renderApp();
+                        hydrateCurrentDoeInBackground();
+                        refreshReferenceData().then(changed => { if (changed) refreshReferenceViews(); });
                     } catch (error) {
                         console.error("Erreur onAuthStateChange :", error);
                         renderLoginScreen();
