@@ -1,4 +1,4 @@
-console.log("DOE v2 clean app loaded ✅");
+console.log("DOE v2 clean app loaded ✅ (fichiers dans Supabase Storage)");
 
 /* ========================
    STORAGE KEYS
@@ -735,14 +735,17 @@ function goToSettingsScreen() {
 
 async function duplicateDraft(draftId) {
     try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        const drafts = await getAllDrafts();
-        const draft = drafts.find(item => item.id === draftId);
-        if (!draft) return;
+        const user = await getCurrentUserFast();
+        if (!user) return;
+        const draft = await getDraftById(draftId);
+        const cleanState = await prepareStateForDb(draft.state || {}, user.id);
+        const newId = crypto.randomUUID();
+        cleanState.currentDraftId = newId;
         const { error } = await supabaseClient.from("drafts").insert({
+            id: newId,
             user_id: user.id,
             title: `${draft.title || "Brouillon"} (copie)`,
-            state: draft.state
+            state: cleanState
         });
         if (error) throw error;
         showToast("Brouillon dupliqué.", "success");
@@ -847,12 +850,13 @@ function filterDraftsTable(value) {
 }
 
 async function getClosedItems() {
+    // Liste légère (pas les fichiers)
     try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
+        const user = await getCurrentUserFast();
         if (!user) return [];
         const { data, error } = await supabaseClient
             .from("closed_does")
-            .select("*")
+            .select("id, title, updated_at, infos:state->data->infos")
             .eq("user_id", user.id)
             .order("updated_at", { ascending: false });
         if (error) throw error;
@@ -860,7 +864,8 @@ async function getClosedItems() {
             id: row.id,
             title: row.title,
             updatedAt: row.updated_at,
-            state: row.state
+            savedAt: row.updated_at,
+            state: { data: { infos: row.infos || {} } }
         }));
     } catch (error) {
         console.error("Erreur getClosedItems :", error);
@@ -873,20 +878,24 @@ async function setClosedItems(items) {
 }
 
 async function getArchivedItems() {
+    // Liste légère (pas les fichiers)
     try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
+        const user = await getCurrentUserFast();
         if (!user) return [];
         const { data, error } = await supabaseClient
             .from("archived_does")
-            .select("*")
+            .select("id, title, updated_at, archive_type:state->>archiveType, payload_title:state->payload->>title, infos:state->payload->state->data->infos, legacy_infos:state->data->infos")
             .eq("user_id", user.id)
             .order("updated_at", { ascending: false });
         if (error) throw error;
         return (data || []).map(row => ({
             id: row.id,
-            archiveType: row.state?.archiveType || "draft",
+            archiveType: row.archive_type || "draft",
             archivedAt: row.updated_at,
-            payload: row.state?.payload || row.state
+            payload: {
+                title: row.payload_title || row.title,
+                state: { data: { infos: row.infos || row.legacy_infos || {} } }
+            }
         }));
     } catch (error) {
         console.error("Erreur getArchivedItems :", error);
@@ -900,16 +909,20 @@ async function setArchivedItems(items) {
 
 async function archiveDraft(id) {
     try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        const drafts = await getAllDrafts();
-        const draft = drafts.find(item => item.id === id);
-        if (!draft) return;
+        const user = await getCurrentUserFast();
+        if (!user) return;
+        const draft = await getDraftById(id);
+        const cleanState = await prepareStateForDb(draft.state || {}, user.id);
         const { error: insertError } = await supabaseClient
             .from("archived_does")
             .insert({
                 user_id: user.id,
                 title: draft.title,
-                state: { archiveType: "draft", archivedAt: new Date().toISOString(), payload: draft }
+                state: {
+                    archiveType: "draft",
+                    archivedAt: new Date().toISOString(),
+                    payload: { ...draft, state: cleanState }
+                }
             });
         if (insertError) throw insertError;
         const { error: deleteError } = await supabaseClient.from("drafts").delete().eq("id", id);
@@ -924,16 +937,21 @@ async function archiveDraft(id) {
 
 async function archiveClosedDoe(id) {
     try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        const items = await getClosedItems();
-        const item = items.find(entry => entry.id === id);
+        const user = await getCurrentUserFast();
+        if (!user) return;
+        const item = await getClosedDoeById(id);
         if (!item) return;
+        const cleanState = await prepareStateForDb(item.state || {}, user.id);
         const { error: insertError } = await supabaseClient
             .from("archived_does")
             .insert({
                 user_id: user.id,
                 title: item.title,
-                state: { archiveType: "closed", archivedAt: new Date().toISOString(), payload: item }
+                state: {
+                    archiveType: "closed",
+                    archivedAt: new Date().toISOString(),
+                    payload: { ...item, state: cleanState }
+                }
             });
         if (insertError) throw insertError;
         const { error: deleteError } = await supabaseClient.from("closed_does").delete().eq("id", id);
@@ -948,22 +966,39 @@ async function archiveClosedDoe(id) {
 
 async function restoreArchivedItem(index) {
     try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
+        const user = await getCurrentUserFast();
+        if (!user) return;
         const archived = await getArchivedItems();
-        const item = archived[index];
-        if (!item) return;
-        if (item.archiveType === "draft") {
-            const { error } = await supabaseClient.from("drafts").insert({
-                user_id: user.id, title: item.payload.title, state: item.payload.state
+        const listItem = archived[index];
+        if (!listItem) return;
+
+        const { data: row, error: fetchError } = await supabaseClient
+            .from("archived_does")
+            .select("*")
+            .eq("id", listItem.id)
+            .eq("user_id", user.id)
+            .single();
+        if (fetchError) throw fetchError;
+
+        const archiveType = row.state?.archiveType || "draft";
+        const payload = row.state?.payload || { title: row.title, state: row.state };
+        const cleanState = await prepareStateForDb(payload.state || {}, user.id);
+        const newId = crypto.randomUUID();
+
+        if (archiveType === "closed") {
+            const { error } = await supabaseClient.from("closed_does").insert({
+                id: newId, user_id: user.id, title: payload.title || row.title, state: cleanState
             });
             if (error) throw error;
-        } else if (item.archiveType === "closed") {
-            const { error } = await supabaseClient.from("closed_does").insert({
-                user_id: user.id, title: item.payload.title, state: item.payload.state
+        } else {
+            cleanState.currentDraftId = newId;
+            const { error } = await supabaseClient.from("drafts").insert({
+                id: newId, user_id: user.id, title: payload.title || row.title, state: cleanState
             });
             if (error) throw error;
         }
-        const { error: deleteError } = await supabaseClient.from("archived_does").delete().eq("id", item.id);
+
+        const { error: deleteError } = await supabaseClient.from("archived_does").delete().eq("id", row.id);
         if (deleteError) throw deleteError;
         showToast("Élément restauré.", "success");
         renderApp();
@@ -1968,7 +2003,7 @@ function validateInfosForDraftSave() {
     return missing;
 }
 
-function handleSaveDraft() {
+async function handleSaveDraft() {
     const missingInfos = validateInfosForDraftSave();
 
     if (missingInfos.length) {
@@ -1977,9 +2012,20 @@ function handleSaveDraft() {
         return;
     }
 
-    const existingIndex = findExistingDraftIndexByKey();
+    // Un AUTRE brouillon avec la même adresse + nature de travaux ?
+    const drafts = await getAllDrafts();
+    const current = getCurrentDraftMatchKey();
+    const duplicate = drafts.find(draft => {
+        if (draft.id === state.currentDraftId) return false;
+        const infos = draft?.state?.data?.infos || {};
+        return (
+            normalizeDraftKey(infos.adresse) === current.adresse &&
+            normalizeDraftKey(infos.nature_travaux) === current.nature
+        );
+    });
 
-    if (existingIndex >= 0) {
+    if (duplicate) {
+        pendingOverwriteDraftId = duplicate.id;
         openDraftOverwriteModal();
         return;
     }
@@ -2004,14 +2050,9 @@ async function handleCloseDoe() {
         showToast("Adresse et nature des travaux requises pour clôturer.", "error");
         return;
     }
-    const closedItems = await getClosedItems();
-    const payload = {
-        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-        savedAt: new Date().toISOString(),
-        state: getDoeOnlyState()
-    };
+
     const drafts = await getAllDrafts();
-    const existingDraftIndex = drafts.findIndex(draft => {
+    const existingDraft = drafts.find(draft => {
         const infos = draft?.state?.data?.infos || {};
         return (
             normalizeDraftKey(infos.adresse) === currentKey.adresse &&
@@ -2020,35 +2061,43 @@ async function handleCloseDoe() {
     });
 
     const finalizeClose = async () => {
-        if (existingDraftIndex >= 0) {
+        try {
+            const user = await getCurrentUserFast();
+            if (!user) { showToast("Non connecté.", "error"); return; }
+
+            showToast("Clôture en cours...", "info");
+            await uploadPendingFiles(state, user.id);
+            const cleanState = stripFilesForDb(getDoeOnlyState());
+
+            // 1. D'abord créer le DOE clôturé...
             const { error } = await supabaseClient
-                .from("drafts")
-                .delete()
-                .eq("id", drafts[existingDraftIndex].id);
-            if (error) console.error("Erreur suppression draft :", error);
-        }
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        const { error } = await supabaseClient
-            .from("closed_does")
-            .insert({
-                user_id: user.id,
-                title: [
-                    currentKey.adresse,
-                    currentKey.nature
-                ].filter(Boolean).join(" — "),
-                state: payload.state
-            });
-        if (error) {
+                .from("closed_does")
+                .insert({
+                    user_id: user.id,
+                    title: [currentKey.adresse, currentKey.nature].filter(Boolean).join(" — "),
+                    state: cleanState
+                });
+            if (error) throw error;
+
+            // 2. ...puis seulement supprimer le brouillon (rien n'est perdu si l'étape 1 échoue)
+            if (existingDraft) {
+                const { error: deleteError } = await supabaseClient
+                    .from("drafts")
+                    .delete()
+                    .eq("id", existingDraft.id);
+                if (deleteError) console.error("Erreur suppression draft :", deleteError);
+            }
+
+            resetCurrentDoe();
+            showToast("DOE clôturé.", "success");
+            goToClosedScreen();
+        } catch (error) {
             console.error("Erreur clôture :", error);
-            showToast("Erreur lors de la clôture.", "error");
-            return;
+            showToast(`Erreur lors de la clôture${error?.message ? " : " + error.message : "."}`, "error");
         }
-        resetCurrentDoe();
-        showToast("DOE clôturé.", "success");
-        goToClosedScreen();
     };
 
-    if (existingDraftIndex >= 0) {
+    if (existingDraft) {
         openConfirmModal(
             "Brouillon existant",
             "Un brouillon avec la même adresse et le même type de travaux existe. Il sera supprimé automatiquement si vous clôturez.",
@@ -2059,16 +2108,38 @@ async function handleCloseDoe() {
     finalizeClose();
 }
 
-function getClosedDoeById(id) {
-    return getClosedItems().find(item => item.id === id);
+async function getClosedDoeById(id) {
+    try {
+        const user = await getCurrentUserFast();
+        if (!user) return null;
+        const { data, error } = await supabaseClient
+            .from("closed_does")
+            .select("*")
+            .eq("id", id)
+            .eq("user_id", user.id)
+            .maybeSingle();
+        if (error) throw error;
+        if (!data) return null;
+        return {
+            id: data.id,
+            title: data.title,
+            updatedAt: data.updated_at,
+            savedAt: data.updated_at,
+            state: data.state
+        };
+    } catch (error) {
+        console.error("Erreur getClosedDoeById :", error);
+        return null;
+    }
 }
 
 async function previewClosedDoe(id) {
-    const item = getClosedDoeById(id);
+    const item = await getClosedDoeById(id);
     if (!item) {
         showToast("DOE introuvable.", "error");
         return;
     }
+    await hydrateStateFiles(item.state || {});
 
     const previousState = deepClone(state);
     const previousScreen = currentScreen;
@@ -2182,11 +2253,12 @@ async function buildDoeZipBlobFromCurrentState() {
 }
 
 async function downloadClosedDoe(id) {
-    const item = getClosedDoeById(id);
+    const item = await getClosedDoeById(id);
     if (!item) {
         showToast("DOE introuvable.", "error");
         return;
     }
+    await hydrateStateFiles(item.state || {});
 
     const previousState = deepClone(state);
     const previousScreen = currentScreen;
@@ -2211,36 +2283,52 @@ function deleteClosedDoe(id) {
     openConfirmModal(
         "Supprimer ce DOE clôturé",
         "Cette action est définitive.",
-        () => {
-            const updated = getClosedItems().filter(item => item.id !== id);
-            setClosedItems(updated);
-            renderApp();
-            showToast("DOE supprimé.", "success");
+        async () => {
+            try {
+                const { error } = await supabaseClient.from("closed_does").delete().eq("id", id);
+                if (error) throw error;
+                renderApp();
+                showToast("DOE supprimé.", "success");
+            } catch (error) {
+                console.error("Erreur deleteClosedDoe :", error);
+                showToast("Erreur lors de la suppression.", "error");
+            }
         }
     );
 }
 
-function reopenClosedDoe(id) {
-    const items = getClosedItems();
-    const item = items.find(entry => entry.id === id);
-    if (!item) return;
+async function reopenClosedDoe(id) {
+    try {
+        const user = await getCurrentUserFast();
+        if (!user) return;
+        const item = await getClosedDoeById(id);
+        if (!item) {
+            showToast("DOE introuvable.", "error");
+            return;
+        }
+        const cleanState = await prepareStateForDb(item.state || {}, user.id);
+        const newId = crypto.randomUUID();
+        cleanState.currentDraftId = newId;
+        const infos = cleanState?.data?.infos || {};
+        const title = [infos.adresse, infos.code_postal, infos.ville].filter(Boolean).join(" ") || "Brouillon";
 
-    const drafts = getAllDrafts();
-    const restoredDraft = {
-        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-        title: [item?.state?.data?.infos?.adresse, item?.state?.data?.infos?.code_postal, item?.state?.data?.infos?.ville]
-            .filter(Boolean)
-            .join(" ") || "Brouillon",
-        updatedAt: new Date().toISOString(),
-        state: deepClone(item.state)
-    };
+        const { error: insertError } = await supabaseClient.from("drafts").insert({
+            id: newId,
+            user_id: user.id,
+            title,
+            state: cleanState
+        });
+        if (insertError) throw insertError;
 
-    drafts.unshift(restoredDraft);
-    setAllDrafts(drafts);
-    setClosedItems(items.filter(entry => entry.id !== id));
+        const { error: deleteError } = await supabaseClient.from("closed_does").delete().eq("id", id);
+        if (deleteError) throw deleteError;
 
-    showToast("DOE rouvert et renvoyé dans Brouillons.", "success");
-    goToDraftsScreen();
+        showToast("DOE rouvert et renvoyé dans Brouillons.", "success");
+        goToDraftsScreen();
+    } catch (error) {
+        console.error("Erreur reopenClosedDoe :", error);
+        showToast("Erreur lors de la réouverture.", "error");
+    }
 }
 
 function wireSidebarNavigation() {
@@ -2630,35 +2718,58 @@ function buildDraftPayload() {
 }
 
 async function saveDraftByMode(mode = "normal") {
+    if (isSavingDraft) return; // évite les doubles clics
+    isSavingDraft = true;
+
     try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
+        const user = await getCurrentUserFast();
         if (!user) { showToast("Non connecté.", "error"); return; }
 
+        if (mode === "overwrite" && pendingOverwriteDraftId) {
+            state.currentDraftId = pendingOverwriteDraftId;
+        }
+        pendingOverwriteDraftId = null;
+
+        showToast("Enregistrement en cours...", "info");
+
+        // 1. Envoyer les fichiers nouveaux / modifiés dans le stockage
+        await uploadPendingFiles(state, user.id);
+
+        // 2. Préparer un brouillon léger (sans le contenu des fichiers)
         const payload = buildDraftPayload();
+        const draftId = state.currentDraftId || payload.id;
+        const cleanState = stripFilesForDb(payload.state);
+        cleanState.currentDraftId = draftId;
+
         const row = {
             user_id: user.id,
             title: payload.title,
-            state: payload.state,
+            state: cleanState,
             updated_at: new Date().toISOString()
         };
 
         if (state.currentDraftId) {
-            // Mettre à jour le brouillon existant
-            const { error } = await supabaseClient
+            const { data, error } = await supabaseClient
                 .from("drafts")
                 .update(row)
                 .eq("id", state.currentDraftId)
-                .eq("user_id", user.id);
+                .eq("user_id", user.id)
+                .select("id");
             if (error) throw error;
+
+            if (!data || !data.length) {
+                // Le brouillon n'existe plus (supprimé / archivé) : on le recrée
+                const { error: insertError } = await supabaseClient
+                    .from("drafts")
+                    .insert({ ...row, id: state.currentDraftId });
+                if (insertError) throw insertError;
+            }
         } else {
-            // Créer un nouveau brouillon
-            const { data, error } = await supabaseClient
+            const { error } = await supabaseClient
                 .from("drafts")
-                .insert({ ...row, id: payload.id })
-                .select()
-                .single();
+                .insert({ ...row, id: draftId });
             if (error) throw error;
-            state.currentDraftId = data.id;
+            state.currentDraftId = draftId;
         }
 
         saveAutosave();
@@ -2666,7 +2777,9 @@ async function saveDraftByMode(mode = "normal") {
         showToast("Brouillon enregistré.", "success");
     } catch (error) {
         console.error("Erreur saveDraftByMode :", error);
-        showToast("Erreur lors de la sauvegarde.", "error");
+        showToast(`Erreur lors de la sauvegarde${error?.message ? " : " + error.message : "."}`, "error");
+    } finally {
+        isSavingDraft = false;
     }
 }
 
@@ -3867,8 +3980,16 @@ function saveAutosave() {
     try {
         localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
     } catch (error) {
-        console.error("Erreur autosave :", error);
-        showToast("Impossible de sauvegarder localement.", "error");
+        // Trop gros pour le navigateur : on garde une copie sans le contenu des fichiers
+        // (les fichiers déjà enregistrés restent dans le stockage Supabase)
+        try {
+            const light = JSON.stringify(state, (key, value) =>
+                key === "file" && isDataUrl(value) ? null : value
+            );
+            localStorage.setItem(AUTOSAVE_KEY, light);
+        } catch (fallbackError) {
+            console.error("Erreur autosave :", fallbackError);
+        }
     }
 }
 
@@ -3905,15 +4026,171 @@ function markAsClean() {
 }
 
 /* ========================
+   UTILISATEUR (rapide)
+   getSession lit la session locale, sans aller-retour réseau.
+   La sécurité reste assurée côté Supabase (RLS).
+======================== */
+async function getCurrentUserFast() {
+    const { data } = await supabaseClient.auth.getSession();
+    return data?.session?.user || null;
+}
+
+/* ========================
+   FICHIERS — Supabase Storage
+   Les PDF / images ne sont plus stockés DANS les brouillons.
+   Ils vont dans le bucket "doe-files" ; le brouillon ne garde
+   que le chemin du fichier (storagePath).
+======================== */
+const FILES_BUCKET = "doe-files";
+const FILE_SECTIONS = ["fiches", "pv", "schemas"];
+let isSavingDraft = false;
+let pendingOverwriteDraftId = null;
+
+function fileFingerprint(dataUrl) {
+    // Empreinte rapide pour savoir si un fichier a changé depuis son envoi
+    const str = String(dataUrl || "");
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+        hash ^= str.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return `${str.length}-${(hash >>> 0).toString(16)}`;
+}
+
+function isDataUrl(value) {
+    return typeof value === "string" && value.startsWith("data:");
+}
+
+function clearStoredFileRef(item) {
+    if (!item) return;
+    delete item.storagePath;
+    delete item.storageKey;
+}
+
+function forEachFileItem(doeState, callback) {
+    const data = doeState?.data;
+    if (!data) return;
+    FILE_SECTIONS.forEach(section => {
+        const list = Array.isArray(data[section]) ? data[section] : [];
+        list.forEach(item => {
+            if (item && typeof item === "object") callback(item, section);
+        });
+    });
+}
+
+function makeStorageFileName(item) {
+    const raw = String(item?.fileName || "fichier");
+    const safe = raw
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^A-Za-z0-9._-]+/g, "_")
+        .slice(-80);
+    return `${crypto.randomUUID()}-${safe || "fichier"}`;
+}
+
+async function uploadItemFile(item, userId) {
+    const blob = dataURLToBlob(item.file);
+    const path = `${userId}/${makeStorageFileName(item)}`;
+    const { error } = await supabaseClient.storage
+        .from(FILES_BUCKET)
+        .upload(path, blob, {
+            contentType: blob.type || item.fileType || "application/octet-stream",
+            upsert: false
+        });
+    if (error) throw new Error(`Envoi du fichier "${item.fileName || "sans nom"}" impossible : ${error.message}`);
+    item.storagePath = path;
+    item.storageKey = fileFingerprint(item.file);
+}
+
+// Envoie dans le stockage les fichiers qui n'y sont pas encore (modifie les lignes en place)
+async function uploadPendingFiles(doeState, userId) {
+    const uploads = [];
+    forEachFileItem(doeState, item => {
+        if (!isDataUrl(item.file)) return;
+        const alreadyStored = item.storagePath && item.storageKey === fileFingerprint(item.file);
+        if (!alreadyStored) uploads.push(uploadItemFile(item, userId));
+    });
+    await Promise.all(uploads);
+}
+
+// Copie du DOE sans le contenu des fichiers (seulement leurs chemins)
+function stripFilesForDb(doeState) {
+    const clean = deepClone(doeState || {});
+    forEachFileItem(clean, item => {
+        if (!isDataUrl(item.file)) return;
+        if (!item.storagePath) {
+            // Sécurité : on ne perd jamais un fichier en silence
+            throw new Error(`Fichier non envoyé : ${item.fileName || "sans nom"}`);
+        }
+        item.file = null;
+    });
+    return clean;
+}
+
+// Pour les anciens brouillons / archives qui contiennent encore les fichiers
+async function prepareStateForDb(doeState, userId) {
+    const working = doeState || {};
+    await uploadPendingFiles(working, userId);
+    return stripFilesForDb(working);
+}
+
+function blobToDataURL(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+    });
+}
+
+// Recharge depuis le stockage les fichiers d'un DOE (aperçu, ZIP, PDF...)
+async function hydrateStateFiles(doeState) {
+    const jobs = [];
+    let failed = 0;
+
+    forEachFileItem(doeState, item => {
+        if (item.file || !item.storagePath) return;
+        jobs.push((async () => {
+            try {
+                const { data, error } = await supabaseClient.storage
+                    .from(FILES_BUCKET)
+                    .download(item.storagePath);
+                if (error) throw error;
+                const typed = new Blob([data], { type: item.fileType || data.type || "application/octet-stream" });
+                item.file = await blobToDataURL(typed);
+                item.storageKey = fileFingerprint(item.file);
+            } catch (error) {
+                failed++;
+                console.error("Erreur chargement fichier :", item.storagePath, error);
+            }
+        })());
+    });
+
+    await Promise.all(jobs);
+    if (failed) showToast(`${failed} fichier(s) n'ont pas pu être chargés.`, "error");
+    return jobs.length - failed;
+}
+
+async function hydrateCurrentDoeInBackground() {
+    try {
+        const loaded = await hydrateStateFiles(state);
+        if (loaded > 0 && currentScreen === "builder") renderApp();
+    } catch (error) {
+        console.error("Erreur chargement des fichiers :", error);
+    }
+}
+
+/* ========================
    DRAFTS — Supabase
 ======================== */
 async function getAllDrafts() {
+    // Liste légère : seulement titre, date et infos d'adresse (pas les fichiers)
     try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
+        const user = await getCurrentUserFast();
         if (!user) return [];
         const { data, error } = await supabaseClient
             .from("drafts")
-            .select("*")
+            .select("id, title, updated_at, infos:state->data->infos")
             .eq("user_id", user.id)
             .order("updated_at", { ascending: false });
         if (error) throw error;
@@ -3921,12 +4198,25 @@ async function getAllDrafts() {
             id: row.id,
             title: row.title,
             updatedAt: row.updated_at,
-            state: row.state
+            state: { data: { infos: row.infos || {} } }
         }));
     } catch (error) {
         console.error("Erreur getAllDrafts :", error);
         return [];
     }
+}
+
+async function getDraftById(draftId) {
+    const user = await getCurrentUserFast();
+    if (!user) throw new Error("Non connecté.");
+    const { data, error } = await supabaseClient
+        .from("drafts")
+        .select("*")
+        .eq("id", draftId)
+        .eq("user_id", user.id)
+        .single();
+    if (error) throw error;
+    return { id: data.id, title: data.title, updatedAt: data.updated_at, state: data.state };
 }
 
 async function setAllDrafts(drafts) {
@@ -3971,15 +4261,12 @@ async function renderDraftsList() {
 
 async function loadDraft(draftId) {
     try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        const { data, error } = await supabaseClient
-            .from("drafts")
-            .select("*")
-            .eq("id", draftId)
-            .eq("user_id", user.id)
-            .single();
-        if (error) throw error;
-        replaceDoeState(data.state);
+        showToast("Chargement du brouillon...", "info");
+        const draft = await getDraftById(draftId);
+        const doeState = draft.state || {};
+        await hydrateStateFiles(doeState);
+        replaceDoeState(doeState);
+        state.currentDraftId = draft.id; // pour que "Enregistrer" mette à jour CE brouillon
         saveAutosave();
         markAsClean();
         closeDraftsModal();
@@ -4760,6 +5047,7 @@ function getModelsForTypeAndBrand(type, brand) {
 function clearFicheAutoFile(row) {
     if (!row) return;
     delete row.file;
+    clearStoredFileRef(row);
     delete row.fileName;
     delete row.fileType;
     delete row.autoMatched;
@@ -4779,6 +5067,7 @@ function tryAutoAttachTechnicalSheet(index) {
         row.fileName = match.fileName || "";
         row.fileType = match.fileType || "";
         row.file = match.file || null;
+        clearStoredFileRef(row);
         row.fileSize = match.fileSize || 0;
         row.fileLastModified = match.fileLastModified || null;
         row.fileSource = "library";
@@ -5122,6 +5411,7 @@ function handleFileUpload(section, index, input) {
         item.invalid = true;
         item.error = validation.reason;
         item.file = null;
+        clearStoredFileRef(item);
         item.fileName = file.name;
         item.fileType = file.type || "";
         item.fileSize = file.size || 0;
@@ -5139,6 +5429,7 @@ function handleFileUpload(section, index, input) {
 
     reader.onload = function (e) {
         item.file = e.target.result;
+        clearStoredFileRef(item);
         item.fileName = file.name;
         item.fileType = file.type || "application/octet-stream";
         item.fileSize = file.size || 0;
@@ -5162,6 +5453,7 @@ function handleFileUpload(section, index, input) {
         item.invalid = true;
         item.error = "Impossible de lire le fichier";
         item.file = null;
+        clearStoredFileRef(item);
 
       markAsDirty();
       saveAutosave();
@@ -5182,6 +5474,7 @@ function deleteFile(section, index) {
             if (!item) return;
 
             delete item.file;
+            clearStoredFileRef(item);
             delete item.fileName;
             delete item.fileType;
             delete item.fileSize;
@@ -5997,6 +6290,7 @@ async function initApp() {
         await loadCurrentProfile();
         currentScreen = "accueil";
         renderApp();
+        hydrateCurrentDoeInBackground();
 
         supabaseClient.auth.onAuthStateChange((event, session) => {
             console.log("onAuthStateChange:", event, !!session);
